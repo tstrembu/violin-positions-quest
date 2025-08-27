@@ -1,0 +1,1569 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Violin Positions Quest</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    .font-inter { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #f3f4f6; }
+  </style>
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] }}}};
+  </script>
+
+  <!-- React 18 UMD + Babel for in-browser JSX (simplest for iOS local files) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect, useRef } = React;
+
+    /* =========================
+       UI Bits
+       ========================= */
+    const AppHeader = ({ title, subtitle }) => (
+      <header className="p-6 text-center">
+        <h1 className="text-3xl font-bold text-gray-800 font-inter">{title}</h1>
+        <p className="text-sm text-gray-600 font-inter">{subtitle}</p>
+      </header>
+    );
+
+    const GameCard = ({ title, description, onClick }) => (
+      <button
+        onClick={onClick}
+        className="bg-white rounded-lg shadow-lg p-6 m-4 w-full text-left cursor-pointer transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-purple-500"
+      >
+        <h3 className="text-xl font-semibold text-purple-700 mb-2 font-inter">{title}</h3>
+        <p className="text-gray-600 font-inter">{description}</p>
+      </button>
+    );
+
+    const ActionButton = ({ onClick, children, className = '', disabled = false, title }) => (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        title={title}
+        className={`px-6 py-3 rounded-full font-bold text-white transition-all transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+      >
+        {children}
+      </button>
+    );
+
+    const Toggle = ({ label, checked, onChange }) => (
+      <label className="inline-flex items-center gap-2 text-sm mr-4">
+        <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4" />
+        <span className="select-none">{label}</span>
+      </label>
+    );
+
+    /* =========================
+       Core Data
+       ========================= */
+    const NOTES_DATA = {
+      G: {
+        1: { 1: ['A♭', 'A'], 2: ['B♭', 'B'], 3: ['C', 'C#'], 4: ['D'] },
+        2: { 1: ['B♭', 'B'], 2: ['B', 'C'], 3: ['C', 'C#'], 4: ['D', 'D#'] },
+        3: { 1: ['C', 'C#'], 2: ['C#', 'D'], 3: ['D', 'D#'], 4: ['E', 'F'] },
+      },
+      D: {
+        1: { 1: ['E♭', 'E'], 2: ['F', 'F#'], 3: ['G', 'G#'], 4: ['A'] },
+        2: { 1: ['F', 'F#'], 2: ['F#', 'G'], 3: ['G', 'G#'], 4: ['A', 'A#'] },
+        3: { 1: ['G', 'G#'], 2: ['G#', 'A'], 3: ['A', 'A#'], 4: ['B', 'C'] },
+      },
+      A: {
+        1: { 1: ['B♭', 'B'], 2: ['C', 'C#'], 3: ['D', 'D#'], 4: ['E'] },
+        2: { 1: ['C', 'C#'], 2: ['C#', 'D'], 3: ['D', 'D#'], 4: ['E', 'F'] },
+        3: { 1: ['D', 'D#'], 2: ['D#', 'E'], 3: ['E', 'F'], 4: ['G', 'G#'] },
+      },
+      E: {
+        1: { 1: ['F', 'F#'], 2: ['G', 'G#'], 3: ['A', 'A#'], 4: ['B'] },
+        2: { 1: ['G', 'G#'], 2: ['G#', 'A'], 3: ['A', 'A#'], 4: ['B', 'C'] },
+        3: { 1: ['A', 'A#'], 2: ['A#', 'B'], 3: ['B', 'C'], 4: ['C#', 'D'] },
+      },
+    };
+
+    const STRINGS = ['G', 'D', 'A', 'E'];
+    const POSITIONS = ['1', '2', '3'];
+    const FINGERS = ['1', '2', '3', '4'];
+
+    /* =========================
+       Helpers & Persistence
+       ========================= */
+    const shuffle = (arr) => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    const ALL_NOTES_UNIQUE = (() => {
+      const set = new Set();
+      STRINGS.forEach(s =>
+        POSITIONS.forEach(p =>
+          FINGERS.forEach(f => NOTES_DATA[s][p][f].forEach(n => set.add(n)))
+        )
+      );
+      return [...set];
+    })();
+
+    const getRandomDistractors = (excludeSet, count = 3) => {
+      const pool = ALL_NOTES_UNIQUE.filter(n => !excludeSet.has(n));
+      const picks = new Set();
+      while (picks.size < Math.min(count, pool.length)) {
+        picks.add(pool[Math.floor(Math.random() * pool.length)]);
+      }
+      return [...picks];
+    };
+
+    const variantHint = (finger, valid) => {
+      if (!valid || valid.length !== 2) return null;
+      const hasFlat = (x) => x.includes('♭');
+      const hasSharp = (x) => x.includes('#');
+      const isNat = (x) => !hasFlat(x) && !hasSharp(x);
+      const [a, b] = valid;
+      const lowHighPair =
+        (hasFlat(a) && isNat(b)) || (hasFlat(b) && isNat(a)) ||
+        (isNat(a) && hasSharp(b)) || (isNat(b) && hasSharp(a));
+      return lowHighPair ? `Finger variant hint: low ${finger} / high ${finger}` : null;
+    };
+
+    const BEST_KEY = 'positionsQuest.speed.best';
+    const STATS_KEY = 'positionsQuest.speed.stats';
+    const PREFS_KEY = 'positionsQuest.prefs';
+    const PRESETS_KEY = 'positionsQuest.filterPresets.v1';
+    const SESSIONLOG_KEY = 'positionsQuest.sessions.v1';
+
+    const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore: 0, bestStreak: 0 }; } catch { return { bestScore: 0, bestStreak: 0 }; } };
+    const saveBest = (obj) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(obj)); } catch {} };
+
+    const loadStats = () => { try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; } catch { return {}; } };
+    const saveStats = (obj) => { try { localStorage.setItem(STATS_KEY, JSON.stringify(obj)); } catch {} };
+
+    const defaultFilters = {
+      strings: Object.fromEntries(STRINGS.map(s => [s, true])),
+      positions: Object.fromEntries(POSITIONS.map(p => [p, true])),
+      fingers: Object.fromEntries(FINGERS.map(f => [f, true])),
+    };
+    const loadPrefs = () => {
+      try {
+        const p = JSON.parse(localStorage.getItem(PREFS_KEY));
+        return {
+          sound: true,
+          confetti: true,
+          adaptive: true,
+          coach: true,
+          coachRetry: true,
+          callouts: false,
+          roundLen: 120,
+          goalEnabled: false,
+          goalTarget: 10,
+          filters: { ...defaultFilters, ...(p?.filters || {}) },
+          ...(p || {})
+        };
+      } catch {
+        return {
+          sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
+          callouts: false, roundLen: 120, goalEnabled: false, goalTarget: 10, filters: defaultFilters
+        };
+      }
+    };
+    const savePrefs = (obj) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {} };
+
+    const loadPresets = () => {
+      try {
+        const p = JSON.parse(localStorage.getItem(PRESETS_KEY));
+        if (p) return p;
+      } catch {}
+      const seeded = [
+        { id: 'f1', name: 'F1 Drills (Low-1 focus)', filters: { strings: {...defaultFilters.strings}, positions: {...defaultFilters.positions}, fingers: { '1': true, '2': false, '3': false, '4': false } } },
+        { id: 'pos2da', name: 'All Pos-2 on D/A', filters: { strings: { G:false, D:true, A:true, E:false }, positions: { '1': false, '2': true, '3': false }, fingers: {...defaultFilters.fingers} } },
+      ];
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(seeded));
+      return seeded;
+    };
+    const savePresets = (list) => { try { localStorage.setItem(PRESETS_KEY, JSON.stringify(list)); } catch {} };
+
+    const loadSessions = () => { try { return JSON.parse(localStorage.getItem(SESSIONLOG_KEY)) || []; } catch { return []; } };
+    const saveSessions = (arr) => { try { localStorage.setItem(SESSIONLOG_KEY, JSON.stringify(arr)); } catch {} };
+
+    /* =========================
+       Confetti + Audio
+       ========================= */
+    const ConfettiBurst = ({ seed }) => {
+      const [pieces, setPieces] = useState([]);
+      useEffect(() => {
+        if (!seed) return;
+        const EMOJI = ['✨','🎉','🎊','⭐','💥','🌟'];
+        const n = 26;
+        const arr = Array.from({ length: n }, (_, i) => ({
+          id: i,
+          left: Math.random() * 100,
+          rot: (Math.random() * 40) - 20,
+          delay: Math.random() * 100,
+          emoji: EMOJI[Math.floor(Math.random() * EMOJI.length)],
+        }));
+        setPieces(arr);
+        const t = setTimeout(() => setPieces([]), 900);
+        return () => clearTimeout(t);
+      }, [seed]);
+      if (!pieces.length) return null;
+      return (
+        <div className="pointer-events-none fixed inset-0 overflow-hidden z-50">
+          {pieces.map(p => (
+            <span
+              key={p.id}
+              style={{
+                position: 'absolute',
+                left: `${p.left}vw`,
+                top: '-10px',
+                transform: `rotate(${p.rot}deg)`,
+                animation: `fall 0.9s ease-in forwards`,
+                animationDelay: `${p.delay}ms`,
+                fontSize: '20px',
+              }}
+            >
+              {p.emoji}
+            </span>
+          ))}
+          <style>{`@keyframes fall { to { transform: translateY(110vh); opacity: 0.6; } }`}</style>
+        </div>
+      );
+    };
+
+    const useBeeps = (enabled) => {
+      const ctxRef = useRef(null);
+      const ensureCtx = () => {
+        if (!enabled) return null;
+        if (!ctxRef.current) ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        return ctxRef.current;
+      };
+      const beep = (freq = 880, dur = 0.08, type = 'sine') => {
+        const ctx = ensureCtx(); if (!ctx) return;
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = type; o.frequency.value = freq;
+        g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination);
+        o.start(); setTimeout(() => { o.stop(); }, dur * 1000);
+      };
+      return { good: () => beep(1046, 0.09, 'triangle'), bad: () => beep(196, 0.12, 'sawtooth') };
+    };
+
+    const useCallouts = (enabled) => {
+      const speak = (text) => {
+        if (!enabled || typeof window === 'undefined' || !window.speechSynthesis) return;
+        try {
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'en-US';
+          u.rate = 1.0;
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(u);
+        } catch {}
+      };
+      return { speak };
+    };
+
+    /* =========================
+       Tempo Trainer
+       ========================= */
+    const TEMPI = [
+      { it:"Prestissimo", en:"super fast" },
+      { it:"Presto",      en:"very fast" },
+      { it:"Allegro",     en:"fast, happy" },
+      { it:"Allegretto",  en:"fairly brisk" },
+      { it:"Andante",     en:"walking speed" },
+      { it:"Andantino",   en:"little walking (near Andante)" },
+      { it:"Adagio",      en:"slow, at ease" },
+      { it:"Largo",       en:"broad, slow" },
+      { it:"Lento",       en:"very slow" },
+    ];
+
+    const TempoTrainer = ({ onBack }) => {
+      const [i, setI] = useState(0);
+      const [show, setShow] = useState(false);
+      const next = () => { setShow(false); setI((i+1)%TEMPI.length); };
+
+      const buildQ = () => {
+        const correct = TEMPI[i];
+        const others = shuffle(TEMPI.filter((_,idx)=>idx!==i)).slice(0,3);
+        const options = shuffle([correct, ...others]);
+        return { term: correct.it, correct: correct.en, options: options.map(o=>o.en) };
+      };
+      const q = buildQ();
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow p-6 w-full max-w-xl">
+            <h2 className="text-2xl font-bold text-purple-700 mb-3">Tempo Trainer</h2>
+            <div className="border rounded p-4 text-center">
+              <div className="text-xl font-bold mb-2">{q.term}</div>
+              {show ? (
+                <div className="text-green-700 font-semibold">{q.correct}</div>
+              ) : (
+                <div className="flex flex-col gap-2 items-center">
+                  {q.options.map((opt,idx)=>(
+                    <ActionButton key={idx} onClick={()=>setShow(true)} className="bg-blue-600 hover:bg-blue-700">{opt}</ActionButton>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-3 flex gap-2 justify-center">
+              <ActionButton onClick={()=>setShow(true)} className="bg-emerald-600 hover:bg-emerald-700">Reveal</ActionButton>
+              <ActionButton onClick={next} className="bg-purple-600 hover:bg-purple-700">Next</ActionButton>
+            </div>
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    /* =========================
+       Accuracy Heatmap
+       ========================= */
+    const tileColor = (total, acc) => {
+      if (!total) return 'rgba(120,120,120,0.18)';
+      const hue = 140 * acc;
+      const sat = 0.85, light = 0.45 + 0.1 * acc;
+      return `hsl(${hue}deg ${sat*100}% ${light*100}%)`;
+    };
+
+    const AccuracyHeatmap = ({ stats }) => {
+      return (
+        <div className="w-full max-w-5xl bg-white rounded-lg shadow p-4 mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Accuracy Heatmap</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {STRINGS.map(s => (
+              <div key={s} className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-100 px-3 py-2 font-semibold">{s} string</div>
+                <div className="p-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {POSITIONS.map(p => (
+                      <div key={p} className="rounded-md border">
+                        <div className="text-xs text-gray-600 px-2 py-1 border-b">Pos {p}</div>
+                        <div className="grid grid-cols-2 gap-1 p-2">
+                          {FINGERS.map(f => {
+                            const k = `${s}:${p}:${f}`;
+                            const st = stats[k] || { correct: 0, total: 0 };
+                            const acc = st.total ? st.correct / st.total : 0;
+                            const bg = tileColor(st.total, acc);
+                            return (
+                              <div key={f} className="rounded p-2 text-center text-xs font-semibold"
+                                   title={`${s} Pos ${p} F${f} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}
+                                   style={{ background: bg }}>
+                                F{f}<br/>{st.total ? `${Math.round(acc*100)}%` : '—'}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Tip: Gray = unseen, red = needs work, green = strong.</p>
+        </div>
+      );
+    };
+
+    /* =========================
+       Filters Panel + Presets
+       ========================= */
+    const FiltersPanel = ({ prefs, setPrefs, onResetStats, onExportCSV, best, presets, setPresets }) => {
+      const f = prefs.filters;
+      const [newPresetName, setNewPresetName] = useState('');
+
+      const toggleGroup = (group, key) => {
+        setPrefs(p => {
+          const next = { ...p, filters: { ...p.filters, [group]: { ...p.filters[group], [key]: !p.filters[group][key] } } };
+          savePrefs(next); return next;
+        });
+      };
+
+      const setAll = (group, value) => {
+        setPrefs(p => {
+          const obj = Object.fromEntries(Object.keys(p.filters[group]).map(k => [k, value]));
+          const next = { ...p, filters: { ...p.filters, [group]: obj } };
+          savePrefs(next); return next;
+        });
+      };
+
+      const saveCurrentAsPreset = () => {
+        if (!newPresetName.trim()) return;
+        const id = `user_${Date.now()}`;
+        const next = [...presets, { id, name: newPresetName.trim(), filters: JSON.parse(JSON.stringify(prefs.filters)) }];
+        setPresets(next); savePresets(next); setNewPresetName('');
+      };
+      const applyPreset = (id) => {
+        const p = presets.find(x => x.id === id);
+        if (!p) return;
+        setPrefs(prev => { const n = { ...prev, filters: JSON.parse(JSON.stringify(p.filters)) }; savePrefs(n); return n; });
+      };
+      const deletePreset = (id) => {
+        const next = presets.filter(x => x.id !== id);
+        setPresets(next); savePresets(next);
+      };
+
+      return (
+        <div className="w-full max-w-5xl bg-white rounded-lg shadow p-4 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm text-gray-700">
+              Best Score: <b>{best.bestScore}</b> · Best Streak: <b>{best.bestStreak}</b>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Toggle label="Adaptive" checked={prefs.adaptive} onChange={v => { const n={...prefs, adaptive:v}; setPrefs(n); savePrefs(n);} } />
+              <Toggle label="Coach" checked={prefs.coach} onChange={v => { const n={...prefs, coach:v}; setPrefs(n); savePrefs(n);} } />
+              <Toggle label="Retry after miss" checked={!!prefs.coachRetry} onChange={v => { const n={...prefs, coachRetry:v}; setPrefs(n); savePrefs(n);} } />
+              <Toggle label="Sound" checked={prefs.sound} onChange={v => { const n={...prefs, sound:v}; setPrefs(n); savePrefs(n);} } />
+              <Toggle label="Confetti" checked={prefs.confetti} onChange={v => { const n={...prefs, confetti:v}; setPrefs(n); savePrefs(n);} } />
+              <Toggle label="Audio call-outs" checked={prefs.callouts} onChange={v => { const n={...prefs, callouts:v}; setPrefs(n); savePrefs(n);} } />
+              <div className="flex items-center gap-2 text-sm">
+                <label>Round:</label>
+                <select
+                  value={prefs.roundLen}
+                  onChange={e => { const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n);} }
+                  className="border rounded p-1"
+                >
+                  {[30,60,120,180].map(x=> <option key={x} value={x}>{x}s</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Toggle label="Goal" checked={prefs.goalEnabled} onChange={v => { const n={...prefs, goalEnabled:v}; setPrefs(n); savePrefs(n);} } />
+                <input type="number" min="1" max="100" className="border rounded p-1 w-16"
+                  value={prefs.goalTarget}
+                  onChange={e => { const n={...prefs, goalTarget:Number(e.target.value)}; setPrefs(n); savePrefs(n);} } />
+                <span className="text-xs text-gray-500">correct answers</span>
+              </div>
+              <ActionButton onClick={onResetStats} className="bg-rose-600 hover:bg-rose-700">Reset Stats</ActionButton>
+              <ActionButton onClick={onExportCSV} className="bg-emerald-600 hover:bg-emerald-700" title="Export CSV of training stats">Export CSV</ActionButton>
+            </div>
+          </div>
+
+          {/* Presets */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold">Filter Presets</h4>
+              <div className="flex items-center gap-2">
+                <input value={newPresetName} onChange={e=>setNewPresetName(e.target.value)} placeholder="Preset name…" className="border rounded p-1" />
+                <ActionButton onClick={saveCurrentAsPreset} className="bg-blue-600 hover:bg-blue-700">Save Preset</ActionButton>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {presets.map(pr => (
+                <div key={pr.id} className="border rounded p-2 flex items-center justify-between">
+                  <div className="text-sm">{pr.name}</div>
+                  <div className="flex gap-2">
+                    <ActionButton onClick={()=>applyPreset(pr.id)} className="bg-purple-600 hover:bg-purple-700">Apply</ActionButton>
+                    {pr.id.startsWith('user_') && (
+                      <ActionButton onClick={()=>deletePreset(pr.id)} className="bg-gray-600 hover:bg-gray-700">Delete</ActionButton>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="mt-4 grid md:grid-cols-3 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">Strings</h4>
+                <div className="text-xs">
+                  <button className="underline mr-2" onClick={() => setAll('strings', true)}>All</button>
+                  <button className="underline" onClick={() => setAll('strings', false)}>None</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {STRINGS.map(s => (
+                  <button key={s} onClick={() => toggleGroup('strings', s)}
+                    className={`px-3 py-1 rounded-full text-sm border ${f.strings[s] ? 'bg-purple-600 text-white border-purple-700' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">Positions</h4>
+                <div className="text-xs">
+                  <button className="underline mr-2" onClick={() => setAll('positions', true)}>All</button>
+                  <button className="underline" onClick={() => setAll('positions', false)}>None</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {POSITIONS.map(p => (
+                  <button key={p} onClick={() => toggleGroup('positions', p)}
+                    className={`px-3 py-1 rounded-full text-sm border ${f.positions[p] ? 'bg-purple-600 text-white border-purple-700' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                    Pos {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold">Fingers</h4>
+                <div className="text-xs">
+                  <button className="underline mr-2" onClick={() => setAll('fingers', true)}>All</button>
+                  <button className="underline" onClick={() => setAll('fingers', false)}>None</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {FINGERS.map(fn => (
+                  <button key={fn} onClick={() => toggleGroup('fingers', fn)}
+                    className={`px-3 py-1 rounded-full text-sm border ${f.fingers[fn] ? 'bg-purple-600 text-white border-purple-700' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                    F{fn}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-500 mt-3">Focus Mode pulls questions only from your selected subset (falls back to all if deselected).</p>
+        </div>
+      );
+    };
+
+    /* =========================
+       Bingo
+       ========================= */
+    const BingoBoard = ({ onBack, markFlag }) => {
+      const baseTasks = useMemo(() => [
+        "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–3","Sight-read in Pos 2",
+        "G-string Pos 1 quiz","C major in Pos 2 aloud","Find 3 ways to play D","E-string Pos 3 quiz","Slur → up-bow staccato",
+        "Name all Cs Pos 1–3", /* center FREE */ "D major in Pos 3 aloud","Echo dynamics on repeat","Open A & D ring check",
+        "A-string Pos 3 quiz","List all F#s Pos 1–3","Gigue pickup (up-bow)","Martelé ×8 bars","Map staff lines → fingers",
+        "D-string Pos 2 quiz","All G notes Pos 1–3","Slow spiccato ×8 bars","Name F1–F4 on E Pos 1","Record 30s and review"
+      ], []);
+      const makeBoard = () => {
+        const grid = shuffle(baseTasks).slice(0, 24);
+        grid.splice(12, 0, 'FREE');
+        return grid;
+      };
+      const [challenges, setChallenges] = useState(makeBoard);
+      const [boardState, setBoardState] = useState(() => {
+        const obj = {}; challenges.forEach(t => obj[t] = (t === 'FREE')); return obj;
+      });
+      const checkedCount = Object.values(boardState).filter(Boolean).length;
+
+      const reshuffle = () => {
+        const next = makeBoard(); setChallenges(next);
+        const obj = {}; next.forEach(t => obj[t] = (t === 'FREE')); setBoardState(obj);
+      };
+
+      const toggleSquare = (task) => { if (task !== 'FREE') setBoardState(s => ({ ...s, [task]: !s[task] })); };
+
+      useEffect(() => {
+        const onKey = (e) => { if (e.key.toLowerCase() === 'r') reshuffle(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, []);
+
+      const hasBingo = useMemo(() => {
+        const get = (r, c) => boardState[challenges[r * 5 + c]];
+        for (let r = 0; r < 5; r++) if ([0,1,2,3,4].every(c => get(r,c))) return true;
+        for (let c = 0; c < 5; c++) if ([0,1,2,3,4].every(r => get(r,c))) return true;
+        if ([0,1,2,3,4].every(i => get(i,i))) return true;
+        if ([0,1,2,3,4].every(i => get(i,4-i))) return true;
+        return false;
+      }, [boardState, challenges]);
+
+      useEffect(() => {
+        if (hasBingo) markFlag && markFlag('bingoBlackout', true);
+      }, [hasBingo, markFlag]);
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-3xl">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-3xl font-bold text-purple-700 font-inter">Positions Bingo</h2>
+              <ActionButton onClick={reshuffle} className="bg-purple-600 hover:bg-purple-700" title="R">New Board</ActionButton>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">Checked: {checkedCount}/25 {hasBingo && <span className="text-green-600 font-semibold">· BINGO! 🎉</span>}</p>
+            <div className="grid grid-cols-5 gap-2">
+              {challenges.map((task, i) => (
+                <button
+                  key={i}
+                  onClick={() => toggleSquare(task)}
+                  className={`p-2 text-center text-xs sm:text-sm md:text-base border-2 rounded-lg h-20 md:h-24 transition-colors ${
+                    boardState[task] ? 'bg-green-500 text-white border-green-700' : 'bg-gray-200 text-gray-800 border-gray-300'
+                  } ${task === 'FREE' ? 'font-bold' : ''}`}
+                  aria-pressed={!!boardState[task]}
+                >
+                  {task}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    /* =========================
+       Seybold Hub
+       ========================= */
+    const LS_SEYBOLD = "seybold.hub.v1";
+    const loadSeybold = () => {
+      try { return JSON.parse(localStorage.getItem(LS_SEYBOLD)) || {
+        week: { when:"", positionVolume:"", focusEtudes:"" },
+        days: {}, intervalLogs: [], bowLogs: [], reflections: [],
+        mastery: { pos1:0, pos2:0, pos3:0 },
+        counters: { scaleSprints:0, upbeatStarts:0, bowControl:0, sightSessions:0 },
+        flags: {}
+      }; } catch { return null; }
+    };
+    const saveSeybold = (x) => { try { localStorage.setItem(LS_SEYBOLD, JSON.stringify(x)); } catch {} };
+
+    const SeyboldHub = ({ onBack }) => {
+      const [state, setState] = useState(loadSeybold() || {});
+      useEffect(() => saveSeybold(state), [state]);
+
+      const setWeek = (k,v) => setState(s => ({ ...s, week: { ...s.week, [k]: v }}));
+      const updateDay = (d, patch) => setState(s => ({ ...s, days: { ...s.days, [d]: { ...(s.days[d]||{}), ...patch } } }));
+      const addIntervalLog = (obj) => setState(s => ({ ...s, intervalLogs:[{...obj, date:new Date().toISOString()}, ...s.intervalLogs] }));
+      const addBowLog = (obj) => setState(s => ({ ...s, bowLogs:[{...obj, date:new Date().toISOString()}, ...s.bowLogs] }));
+      const addReflection = (obj) => setState(s => ({ ...s, reflections:[{...obj, date:new Date().toISOString()}, ...s.reflections] }));
+      const bumpMastery = (pos, n=1) => setState(s => ({ ...s, mastery:{ ...s.mastery, [pos]: (s.mastery[pos]||0)+n }}));
+
+      useEffect(() => {
+        const dates = Object.keys(state.days).sort().slice(-7);
+        const seven = dates.length===7 && dates.every(d => (state.days[d]?.points||0)>0);
+        if (seven && !state.flags.practiceStreak7) setState(s => ({ ...s, flags:{...s.flags, practiceStreak7:true} }));
+      }, [state.days]);
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="w-full max-w-5xl space-y-6">
+            <div className="bg-white rounded-xl shadow p-6">
+              <h2 className="text-2xl font-bold text-purple-700 mb-3">Seybold Hub</h2>
+              <div className="grid md:grid-cols-3 gap-3">
+                <input className="border rounded p-2" placeholder="Week of…" value={state.week.when} onChange={e=>setWeek('when', e.target.value)}/>
+                <input className="border rounded p-2" placeholder="Current Position/Volume…" value={state.week.positionVolume} onChange={e=>setWeek('positionVolume', e.target.value)}/>
+                <input className="border rounded p-2" placeholder="Focus Etudes…" value={state.week.focusEtudes} onChange={e=>setWeek('focusEtudes', e.target.value)}/>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-semibold mb-2">Daily Checklist</h3>
+              <DayChecklistTable days={state.days} onChange={updateDay}/>
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-semibold mb-2">Interval & Position Discovery Log</h3>
+              <IntervalLog onAdd={addIntervalLog} items={state.intervalLogs}/>
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-semibold mb-2">Bow Stroke Application Log</h3>
+              <BowLog onAdd={addBowLog} items={state.bowLogs}/>
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-semibold mb-2">Weekly Reflection</h3>
+              <WeeklyReflection onAdd={addReflection} items={state.reflections}/>
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-semibold mb-2">Master Chart — Positions</h3>
+              <MasterChart mastery={state.mastery} onBump={bumpMastery}/>
+            </div>
+          </div>
+
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    const DayChecklistTable = ({ days, onChange }) => {
+      const todayISO = new Date().toISOString().slice(0,10);
+      const row = (d) => days[d] || {};
+      const set = (d,k,v) => onChange(d, { [k]: v });
+
+      const addDay = () => onChange(todayISO, row(todayISO));
+      const keys = Object.keys(days).sort();
+
+      return (
+        <>
+          <div className="mb-3">
+            <ActionButton onClick={addDay} className="bg-emerald-600 hover:bg-emerald-700">Add Today</ActionButton>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead><tr className="text-left">
+                <th className="p-2">Date</th><th className="p-2">Etude #</th><th className="p-2">Bowing</th><th className="p-2">Intervals?</th><th className="p-2">Shift/Frame?</th><th className="p-2">Reflection</th><th className="p-2">Points (0–5)</th>
+              </tr></thead>
+              <tbody>
+                {keys.map(d => (
+                  <tr key={d} className="border-t">
+                    <td className="p-2">{d}</td>
+                    <td className="p-2"><input className="border rounded p-1 w-24" value={row(d).etude||""} onChange={e=>set(d,'etude',e.target.value)}/></td>
+                    <td className="p-2"><input className="border rounded p-1 w-32" value={row(d).bowing||""} onChange={e=>set(d,'bowing',e.target.value)}/></td>
+                    <td className="p-2"><input type="checkbox" checked={!!row(d).intervals} onChange={e=>set(d,'intervals',e.target.checked)}/></td>
+                    <td className="p-2"><input type="checkbox" checked={!!row(d).shift} onChange={e=>set(d,'shift',e.target.checked)}/></td>
+                    <td className="p-2"><input className="border rounded p-1 w-56" value={row(d).reflection||""} onChange={e=>set(d,'reflection',e.target.value)}/></td>
+                    <td className="p-2"><input type="number" min="0" max="5" className="border rounded p-1 w-16" value={row(d).points||0} onChange={e=>set(d,'points',Number(e.target.value))}/></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      );
+    };
+
+    const IntervalLog = ({ onAdd, items }) => {
+      const [f, setF] = useState({ etude:"", volume:"", intervals:"", positions:"", crossings:"" });
+      const add = () => { onAdd(f); setF({ etude:"", volume:"", intervals:"", positions:"", crossings:"" }); };
+      return (
+        <>
+          <div className="grid md:grid-cols-5 gap-2">
+            <input className="border p-2 rounded" placeholder="Etude #" value={f.etude} onChange={e=>setF({...f,etude:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Volume" value={f.volume} onChange={e=>setF({...f,volume:e.target.value})}/>
+            <input className="border p-2 rounded md:col-span-2" placeholder="Intervals (plan)" value={f.intervals} onChange={e=>setF({...f,intervals:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Positions + crossings" value={f.positions} onChange={e=>setF({...f,positions:e.target.value})}/>
+          </div>
+          <div className="mt-2"><ActionButton onClick={add} className="bg-blue-600 hover:bg-blue-700">Add</ActionButton></div>
+          <ul className="mt-3 text-sm text-gray-700 space-y-1">
+            {items.map((it,i)=>(<li key={i} className="border-b pb-1">{it.date.slice(0,10)} — Etude {it.etude} (Vol {it.volume}): {it.intervals} · {it.positions}</li>))}
+          </ul>
+        </>
+      );
+    };
+
+    const BowLog = ({ onAdd, items }) => {
+      const [f, setF] = useState({ etude:"", volume:"", stroke:"Detache", notes:"" });
+      const add = () => { onAdd(f); setF({ etude:"", volume:"", stroke:"Detache", notes:"" }); };
+      return (
+        <>
+          <div className="grid md:grid-cols-5 gap-2">
+            <input className="border p-2 rounded" placeholder="Etude #" value={f.etude} onChange={e=>setF({...f,etude:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Volume" value={f.volume} onChange={e=>setF({...f,volume:e.target.value})}/>
+            <select className="border p-2 rounded" value={f.stroke} onChange={e=>setF({...f,stroke:e.target.value})}>
+              {["Detache","Martele","Colle","Spiccato","Legato","Slur → up-bow staccato"].map(x=><option key={x}>{x}</option>)}
+            </select>
+            <input className="border p-2 rounded md:col-span-2" placeholder="Notes…" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/>
+          </div>
+          <div className="mt-2"><ActionButton onClick={add} className="bg-blue-600 hover:bg-blue-700">Add</ActionButton></div>
+          <ul className="mt-3 text-sm text-gray-700 space-y-1">
+            {items.map((it,i)=>(<li key={i} className="border-b pb-1">{it.date.slice(0,10)} — Etude {it.etude} (Vol {it.volume}): {it.stroke} · {it.notes}</li>))}
+          </ul>
+        </>
+      );
+    };
+
+    const WeeklyReflection = ({ onAdd, items }) => {
+      const [f, setF] = useState({ best:"", challenge:"", interval:"", bow:"", tone:"", goal:"" });
+      const add = () => { onAdd(f); setF({ best:"", challenge:"", interval:"", bow:"", tone:"", goal:"" }); };
+      return (
+        <>
+          <div className="grid md:grid-cols-3 gap-2">
+            <input className="border p-2 rounded" placeholder="Best improvement…" value={f.best} onChange={e=>setF({...f,best:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Biggest challenge…" value={f.challenge} onChange={e=>setF({...f,challenge:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Interval I improved…" value={f.interval} onChange={e=>setF({...f,interval:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Bow stroke needs work…" value={f.bow} onChange={e=>setF({...f,bow:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Sound/tone change…" value={f.tone} onChange={e=>setF({...f,tone:e.target.value})}/>
+            <input className="border p-2 rounded" placeholder="Goal for next week…" value={f.goal} onChange={e=>setF({...f,goal:e.target.value})}/>
+          </div>
+          <div className="mt-2"><ActionButton onClick={add} className="bg-blue-600 hover:bg-blue-700">Save Reflection</ActionButton></div>
+          <ul className="mt-3 text-sm text-gray-700 space-y-1">
+            {items.map((it,i)=>(<li key={i} className="border-b pb-1">{it.date.slice(0,10)} — Best: {it.best} | Challenge: {it.challenge} | Goal: {it.goal}</li>))}
+          </ul>
+        </>
+      );
+    };
+
+    const MasterChart = ({ mastery, onBump }) => {
+      const row = (label, posKey, target) => (
+        <tr className="border-t">
+          <td className="p-2">{label}</td>
+          <td className="p-2">{mastery[posKey]||0} / {target}</td>
+          <td className="p-2"><ActionButton onClick={()=>onBump(posKey,1)} className="bg-emerald-600 hover:bg-emerald-700">+1 completed</ActionButton></td>
+        </tr>
+      );
+      return (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead><tr className="text-left"><th className="p-2">Position</th><th className="p-2"># Etudes Complete</th><th className="p-2">Action</th></tr></thead>
+            <tbody>
+              {row("Pos 1", "pos1", 8)}
+              {row("Pos 2", "pos2", 8)}
+              {row("Pos 3", "pos3", 6)}
+            </tbody>
+          </table>
+        </div>
+      );
+    };
+
+    /* =========================
+       Scoreboard + Badges
+       ========================= */
+    const BADGES = [
+      { id:"pos1", name:"Position Pro I", desc:"Position 1 master" },
+      { id:"pos2", name:"Position Pro II", desc:"Position 2 master" },
+      { id:"pos3", name:"Position Pro III", desc:"Position 3 master" },
+      { id:"scale", name:"Scale Sprinter", desc:"2-octave sprints" },
+      { id:"upbeat", name:"Upbeat Ace", desc:"clean landings" },
+      { id:"bow", name:"Bow Ninja", desc:"contact-point control" },
+      { id:"sight", name:"Sight-Reading Scout" },
+      { id:"bingo", name:"Bingo Blackout" },
+      { id:"boss1", name:"Boss Fighter I" },
+      { id:"boss2", name:"Boss Fighter II" },
+      { id:"boss3", name:"Boss Fighter III" },
+      { id:"streak7", name:"Practice Streak", desc:"7 days" },
+    ];
+    const BADGE_RULES = {
+      pos1: (state) => state.mastery.pos1 >= 8,
+      pos2: (state) => state.mastery.pos2 >= 8,
+      pos3: (state) => state.mastery.pos3 >= 6,
+      scale: (state) => (state.counters.scaleSprints || 0) >= 10,
+      upbeat: (state) => (state.counters.upbeatStarts || 0) >= 20,
+      bow: (state) => (state.counters.bowControl || 0) >= 30,
+      sight: (state) => (state.counters.sightSessions || 0) >= 10,
+      bingo: (state) => !!state.flags.bingoBlackout,
+      boss1: (state) => !!state.flags.boss1Clear,
+      boss2: (state) => !!state.flags.boss2Clear,
+      boss3: (state) => !!state.flags.boss3Clear,
+      streak7: (state) => (state.flags.practiceStreak7 || false),
+    };
+
+    const LS_SCORE = "positions.scoreboard.v1";
+    const LS_BADGES = "positions.badges.v1";
+    const loadScore = () => { try { return JSON.parse(localStorage.getItem(LS_SCORE)) || []; } catch { return []; } };
+    const saveScore = (x) => { try { localStorage.setItem(LS_SCORE, JSON.stringify(x)); } catch {} };
+    const loadBadges = () => { try { return JSON.parse(localStorage.getItem(LS_BADGES)) || {}; } catch { return {}; } };
+    const saveBadges = (x) => { try { localStorage.setItem(LS_BADGES, JSON.stringify(x)); } catch {} };
+
+    const Scoreboard = ({ onBack, seyboldState }) => {
+      const [rows, setRows] = useState(loadScore());
+      const [earned, setEarned] = useState(loadBadges());
+      useEffect(()=>saveScore(rows),[rows]);
+      useEffect(()=>saveBadges(earned),[earned]);
+
+      const addRow = () => setRows(r => [{date:new Date().toISOString().slice(0,10), pos:"", etudes:"", scale:0, speed:0, locations:0, mini:0, boss:0, comments:""}, ...r]);
+      const total = (r) => [r.scale, r.speed, r.locations, r.mini, r.boss].map(Number).reduce((a,b)=>a+(isNaN(b)?0:b),0);
+
+      useEffect(()=>{
+        const derived = {
+          mastery: seyboldState?.mastery || {pos1:0,pos2:0,pos3:0},
+          counters: seyboldState?.counters || {},
+          flags: { ...(seyboldState?.flags||{}) }
+        };
+        const next = {...earned};
+        BADGES.forEach(b=>{
+          const ok = BADGE_RULES[b.id](derived);
+          if (ok && !next[b.id]) next[b.id] = new Date().toISOString();
+        });
+        setEarned(next);
+      }, [rows, seyboldState]); // eslint disabled in original
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="w-full max-w-5xl space-y-6">
+            <div className="bg-white rounded-xl shadow p-6">
+              <h2 className="text-2xl font-bold text-purple-700 mb-3">Parent / Teacher Scoreboard</h2>
+              <ActionButton onClick={addRow} className="bg-emerald-600 hover:bg-emerald-700">Add Day</ActionButton>
+              <div className="overflow-x-auto mt-3">
+                <table className="min-w-full text-sm">
+                  <thead><tr className="text-left">
+                    <th className="p-2">Date</th><th className="p-2">Pos/String</th><th className="p-2">Seybold Etude(s)</th>
+                    <th className="p-2">Scale Sprint</th><th className="p-2">Flashcards (Speed)</th><th className="p-2">Note→Locations</th><th className="p-2">Mini-game</th><th className="p-2">Boss Fight</th><th className="p-2">Comments</th><th className="p-2">Points</th>
+                  </tr></thead>
+                  <tbody>
+                    {rows.map((r,i)=>(
+                      <tr key={i} className="border-t">
+                        <td className="p-2"><input className="border p-1 rounded w-28" value={r.date} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,date:e.target.value}:y))}/></td>
+                        <td className="p-2"><input className="border p-1 rounded w-24" value={r.pos||""} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,pos:e.target.value}:y))}/></td>
+                        <td className="p-2"><input className="border p-1 rounded w-40" value={r.etudes||""} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,etudes:e.target.value}:y))}/></td>
+                        {["scale","speed","locations","mini","boss"].map(k=>(
+                          <td key={k} className="p-2"><input type="number" min="0" max="5" className="border p-1 rounded w-16" value={r[k]||0} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,[k]:Number(e.target.value)}:y))}/></td>
+                        ))}
+                        <td className="p-2"><input className="border p-1 rounded w-64" value={r.comments||""} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,comments:e.target.value}:y))}/></td>
+                        <td className="p-2 font-bold">{total(r)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-semibold mb-2">Badges</h3>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {BADGES.map(b=>{
+                  const wonAt = earned[b.id];
+                  return (
+                    <div key={b.id} className={`border rounded p-3 ${wonAt?'bg-amber-100':'bg-gray-50'}`}>
+                      <div className="font-semibold">{b.name}</div>
+                      <div className="text-xs text-gray-600">{b.desc||''}</div>
+                      <div className="text-xs mt-1">{wonAt ? `Earned ${wonAt.slice(0,10)}`:"Not yet"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    /* =========================
+       Boss Fights
+       ========================= */
+    const BOSS_KEYS = {
+      BF1: {
+        prompt: "Find two valid locations: G string, Pos 2, F4 AND D string, Pos 3, F2",
+        answers: [
+          { s:"G", p:"2", f:"4" },
+          { s:"D", p:"3", f:"2" },
+        ]
+      },
+      BF2: { prompt: "List all ways to play C-natural using F3 (Positions 1–3)" },
+      BF3: {
+        prompt: "Play D–E–F using only Position 3 (give one valid path)",
+        samplePaths: [
+          "G-only low: D4 → E4 → F4",
+          "A-only mid: D5 → E5 → F5",
+          "Cross: G D4 → A E5 → A F5"
+        ]
+      }
+    };
+
+    const LS_BOSS = "positions.boss.v1";
+    const loadBoss = () => { try { return JSON.parse(localStorage.getItem(LS_BOSS)) || {}; } catch { return {}; } };
+    const saveBoss = (x) => { try { localStorage.setItem(LS_BOSS, JSON.stringify(x)); } catch {} };
+
+    const BossFights = ({ onBack, markFlag }) => {
+      const [state,setState] = useState(loadBoss());
+      useEffect(()=>saveBoss(state),[state]);
+
+      const [bf, setBf] = useState("BF1");
+      const [answer, setAnswer] = useState("");
+
+      const check = () => {
+        const key = BOSS_KEYS[bf];
+        let ok = false;
+
+        if (bf==="BF1") {
+          ok = key.answers.every(a =>
+            new RegExp(`${a.s}`, 'i').test(answer) &&
+            new RegExp(`Pos\\s*${a.p}`, 'i').test(answer) &&
+            new RegExp(`F${a.f}`, 'i').test(answer)
+          );
+          if (ok) setState(s=>({ ...s, BF1:true })), markFlag('boss1Clear',true);
+        }
+        if (bf==="BF2") {
+          ok = /C[^#]|\bC\b/i.test(answer) && /F3/i.test(answer);
+          if (ok) setState(s=>({ ...s, BF2:true })), markFlag('boss2Clear',true);
+        }
+        if (bf==="BF3") {
+          ok = /(D.*E.*F)|(D4.*E4.*F4)|(D5.*E5.*F5)/i.test(answer);
+          if (ok) setState(s=>({ ...s, BF3:true })), markFlag('boss3Clear',true);
+        }
+        alert(ok ? "Boss cleared!": "Not quite—try again.");
+      };
+
+      const key = BOSS_KEYS[bf];
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow p-6 w-full max-w-3xl">
+            <h2 className="text-2xl font-bold text-purple-700 mb-3">Boss Fights</h2>
+            <div className="mb-3">
+              <select className="border p-2 rounded" value={bf} onChange={e=>setBf(e.target.value)}>
+                <option value="BF1">Boss I</option>
+                <option value="BF2">Boss II</option>
+                <option value="BF3">Boss III</option>
+              </select>
+            </div>
+            <p className="font-semibold mb-2">{key.prompt}</p>
+            <textarea className="border rounded w-full p-2 h-24" placeholder="Type your locations/plan…" value={answer} onChange={e=>setAnswer(e.target.value)} />
+            <div className="mt-3 flex gap-2">
+              <ActionButton onClick={check} className="bg-blue-600 hover:bg-blue-700">Check Answer</ActionButton>
+              <ActionButton onClick={onBack} className="bg-gray-600 hover:bg-gray-700">Back</ActionButton>
+            </div>
+
+            {bf==="BF3" && (
+              <div className="mt-4 text-sm text-gray-700">
+                <div className="font-semibold mb-1">Sample valid paths</div>
+                <ul className="list-disc pl-5">
+                  {key.samplePaths.map((p,i)=><li key={i}>{p}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    /* =========================
+       Speed Ladder (with audio unlock hook)
+       ========================= */
+    const SpeedLadderGame = ({ onBack, prefs, setPrefs, stats, setStats }) => {
+      const allCombos = useMemo(() => {
+        const arr = [];
+        STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
+          arr.push({ s, p, f, valid: NOTES_DATA[s][p][f] });
+        })));
+        return arr;
+      }, []);
+
+      const beeps = useBeeps(prefs.sound);
+      const { speak } = useCallouts(prefs.callouts);
+
+      const [question, setQuestion] = useState(null);
+      const [score, setScore] = useState(0);
+      const [answered, setAnswered] = useState(0);
+      const [timer, setTimer] = useState(prefs.roundLen || 120);
+      const [finished, setFinished] = useState(false);
+      const [feedback, setFeedback] = useState(null);
+      const [streak, setStreak] = useState(0);
+      const [bestStreak, setBestStreak] = useState(loadBest().bestStreak);
+      const [bestScore, setBestScore] = useState(loadBest().bestScore);
+      const [roundId, setRoundId] = useState(0);
+      const [qCounter, setQCounter] = useState(0);
+      const [confettiSeed, setConfettiSeed] = useState(0);
+      const [comboHint, setComboHint] = useState(null);
+      const optionsRef = useRef([]);
+      const lastMissRef = useRef(null);
+
+      const [events, setEvents] = useState([]);
+      const [replay, setReplay] = useState(null);
+
+      useEffect(() => { setTimer(prefs.roundLen || 120); }, [prefs.roundLen, roundId]);
+
+      const candidates = useMemo(() => {
+        const f = prefs.filters || {};
+        const okStrings = f.strings || {};
+        const okPos = f.positions || {};
+        const okFingers = f.fingers || {};
+        const sel = allCombos.filter(c => (okStrings[c.s] !== false) && (okPos[c.p] !== false) && (okFingers[c.f] !== false));
+        return sel.length ? sel : allCombos;
+      }, [allCombos, prefs.filters]);
+
+      const weightedPick = () => {
+        if (!prefs.adaptive) return getRandomItem(candidates);
+        const counter = qCounter;
+        const entries = candidates.map(c => {
+          const key = `${c.s}:${c.p}:${c.f}`;
+          const st = stats[key];
+          const total = st?.total ?? 0;
+          const correct = st?.correct ?? 0;
+          const acc = total > 0 ? correct / total : 0;
+          const unseenBoost = total === 0 ? 0.6 : 0;
+          const last = st?.lastSeenIdx ?? -1;
+          const recencyPenalty = last >= 0 ? Math.max(0.65, 1 - Math.max(0, 4 - (counter - last)) * 0.18) : 1;
+          let weight = 0.1 + (1 - acc) + unseenBoost;
+          if (prefs.coach) weight = weight * (1 + (1 - acc));
+          return { combo: c, weight: Math.max(0.05, weight * recencyPenalty) };
+        });
+        if (prefs.coach && prefs.coachRetry && lastMissRef.current) {
+          const idx = entries.findIndex(e => e.combo.s === lastMissRef.current.s && e.combo.p === lastMissRef.current.p && e.combo.f === lastMissRef.current.f);
+          if (idx >= 0) entries[idx].weight *= 2.2;
+        }
+        const sum = entries.reduce((a, e) => a + e.weight, 0) || 1;
+        let r = Math.random() * sum;
+        for (const e of entries) { if ((r -= e.weight) <= 0) return e.combo; }
+        return entries[entries.length - 1].combo;
+      };
+
+      const newQuestion = (presetCombo=null) => {
+        const combo = presetCombo || weightedPick();
+        const correct = getRandomItem(combo.valid);
+        const distractors = getRandomDistractors(new Set([correct]), 3);
+        const options = shuffle([correct, ...distractors]);
+        setQuestion({ ...combo, correct, options });
+        optionsRef.current = options;
+        setComboHint(variantHint(combo.f, combo.valid));
+
+        const key = `${combo.s}:${combo.p}:${combo.f}`;
+        const st = stats[key] || { correct:0, total:0, lastSeenIdx:-1 };
+        const next = { ...stats, [key]: { ...st, lastSeenIdx: qCounter } };
+        setStats(next); saveStats(next);
+        setQCounter(x => x + 1);
+
+        speak(`${combo.s}, position ${combo.p}, finger ${combo.f}. Go!`);
+      };
+
+      useEffect(() => { newQuestion(); }, [roundId, candidates.length]);
+
+      useEffect(() => {
+        if (finished) return;
+        const id = setInterval(() => {
+          setTimer(t => {
+            if (t <= 1) {
+              clearInterval(id);
+              setFinished(true);
+              const bs = Math.max(bestScore, score);
+              const bk = Math.max(bestStreak, streak);
+              setBestScore(bs); setBestStreak(bk); saveBest({ bestScore: bs, bestStreak: bk });
+              return 0;
+            }
+            return t - 1;
+          });
+        }, 1000);
+        return () => clearInterval(id);
+      }, [finished, roundId, score, streak, bestScore, bestStreak]);
+
+      const finishRound = () => {
+        setFinished(true);
+        const bs = Math.max(bestScore, score);
+        const bk = Math.max(bestStreak, streak);
+        setBestScore(bs); setBestStreak(bk); saveBest({ bestScore: bs, bestStreak: bk });
+        const session = { ts: Date.now(), roundLen: prefs.roundLen, events };
+        const all = [session, ...loadSessions()].slice(0, 30);
+        saveSessions(all);
+      };
+
+      const handleAnswer = (note) => {
+        if (finished || !question) return;
+
+        const key = `${question.s}:${question.p}:${question.f}`;
+        const prev = stats[key] || { correct: 0, total: 0, lastSeenIdx: qCounter };
+        const isCorrect = note === question.correct;
+
+        const updated = {
+          ...stats,
+          [key]: { ...prev, total: prev.total + 1, correct: prev.correct + (isCorrect ? 1 : 0) }
+        };
+        setStats(updated); saveStats(updated);
+
+        setEvents(evts => [{ t: Date.now(), s:question.s, p:question.p, f:question.f, correctNote:question.correct, chosen:note, ok:isCorrect }, ...evts]);
+
+        setAnswered(a => a + 1);
+        if (isCorrect) {
+          lastMissRef.current = null;
+          beeps.good();
+          setScore(s => s + 1);
+          setStreak(x => x + 1);
+          if (prefs.confetti) setConfettiSeed(x => x + 1);
+          setFeedback({ ok: true, msg: 'Nice!' });
+          if (prefs.goalEnabled && score + 1 >= prefs.goalTarget) {
+            setTimeout(() => finishRound(), 250);
+            return;
+          }
+        } else {
+          lastMissRef.current = { s: question.s, p: question.p, f: question.f, valid: question.valid };
+          beeps.bad();
+          setStreak(0);
+          const alt = question.valid.length > 1 ? ` (also possible: ${question.valid.join(' or ')})` : '';
+          setFeedback({ ok: false, msg: `Correct: ${question.correct}${alt}` });
+        }
+
+        const delay = prefs.coach ? (isCorrect ? 450 : 1100) : 800;
+        setTimeout(() => {
+          setFeedback(null);
+          if (!isCorrect && prefs.coach && prefs.coachRetry && Math.random() < 0.5) {
+            const miss = lastMissRef.current;
+            if (miss) {
+              const correct = getRandomItem(miss.valid);
+              const distractors = getRandomDistractors(new Set([correct]), 3);
+              const options = shuffle([correct, ...distractors]);
+              setQuestion({ ...miss, correct, options });
+              optionsRef.current = options;
+              setComboHint(variantHint(miss.f, miss.valid));
+              speak(`${miss.s}, position ${miss.p}, finger ${miss.f}. Try again.`);
+              return;
+            }
+          }
+          newQuestion();
+        }, delay);
+      };
+
+      useEffect(() => {
+        const onKey = (e) => {
+          if (finished) return;
+          const k = e.key.toLowerCase();
+          if (['1','2','3','4'].includes(k)) {
+            const idx = Number(k) - 1;
+            const note = optionsRef.current?.[idx];
+            if (note) handleAnswer(note);
+          }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [finished, question]);
+
+      const resetRound = () => {
+        setScore(0); setAnswered(0); setTimer(prefs.roundLen || 120);
+        setFinished(false); setFeedback(null); setStreak(0);
+        setEvents([]); setReplay(null);
+        setRoundId(id => id + 1);
+      };
+
+      const misses = events.filter(e => !e.ok).map(e => ({ s:e.s, p:e.p, f:e.f, valid: NOTES_DATA[e.s][e.p][e.f] }));
+      const startReplay = () => {
+        if (misses.length === 0) return;
+        setReplay(misses);
+        const first = misses[misses.length-1];
+        newQuestion(first);
+        setFinished(false);
+        setScore(0); setAnswered(0); setTimer(0);
+        setEvents([]);
+      };
+
+      const exportSession = () => {
+        const rows = [['time','string','position','finger','correct','chosen','ok']];
+        [...events].reverse().forEach(e => rows.push([new Date(e.t).toISOString(), e.s, e.p, e.f, e.correctNote, e.chosen, e.ok ? '1':'0']));
+        const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'positions_session.csv';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      };
+
+      return (
+        <div className="relative flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <ConfettiBurst seed={confettiSeed} />
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl">
+            <h2 className="text-3xl font-bold text-center text-purple-700 mb-2 font-inter">Speed Ladder</h2>
+
+            <div className="flex flex-col items-center text-sm text-gray-700">
+              <div className="mb-1">
+                Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Best score: <b>{bestScore}</b> · Best streak: <b>{bestStreak}</b>
+              </div>
+              <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
+                <label className="text-xs">Round</label>
+                <select className="border rounded p-1 text-xs" value={prefs.roundLen} onChange={e=>{ const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
+                  {[30,60,120,180].map(x=> <option key={x} value={x}>{x}s</option>)}
+                </select>
+                <label className="text-xs ml-2">Goal</label>
+                <input type="checkbox" checked={prefs.goalEnabled} onChange={e=>{ const n={...prefs, goalEnabled:e.target.checked}; setPrefs(n); savePrefs(n); }}/>
+                <input type="number" min="1" max="100" className="border rounded p-1 w-16 text-xs"
+                  value={prefs.goalTarget} onChange={e=>{ const n={...prefs, goalTarget:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}/>
+                <span className="text-xs text-gray-500">correct</span>
+              </div>
+            </div>
+
+            {finished ? (
+              <div className="text-center">
+                <p className="text-xl font-inter mb-2">Round over! Final score: <b>{score}</b> / {answered}</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <ActionButton onClick={resetRound} className="bg-purple-600 hover:bg-purple-700">Play Again</ActionButton>
+                  <ActionButton onClick={exportSession} className="bg-emerald-600 hover:bg-emerald-700">Export Session</ActionButton>
+                  <ActionButton onClick={startReplay} className="bg-blue-600 hover:bg-blue-700" disabled={misses.length===0}>
+                    Replay Misses ({misses.length})
+                  </ActionButton>
+                </div>
+              </div>
+            ) : question && (
+              <>
+                <div className="text-center mb-6">
+                  <p className="text-2xl font-bold text-gray-800 font-inter">
+                    What note can you play with your <b>{question.f}</b> finger on the <b>{question.s}</b> string in <b>Position {question.p}</b>?
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">Tip: say the map aloud (F1–F4). Press <b>1–4</b> to answer fast.</p>
+                  {comboHint && <p className="text-xs text-amber-700 mt-1">{comboHint}</p>}
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-3">
+                  {question.options.map((note, i) => (
+                    <ActionButton
+                      key={i}
+                      onClick={() => handleAnswer(note)}
+                      className="bg-blue-600 hover:bg-blue-700 text-lg w-36 flex items-center justify-center gap-2"
+                      title={`Press ${i+1}`}
+                    >
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/20 text-sm">{i+1}</span>
+                      <span>{note}</span>
+                    </ActionButton>
+                  ))}
+                </div>
+
+                {feedback && (
+                  <p role="status" aria-live="polite" className={`mt-6 text-center font-inter ${feedback.ok ? 'text-green-600' : 'text-red-600'}`}>
+                    {feedback.msg}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    /* =========================
+       Flashcards
+       ========================= */
+    const allLocationsForNote = (note) => {
+      const spots = [];
+      STRINGS.forEach(s =>
+        POSITIONS.forEach(p =>
+          FINGERS.forEach(f => {
+            if (NOTES_DATA[s][p][f].includes(note)) {
+              spots.push({ s, p, f });
+            }
+          })
+        )
+      );
+      return spots;
+    };
+    const groupLocationsByString = (note) => {
+      const byString = new Map(STRINGS.map(s => [s, []]));
+      for (const loc of allLocationsForNote(note)) byString.get(loc.s).push(loc);
+      const lines = [];
+      for (const s of STRINGS) {
+        const arr = byString.get(s);
+        if (arr && arr.length) {
+          const parts = arr
+            .sort((a, b) => Number(a.p) - Number(b.p) || Number(a.f) - Number(b.f))
+            .map(({ p, f }) => `Pos ${p} (F${f})`);
+          lines.push(`${s}: ${parts.join(', ')}`);
+        }
+      }
+      return lines.join('  |  ');
+    };
+
+    const Flashcards = ({ onBack }) => {
+      const [mode, setMode] = useState('A');
+      const [index, setIndex] = useState(0);
+      const [show, setShow] = useState(false);
+
+      const deckA = useMemo(() => {
+        const cards = [];
+        STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
+          const ans = NOTES_DATA[s][p][f].join(' or ');
+          cards.push({ q: `What note(s) under finger ${f} on ${s} string in Position ${p}?`, a: ans });
+        })));
+        return cards;
+      }, []);
+
+      const deckB = useMemo(() => {
+        const uniq = [...new Set(ALL_NOTES_UNIQUE)].sort();
+        return uniq.map(n => ({ q: `Where can you play ${n} in Positions 1–3?`, a: groupLocationsByString(n) }));
+      }, []);
+
+      const deck = mode === 'A' ? deckA : deckB;
+      const next = () => { setShow(false); setIndex((index + 1) % deck.length); };
+      const prev = () => { setShow(false); setIndex((index - 1 + deck.length) % deck.length); };
+      const reveal = () => setShow(true);
+
+      useEffect(() => {
+        const onKey = (e) => {
+          const k = e.key.toLowerCase();
+          if (k === ' ') { e.preventDefault(); reveal(); }
+          else if (k === 'n') next();
+          else if (k === 'p') prev();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [index, deck, show]);
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl">
+            <h2 className="text-3xl font-bold text-center text-purple-700 mb-4 font-inter">Flashcards</h2>
+            <div className="flex justify-center gap-2 mb-4">
+              <ActionButton onClick={() => { setMode('A'); setIndex(0); setShow(false); }} className={`${mode==='A'?'bg-purple-600 hover:bg-purple-700':'bg-gray-600 hover:bg-gray-700'}`}>Deck A</ActionButton>
+              <ActionButton onClick={() => { setMode('B'); setIndex(0); setShow(false); }} className={`${mode==='B'?'bg-purple-600 hover:bg-purple-700':'bg-gray-600 hover:bg-gray-700'}`}>Deck B</ActionButton>
+            </div>
+            <div className="border-2 border-gray-300 rounded-xl p-6 text-center">
+              <p className="text-xl font-inter text-gray-800 mb-4">{deck[index].q}</p>
+              {show ? (
+                <p className="text-lg font-semibold text-green-700 font-inter whitespace-pre-line">{deck[index].a}</p>
+              ) : (
+                <p className="text-gray-400 italic font-inter">Press Space or tap “Reveal”.</p>
+              )}
+            </div>
+            <div className="flex justify-center gap-3 mt-6">
+              <ActionButton onClick={reveal} className="bg-blue-600 hover:bg-blue-700">Reveal</ActionButton>
+              <ActionButton onClick={prev} className="bg-gray-600 hover:bg-gray-700">Previous</ActionButton>
+              <ActionButton onClick={next} className="bg-purple-600 hover:bg-purple-700">Next</ActionButton>
+            </div>
+            <p className="text-center text-sm text-gray-500 mt-4 font-inter">
+              Card {index + 1} / {deck.length} · Shortcuts: Space (reveal), N (next), P (prev)
+            </p>
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    /* =========================
+       Dashboard
+       ========================= */
+    const Dashboard = ({ go, prefs, setPrefs, stats, setStats, seyboldState }) => {
+      const [best, setBest] = useState(loadBest());
+      const [presets, setPresets] = useState(loadPresets());
+
+      useEffect(() => {
+        const onStorage = () => setBest(loadBest());
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+      }, []);
+
+      const resetAll = () => {
+        localStorage.removeItem(BEST_KEY);
+        localStorage.removeItem(STATS_KEY);
+        setBest({ bestScore: 0, bestStreak: 0 });
+        setStats({});
+      };
+
+      const exportCSV = () => {
+        const rows = [['string','position','finger','correct','total','accuracy']];
+        STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
+          const k = `${s}:${p}:${f}`;
+          const st = stats[k] || { correct:0, total:0 };
+          const acc = st.total ? (st.correct / st.total) : 0;
+          rows.push([s,p,f, String(st.correct), String(st.total), acc.toFixed(4)]);
+        })));
+        const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'positions_training_stats.csv';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      };
+
+      return (
+        <div className="flex flex-col items-center p-4">
+          <AppHeader title="Violin Positions Quest" subtitle="Your daily mission to master the fingerboard!" />
+
+          <FiltersPanel
+            prefs={prefs} setPrefs={setPrefs}
+            onResetStats={resetAll} onExportCSV={exportCSV}
+            best={best} presets={presets} setPresets={setPresets}
+          />
+
+          <AccuracyHeatmap stats={stats} />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+            <GameCard title="Speed Ladder" description="2-minute round (configurable). Adaptive + Coach. Eyes-off call-outs. Replay misses. Shortcuts: 1–4" onClick={() => go('speed')} />
+            <GameCard title="Dice of Destiny" description="Press your luck for a random practice challenge." onClick={() => go('dice')} />
+            <GameCard title="Positions Bingo" description="Fill a line. Center is FREE. Press R to reshuffle." onClick={() => go('bingo')} />
+            <GameCard title="Flashcards Mode" description="Deck A: Direct Hit · Deck B: Note → grouped locations." onClick={() => go('cards')} />
+            <GameCard title="Seybold Hub" description="Weekly checklist, logs, reflections, master chart." onClick={() => go('seybold')} />
+            <GameCard title="Scoreboard & Badges" description="0–5 daily scoring + earned badges." onClick={() => go('scoreboard')} />
+            <GameCard title="Boss Fights I–III" description="Beat the checks to clear bosses." onClick={() => go('boss')} />
+            <GameCard title="Tempo Trainer" description="Prestissimo → Lento glossary & quiz." onClick={() => go('tempo')} />
+          </div>
+        </div>
+      );
+    };
+
+    /* =========================
+       Dice of Destiny
+       ========================= */
+    const DiceOfDestinyGame = ({ onBack }) => {
+      const fullList = useMemo(() => [
+        'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–3',
+        'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 2 aloud','Find 3 ways to play D','E-string Pos 3 quiz',
+        'Slur → up-bow staccato','Name all Cs Pos 1–3','D major in Pos 3 aloud','Echo dynamics on repeat','Open A & D ring check',
+        'A-string Pos 3 quiz','List all F#s Pos 1–3','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 2 quiz',
+      ], []);
+      const [pool, setPool] = useState(fullList);
+      const [challenge, setChallenge] = useState('');
+      const [isRolling, setIsRolling] = useState(false);
+      const [history, setHistory] = useState([]);
+
+      const rollDice = () => {
+        setIsRolling(true);
+        setChallenge('Rolling...');
+        setTimeout(() => {
+          const currentPool = pool.length ? pool : fullList;
+          const pick = getRandomItem(currentPool);
+          setChallenge(pick);
+          setHistory(h => [pick, ...h].slice(0, 6));
+          setPool(currentPool.filter(c => c !== pick));
+          setIsRolling(false);
+        }, 650);
+      };
+
+      const copy = async () => { try { await navigator.clipboard.writeText(challenge); } catch {} };
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl text-center">
+            <h2 className="text-3xl font-bold text-purple-700 mb-4 font-inter">Dice of Destiny</h2>
+            <p className="text-gray-600 font-inter mb-4">Roll for a focused challenge. Avoids repeats until the set cycles.</p>
+            <ActionButton onClick={rollDice} disabled={isRolling} className="bg-green-600 hover:bg-green-700 my-4 text-2xl">
+              {isRolling ? '...' : 'Roll Dice'}
+            </ActionButton>
+            <div className="bg-gray-200 rounded-lg p-4 mt-6">
+              <p className="text-xl font-semibold font-inter text-gray-800">Your Destiny:</p>
+              <p className="text-2xl mt-2 font-bold text-gray-700 font-inter min-h-[3rem]">{challenge || 'Click "Roll Dice" to begin!'}</p>
+              <div className="mt-3">
+                <ActionButton onClick={copy} disabled={!challenge || challenge === 'Rolling...'} className="bg-blue-600 hover:bg-blue-700">Copy</ActionButton>
+              </div>
+            </div>
+            {history.length > 0 && (
+              <div className="mt-6 text-left">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Recent rolls</p>
+                <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                  {history.map((h, i) => <li key={i}>{h}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    /* =========================
+       App
+       ========================= */
+    const App = () => {
+      const [view, setView] = useState('dashboard');
+      const [prefs, setPrefs] = useState(loadPrefs());
+      const [stats, setStats] = useState(loadStats());
+      const [seyboldState, setSeyboldState] = useState(loadSeybold() || {});
+      useEffect(() => { savePrefs(prefs); }, [prefs]);
+      useEffect(() => { saveStats(stats); }, [stats]);
+      useEffect(() => { saveSeybold(seyboldState); }, [seyboldState]);
+
+      const go = (v) => setView(v);
+      const markFlag = (k,v) => setSeyboldState(s=>({ ...s, flags:{ ...(s.flags||{}), [k]:v }}));
+
+      return (
+        <div className="min-h-screen bg-gray-100 font-inter">
+          {view === 'dashboard' && <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} seyboldState={seyboldState} />}
+          {view === 'speed' && <SpeedLadderGame prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} onBack={() => setView('dashboard')} />}
+          {view === 'dice' && <DiceOfDestinyGame onBack={() => setView('dashboard')} />}
+          {view === 'bingo' && <BingoBoard onBack={() => setView('dashboard')} markFlag={markFlag} />}
+          {view === 'cards' && <Flashcards onBack={() => setView('dashboard')} />}
+          {view === 'seybold' && <SeyboldHub onBack={() => setView('dashboard')} />}
+          {view === 'scoreboard' && <Scoreboard seyboldState={seyboldState} onBack={() => setView('dashboard')} />}
+          {view === 'boss' && <BossFights onBack={() => setView('dashboard')} markFlag={markFlag} />}
+          {view === 'tempo' && <TempoTrainer onBack={() => setView('dashboard')} />}
+        </div>
+      );
+    };
+
+    // Mount the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+
+    // --- iOS audio/TTS unlock (first user gesture) ---
+    const unlock = () => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+      } catch {}
+      if (window.speechSynthesis) {
+        try { window.speechSynthesis.cancel(); } catch {}
+      }
+      window.removeEventListener('touchend', unlock);
+      window.removeEventListener('click', unlock);
+    };
+    window.addEventListener('touchend', unlock, { once: true });
+    window.addEventListener('click', unlock, { once: true });
+  </script>
+</body>
+</html>
