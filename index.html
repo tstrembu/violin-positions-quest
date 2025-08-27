@@ -1574,7 +1574,9 @@
   <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js", { scope: "./" });
+      navigator.serviceWorker.register("/violin-positions-quest/sw.js", {
+        scope: "/violin-positions-quest/"
+      });
     });
   }
 </script>
