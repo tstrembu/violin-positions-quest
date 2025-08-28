@@ -4,27 +4,76 @@
   <meta charset="utf-8" />
   <title>Violin Positions Quest</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/violin-positions-quest/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/violin-positions-quest/icons/icon-192.png" />
+  <meta name="theme-color" content="#6d28d9" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
-    .font-inter { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
-    html, body { height: 100%; }
-    body { margin: 0; background: #f3f4f6; }
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --ink-900: #111827;
+      --ink-800: #1f2937;
+      --ink-700: #374151;
+      --ink-600: #4b5563;
+      --ink-500: #6b7280;
+      --shadow: 0 10px 20px rgba(0,0,0,0.08);
+    }
+    body.dark {
+      --bg: #0b1020;
+      --card: #0f172a;
+      --ink-900: #e5e7eb;
+      --ink-800: #e2e8f0;
+      --ink-700: #cbd5e1;
+      --ink-600: #94a3b8;
+      --ink-500: #64748b;
+      --shadow: 0 12px 24px rgba(0,0,0,0.35);
+    }
+    html, body { height:100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink-900);
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
+    }
+    .card { background: var(--card); box-shadow: var(--shadow); }
+    .muted { color: var(--ink-600); }
+    .ink700 { color: var(--ink-700); }
+    .ink800 { color: var(--ink-800); }
+    .linkish { text-decoration: underline; cursor: pointer; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999; }
+    .modal { width:min(680px, 92vw); }
+    .pill { border-radius: 9999px; padding: 4px 10px; display:inline-block; font-size:12px; }
+    .badge { background:#6d28d9; color:white; border-radius:9999px; padding:.25rem .6rem; font-weight:700; font-size:12px; }
+    .help-dot { width: 22px; height: 22px; border-radius: 9999px; display:inline-flex; align-items:center; justify-content:center; background:#11182717; color:#6d28d9; font-weight:700; }
+    .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 9998; }
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding: .75rem 1.25rem; border-radius: 9999px; color:white; font-weight:700;
+      transition: transform .08s ease;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-purple { background:#6d28d9; }
+    .btn-blue { background:#2563eb; }
+    .btn-green { background:#059669; }
+    .btn-gray { background:#4b5563; }
+    .btn-rose { background:#e11d48; }
+    .btn-amber { background:#d97706; }
+    .grid-cards { display:grid; gap: 24px; grid-template-columns: repeat(1, minmax(0,1fr)); }
+    @media(min-width:640px){ .grid-cards{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media(min-width:1024px){ .grid-cards{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
   </style>
 
-  <!-- PWA hooks -->
-  <link rel="manifest" href="/violin-positions-quest/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/violin-positions-quest/icons/icon-192.png">
-  <meta name="theme-color" content="#6d28d9">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-  <!-- Tailwind Play CDN -->
+  <!-- Tailwind Play CDN (for utility odds & ends) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = { theme: { extend: { fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] }}}};
+    tailwind.config = { darkMode:'class', theme:{ extend:{ fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] } } } };
   </script>
 
   <!-- React 18 UMD + Babel for in-browser JSX -->
@@ -36,139 +85,101 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useMemo, useEffect, useRef } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
-    /* =========================
-       Shared UI Bits
-       ========================= */
-    const AppHeader = ({ title, subtitle }) => (
-      <header className="p-6 text-center">
-        <h1 className="text-3xl font-bold text-gray-800 font-inter">{title}</h1>
-        <p className="text-sm text-gray-600 font-inter">{subtitle}</p>
-      </header>
-    );
+    /* =========================================================
+       Storage keys
+    ========================================================== */
+    const THEME_KEY = 'vpq.theme.v1';
+    const BEST_KEY = 'positionsQuest.speed.best';
+    const STATS_KEY = 'positionsQuest.speed.stats';
+    const PREFS_KEY = 'positionsQuest.prefs';
+    const PRESETS_KEY = 'positionsQuest.filterPresets.v1';
+    const SESSIONLOG_KEY = 'positionsQuest.sessions.v1';
+    const SCORE_KEY = 'positions.scoreboard.v1';
+    const BADGES_KEY = 'positions.badges.v1';
+    const SEYBOLD_KEY = 'seybold.hub.v1';
+    const TEMPO_STATS_KEY = 'positionsQuest.tempo.stats.v1';
+    const TEMPO_BEST_KEY  = 'positionsQuest.tempo.best.v1';
 
-    const GameCard = ({ title, description, onClick }) => (
-      <button
-        onClick={onClick}
-        className="bg-white rounded-lg shadow-lg p-6 m-4 w-full text-left cursor-pointer transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-purple-500"
-      >
-        <h3 className="text-xl font-semibold text-purple-700 mb-2 font-inter">{title}</h3>
-        <p className="text-gray-600 font-inter">{description}</p>
-      </button>
-    );
+    /* =========================================================
+       Theme
+    ========================================================== */
+    const getTheme = () => (localStorage.getItem(THEME_KEY) || 'light');
+    const setTheme = (t) => { localStorage.setItem(THEME_KEY, t); document.body.classList.toggle('dark', t === 'dark'); };
 
-    const ActionButton = ({ onClick, children, className = '', disabled = false, title }) => (
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        title={title}
-        className={`px-6 py-3 rounded-full font-bold text-white transition-all transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-      >
-        {children}
-      </button>
-    );
+    // Initialize theme immediately (no flash)
+    (function bootTheme(){ setTheme(getTheme()); })();
 
-    const Toggle = ({ label, checked, onChange }) => (
-      <label className="inline-flex items-center gap-2 text-sm mr-4">
-        <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="h-4 w-4" />
-        <span className="select-none">{label}</span>
-      </label>
-    );
+    /* =========================================================
+       Utility helpers
+    ========================================================== */
+    const shuffle = (arr) => {
+      const a = [...arr];
+      for (let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+      return a;
+    };
+    const getRandomItem = (arr) => arr[Math.floor(Math.random()*arr.length)];
 
-    /* =========================
-       Error guard (prevents blank screens)
-       ========================= */
-    class ErrorBoundary extends React.Component {
-      constructor(props){ super(props); this.state = { hasError:false, err:null }; }
-      static getDerivedStateFromError(err){ return { hasError:true, err }; }
-      componentDidCatch(err, info){ /* optional: log */ }
-      render(){
-        if (this.state.hasError) {
-          return (
-            <div className="p-6 max-w-xl mx-auto text-center">
-              <h2 className="text-xl font-bold text-rose-700 mb-2">Something went wrong</h2>
-              <p className="text-sm text-gray-600 mb-4">Try going back to the dashboard or reload.</p>
-              <div className="flex gap-2 justify-center">
-                <button onClick={()=>location.reload()} className="px-4 py-2 bg-purple-600 text-white rounded-full">Reload</button>
-                <button onClick={()=>window.history.back()} className="px-4 py-2 bg-gray-700 text-white rounded-full">Back</button>
-              </div>
-            </div>
-          );
-        }
-        return this.props.children;
-      }
-    }
+    /* =========================================================
+       Fingerboard Data (expanded to Positions 1–5)
+       (Modeled after your 1–3 mapping with consistent stepping)
+    ========================================================== */
+    const STRINGS = ['G','D','A','E'];
+    const POSITIONS = ['1','2','3','4','5'];
+    const FINGERS = ['1','2','3','4'];
 
-    const MissingView = ({ name="this view", onBack }) => (
-      <div className="p-6 max-w-xl mx-auto text-center">
-        <h2 className="text-2xl font-bold text-amber-700 mb-2">View not available</h2>
-        <p className="text-sm text-gray-600 mb-4">“{name}” isn’t loaded in this build.</p>
-        <button onClick={onBack} className="px-4 py-2 bg-gray-700 text-white rounded-full">Back</button>
-      </div>
-    );
+    // Helper to format a pair like D/D# etc.
+    const pair = (a,b) => [a, b];
 
-    /* =========================
-       Core Fingerboard Data
-       ========================= */
+    // Expanded mapping (keeps the same friendly enharmonic style you used)
     const NOTES_DATA = {
       G: {
-        1: { 1: ['A♭', 'A'], 2: ['B♭', 'B'], 3: ['C', 'C#'], 4: ['D'] },
-        2: { 1: ['B♭', 'B'], 2: ['B', 'C'], 3: ['C', 'C#'], 4: ['D', 'D#'] },
-        3: { 1: ['C', 'C#'], 2: ['C#', 'D'], 3: ['D', 'D#'], 4: ['E', 'F'] },
+        1: { 1: ['A♭','A'], 2: ['B♭','B'], 3: ['C','C#'], 4: ['D'] },
+        2: { 1: ['B♭','B'], 2: ['B','C'], 3: ['C','C#'], 4: ['D','D#'] },
+        3: { 1: ['C','C#'], 2: ['C#','D'], 3: ['D','D#'], 4: ['E','F'] },
+        4: { 1: ['D','D#'], 2: ['D#','E'], 3: ['E','F'],   4: ['F#','G'] },
+        5: { 1: ['E','F'],   2: ['F','F#'], 3: ['F#','G'], 4: ['G#','A'] },
       },
       D: {
-        1: { 1: ['E♭', 'E'], 2: ['F', 'F#'], 3: ['G', 'G#'], 4: ['A'] },
-        2: { 1: ['F', 'F#'], 2: ['F#', 'G'], 3: ['G', 'G#'], 4: ['A', 'A#'] },
-        3: { 1: ['G', 'G#'], 2: ['G#', 'A'], 3: ['A', 'A#'], 4: ['B', 'C'] },
+        1: { 1: ['E♭','E'], 2: ['F','F#'], 3: ['G','G#'], 4: ['A'] },
+        2: { 1: ['F','F#'], 2: ['F#','G'], 3: ['G','G#'], 4: ['A','A#'] },
+        3: { 1: ['G','G#'], 2: ['G#','A'], 3: ['A','A#'], 4: ['B','C'] },
+        4: { 1: ['A','A#'], 2: ['A#','B'], 3: ['B','C'],  4: ['C#','D'] },
+        5: { 1: ['B','C'],  2: ['C','C#'], 3: ['C#','D'], 4: ['D#','E'] },
       },
       A: {
-        1: { 1: ['B♭', 'B'], 2: ['C', 'C#'], 3: ['D', 'D#'], 4: ['E'] },
-        2: { 1: ['C', 'C#'], 2: ['C#', 'D'], 3: ['D', 'D#'], 4: ['E', 'F'] },
-        3: { 1: ['D', 'D#'], 2: ['D#', 'E'], 3: ['E', 'F'], 4: ['G', 'G#'] },
+        1: { 1: ['B♭','B'], 2: ['C','C#'], 3: ['D','D#'], 4: ['E'] },
+        2: { 1: ['C','C#'], 2: ['C#','D'], 3: ['D','D#'], 4: ['E','F'] },
+        3: { 1: ['D','D#'], 2: ['D#','E'], 3: ['E','F'],  4: ['F#','G'] },
+        4: { 1: ['E','F'],  2: ['F','F#'], 3: ['F#','G'], 4: ['G#','A'] },
+        5: { 1: ['F#','G'], 2: ['G','G#'], 3: ['G#','A'], 4: ['A#','B'] },
       },
       E: {
-        1: { 1: ['F', 'F#'], 2: ['G', 'G#'], 3: ['A', 'A#'], 4: ['B'] },
-        2: { 1: ['G', 'G#'], 2: ['G#', 'A'], 3: ['A', 'A#'], 4: ['B', 'C'] },
-        3: { 1: ['A', 'A#'], 2: ['A#', 'B'], 3: ['B', 'C'], 4: ['C#', 'D'] },
+        1: { 1: ['F','F#'], 2: ['G','G#'], 3: ['A','A#'], 4: ['B'] },
+        2: { 1: ['G','G#'], 2: ['G#','A'], 3: ['A','A#'], 4: ['B','C'] },
+        3: { 1: ['A','A#'], 2: ['A#','B'], 3: ['B','C'],  4: ['C#','D'] },
+        4: { 1: ['B','C'],  2: ['C','C#'], 3: ['C#','D'], 4: ['D#','E'] },
+        5: { 1: ['C#','D'], 2: ['D','D#'], 3: ['D#','E'], 4: ['F','F#'] },
       },
     };
-    const STRINGS = ['G', 'D', 'A', 'E'];
-    const POSITIONS = ['1', '2', '3'];
-    const FINGERS = ['1', '2', '3', '4'];
-
-    /* =========================
-       Helpers & Persistence
-       ========================= */
-    const shuffle = (arr) => { const a = [...arr]; for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
-    const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
     const ALL_NOTES_UNIQUE = (() => {
       const set = new Set();
-      STRINGS.forEach(s =>
-        POSITIONS.forEach(p =>
-          FINGERS.forEach(f => NOTES_DATA[s][p][f].forEach(n => set.add(n)))
-        )
-      );
+      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => NOTES_DATA[s][p][f].forEach(n => set.add(n)))));
       return [...set];
     })();
 
-    const getRandomDistractors = (excludeSet, count = 3) => {
+    const getRandomDistractors = (excludeSet, count=3) => {
       const pool = ALL_NOTES_UNIQUE.filter(n => !excludeSet.has(n));
       const picks = new Set();
-      while (picks.size < Math.min(count, pool.length)) picks.add(pool[Math.floor(Math.random() * pool.length)]);
+      while (picks.size < Math.min(count, pool.length)) picks.add(pool[Math.floor(Math.random()*pool.length)]);
       return [...picks];
     };
 
-    // Fingerboard stats
-    const BEST_KEY = 'positions.best.v1';
-    const STATS_KEY = 'positions.stats.v1';
-    const PREFS_KEY = 'positions.prefs.v1';
-    const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore: 0, bestStreak: 0 }; } catch { return { bestScore: 0, bestStreak: 0 }; } };
-    const saveBest = (obj) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(obj)); } catch {} };
-    const loadStats = () => { try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; } catch { return {}; } };
-    const saveStats = (obj) => { try { localStorage.setItem(STATS_KEY, JSON.stringify(obj)); } catch {} };
-
+    /* =========================================================
+       Prefs & persistence
+    ========================================================== */
     const defaultFilters = {
       strings: Object.fromEntries(STRINGS.map(s => [s, true])),
       positions: Object.fromEntries(POSITIONS.map(p => [p, true])),
@@ -177,40 +188,26 @@
     const loadPrefs = () => {
       try {
         const p = JSON.parse(localStorage.getItem(PREFS_KEY));
-        return { sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true, callouts:true, roundLen:120, goalEnabled:false, goalTarget:10, filters:{ ...defaultFilters, ...(p?.filters||{}) }, ...(p||{}) };
-      } catch {
-        return { sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true, callouts:true, roundLen:120, goalEnabled:false, goalTarget:10, filters: defaultFilters };
-      }
+        return {
+          sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
+          callouts: true, roundLen: 120, goalEnabled: false, goalTarget: 10,
+          filters: { ...defaultFilters, ...(p?.filters || {}) }, ...(p || {})
+        };
+      } catch { return { sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true, callouts:true, roundLen:120, goalEnabled:false, goalTarget:10, filters: defaultFilters }; }
     };
     const savePrefs = (obj) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {} };
+    const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
+    const saveBest = (obj) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(obj)); } catch {} };
+    const loadStats = () => { try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; } catch { return {}; } };
+    const saveStats = (obj) => { try { localStorage.setItem(STATS_KEY, JSON.stringify(obj)); } catch {} };
+    const loadTempoStats = () => { try { return JSON.parse(localStorage.getItem(TEMPO_STATS_KEY)) || {}; } catch { return {}; } };
+    const saveTempoStats = (obj) => { try { localStorage.setItem(TEMPO_STATS_KEY, JSON.stringify(obj)); } catch {} };
+    const loadTempoBest = () => { try { return JSON.parse(localStorage.getItem(TEMPO_BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
+    const saveTempoBest = (obj) => { try { localStorage.setItem(TEMPO_BEST_KEY, JSON.stringify(obj)); } catch {} };
 
-    /* =========================
-       Confetti + Audio + Callouts
-       ========================= */
-    const ConfettiBurst = ({ seed }) => {
-      const [pieces, setPieces] = useState([]);
-      useEffect(() => {
-        if (!seed) return;
-        const EMOJI = ['✨','🎉','🎊','⭐','💥','🌟'];
-        const n = 26;
-        const arr = Array.from({ length: n }, (_, i) => ({
-          id: i, left: Math.random() * 100, rot: (Math.random() * 40) - 20, delay: Math.random() * 100, emoji: EMOJI[Math.floor(Math.random() * EMOJI.length)],
-        }));
-        setPieces(arr);
-        const t = setTimeout(() => setPieces([]), 900);
-        return () => clearTimeout(t);
-      }, [seed]);
-      if (!pieces.length) return null;
-      return (
-        <div className="pointer-events-none fixed inset-0 overflow-hidden z-50">
-          {pieces.map(p => (
-            <span key={p.id} style={{ position:'absolute', left:`${p.left}vw`, top:'-10px', transform:`rotate(${p.rot}deg)`, animation:`fall 0.9s ease-in forwards`, animationDelay:`${p.delay}ms`, fontSize:'20px' }}>{p.emoji}</span>
-          ))}
-          <style>{`@keyframes fall { to { transform: translateY(110vh); opacity: 0.6; } }`}</style>
-        </div>
-      );
-    };
-
+    /* =========================================================
+       Audio & call-outs
+    ========================================================== */
     const useBeeps = (enabled) => {
       const ctxRef = useRef(null);
       const ensureCtx = () => {
@@ -221,344 +218,265 @@
       const beep = (freq = 880, dur = 0.08, type = 'sine') => {
         const ctx = ensureCtx(); if (!ctx) return;
         const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.type = type; o.frequency.value = freq;
-        g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination);
-        o.start(); setTimeout(() => { o.stop(); }, dur * 1000);
+        o.type = type; o.frequency.value = freq; g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination);
+        o.start(); setTimeout(()=>o.stop(), dur*1000);
       };
       return { good: () => beep(1046, 0.09, 'triangle'), bad: () => beep(196, 0.12, 'sawtooth') };
     };
-
     const useCallouts = (enabled) => {
       const speak = (text) => {
-        if (!enabled || typeof window === 'undefined' || !window.speechSynthesis) return;
-        try {
-          const u = new SpeechSynthesisUtterance(text);
-          u.lang = 'en-US';
-          u.rate = 1.0;
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(u);
-        } catch {}
+        if (!enabled || !window.speechSynthesis) return;
+        try { const u = new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=1.0; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } catch {}
       };
       return { speak };
     };
 
-    /* =========================
-       Heatmap helpers
-       ========================= */
+    /* =========================================================
+       Tiny UI atoms
+    ========================================================== */
+    const Modal = ({ open, onClose, title, children }) => !open ? null : (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal card rounded-xl p-5" onClick={e=>e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-lg font-bold">{title}</div>
+            <button className="btn btn-gray" onClick={onClose}>Close</button>
+          </div>
+          <div className="muted text-sm leading-relaxed">{children}</div>
+        </div>
+      </div>
+    );
+
+    const CardButton = ({ title, description, onClick, onHelp }) => (
+      <div className="card rounded-xl p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-xl font-bold ink800">{title}</div>
+            <div className="muted text-sm mt-1">{description}</div>
+          </div>
+          <button className="help-dot" title="How to play" onClick={onHelp}>?</button>
+        </div>
+        <div className="mt-4">
+          <button className="btn btn-purple" onClick={onClick}>Open</button>
+        </div>
+      </div>
+    );
+
+    const Toast = ({ open, text, action, onAction }) => !open ? null : (
+      <div className="toast">
+        <div className="card rounded-full px-4 py-2 flex items-center gap-3">
+          <span className="ink800">{text}</span>
+          {action && <button className="btn btn-amber" onClick={onAction}>{action}</button>}
+        </div>
+      </div>
+    );
+
+    /* =========================================================
+       Help text (one-paragraph per card)
+    ========================================================== */
+    const HELP = {
+      speed: "Speed Ladder: you’ll see a prompt like G, Position 2, Finger 3. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
+      cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is under finger X?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
+      bingo: "Positions Bingo: a 5×5 practice board with violin tasks. Mark squares as you complete them. The center is FREE. Press R to reshuffle the board.",
+      dice: "Dice of Destiny: press Roll for a focused practice challenge. The dice avoids repeats until the set cycles. Copy your challenge to notes if you like.",
+      seybold: "Seybold Hub: weekly planner + logs tied to Positions 1–5. Track etudes, bowing focus, interval plans, and reflections aligned with Seybold Volumes 1–8.",
+      scoreboard: "Scoreboard & Badges: log daily points (0–5) for activities. Earn badges automatically as certain milestones are reached.",
+      boss: "Boss Fights: short written checks for positions, intervals, and planning. Clear each boss by typing a valid path or solution.",
+      tempoTrainer: "Tempo Trainer: flashcards for Italian tempo terms with optional speech call-outs. Reveal the meaning, then say the feel out loud.",
+      tempoTester: "Tempo Tester: timed multiple choice. Press 1–4 to answer. At the end, review your misses and retry just those items. A heat map tracks per-term accuracy.",
+      bielerLab: "Bieler Method Lab: progressive study of Ida Bieler’s approach. First build vocabulary, then test conceptual understanding, then apply ideas to musical scenarios and bow/left-hand technique."
+    };
+
+    /* =========================================================
+       Accuracy heatmaps
+    ========================================================== */
     const tileColor = (total, acc) => {
       if (!total) return 'rgba(120,120,120,0.18)';
-      const hue = 140 * acc;
-      const sat = 0.85, light = 0.45 + 0.1 * acc;
+      const hue = 140*acc; const sat = .85; const light = .45 + .1*acc;
       return `hsl(${hue}deg ${sat*100}% ${light*100}%)`;
     };
 
-    /* =========================
-       Accuracy Heatmap (fingerboard)
-       ========================= */
-    const AccuracyHeatmap = ({ stats }) => {
-      return (
-        <div className="w-full max-w-5xl bg-white rounded-lg shadow p-4 mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Accuracy Heatmap</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STRINGS.map(s => (
-              <div key={s} className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-100 px-3 py-2 font-semibold">{s} string</div>
-                <div className="p-2">
-                  <div className="grid grid-cols-3 gap-2">
-                    {POSITIONS.map(p => (
-                      <div key={p} className="rounded-md border">
-                        <div className="text-xs text-gray-600 px-2 py-1 border-b">Pos {p}</div>
-                        <div className="grid grid-cols-2 gap-1 p-2">
-                          {FINGERS.map(f => {
-                            const k = `${s}:${p}:${f}`;
-                            const st = stats[k] || { correct: 0, total: 0 };
-                            const acc = st.total ? st.correct / st.total : 0;
-                            const bg = tileColor(st.total, acc);
-                            return (
-                              <div key={f} className="rounded p-2 text-center text-xs font-semibold" title={`${s} Pos ${p} F${f} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`} style={{ background: bg }}>
-                                F{f}<br/>{st.total ? `${Math.round(acc*100)}%` : '—'}
-                              </div>
-                            );
-                          })}
-                        </div>
+    const AccuracyHeatmap = ({ stats }) => (
+      <div className="card rounded-xl p-4">
+        <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {STRINGS.map(s => (
+            <div key={s} className="rounded-lg border">
+              <div className="px-3 py-2 font-semibold" style="background:rgba(0,0,0,.04)">{s} string</div>
+              <div className="p-2">
+                <div className="grid grid-cols-5 gap-2">
+                  {POSITIONS.map(p => (
+                    <div key={p} className="rounded-md border">
+                      <div className="text-xs px-2 py-1 border-b">Pos {p}</div>
+                      <div className="grid grid-cols-2 gap-1 p-2">
+                        {FINGERS.map(f => {
+                          const k = `${s}:${p}:${f}`;
+                          const st = stats[k] || { correct:0, total:0 };
+                          const acc = st.total ? st.correct/st.total : 0;
+                          const bg = tileColor(st.total, acc);
+                          return (
+                            <div key={f} className="rounded p-2 text-center text-xs font-semibold" style={{background:bg}} title={`${s} Pos ${p} F${f} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}>
+                              F{f}<br/>{st.total ? `${Math.round(acc*100)}%` : '—'}
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-2">Tip: Gray = unseen, red = needs work, green = strong.</p>
+            </div>
+          ))}
         </div>
-      );
-    };
+        <p className="text-xs muted mt-2">Gray = unseen, red = needs work, green = strong.</p>
+      </div>
+    );
 
-    /* =========================
-       Filters Panel
-       ========================= */
-    const PRESETS_KEY = 'positions.presets.v1';
-    const loadPresets = () => {
-      try { const p = JSON.parse(localStorage.getItem(PRESETS_KEY)); if (p) return p; } catch {}
-      const seeded = [
-        { id: 'f1', name: 'F1 Drills (Low-1 focus)', filters: { strings: {...defaultFilters.strings}, positions: {...defaultFilters.positions}, fingers: { '1': true, '2': false, '3': false, '4': false } } },
-        { id: 'pos2da', name: 'All Pos-2 on D/A', filters: { strings: { G:false, D:true, A:true, E:false }, positions: { '1': false, '2': true, '3': false }, fingers: {...defaultFilters.fingers} } },
-      ];
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(seeded));
-      return seeded;
-    };
-    const savePresets = (list) => { try { localStorage.setItem(PRESETS_KEY, JSON.stringify(list)); } catch {} };
-
-    const FiltersPanel = ({ prefs, setPrefs, onResetStats, onExportCSV, best, presets, setPresets }) => {
-      const f = prefs.filters;
-      const [newPresetName, setNewPresetName] = useState('');
-
-      const toggleGroup = (group, key) => {
-        setPrefs(p => {
-          const next = { ...p, filters: { ...p.filters, [group]: { ...p.filters[group], [key]: !p.filters[group][key] } } };
-          savePrefs(next); return next;
-        });
-      };
-
-      const setAll = (group, value) => {
-        setPrefs(p => {
-          const obj = Object.fromEntries(Object.keys(p.filters[group]).map(k => [k, value]));
-          const next = { ...p, filters: { ...p.filters, [group]: obj } };
-          savePrefs(next); return next;
-        });
-      };
-
-      const saveCurrentAsPreset = () => {
-        if (!newPresetName.trim()) return;
-        const id = `user_${Date.now()}`;
-        const next = [...presets, { id, name: newPresetName.trim(), filters: JSON.parse(JSON.stringify(prefs.filters)) }];
-        setPresets(next); savePresets(next); setNewPresetName('');
-      };
-      const applyPreset = (id) => {
-        const p = presets.find(x => x.id === id);
-        if (!p) return;
-        setPrefs(prev => { const n = { ...prev, filters: JSON.parse(JSON.stringify(p.filters)) }; savePrefs(n); return n; });
-      };
-      const deletePreset = (id) => {
-        const next = presets.filter(x => x.id !== id);
-        setPresets(next); savePresets(next);
-      };
-
-      return (
-        <div className="w-full max-w-5xl bg-white rounded-lg shadow p-4 mb-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm text-gray-700">
-              Best Score: <b>{best.bestScore}</b> · Best Streak: <b>{best.bestStreak}</b>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Toggle label="Adaptive" checked={prefs.adaptive} onChange={v => { const n={...prefs, adaptive:v}; setPrefs(n); savePrefs(n);} } />
-              <Toggle label="Coach" checked={prefs.coach} onChange={v => { const n={...prefs, coach:v}; setPrefs(n); savePrefs(n);} } />
-              <Toggle label="Retry after miss" checked={!!prefs.coachRetry} onChange={v => { const n={...prefs, coachRetry:v}; setPrefs(n); savePrefs(n);} } />
-              <Toggle label="Sound" checked={prefs.sound} onChange={v => { const n={...prefs, sound:v}; setPrefs(n); savePrefs(n);} } />
-              <Toggle label="Confetti" checked={prefs.confetti} onChange={v => { const n={...prefs, confetti:v}; setPrefs(n); savePrefs(n);} } />
-              <Toggle label="Audio call-outs" checked={prefs.callouts} onChange={v => { const n={...prefs, callouts:v}; setPrefs(n); savePrefs(n);} } />
-              <div className="flex items-center gap-2 text-sm">
-                <label>Round:</label>
-                <select value={prefs.roundLen} onChange={e => { const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n);} } className="border rounded p-1">
-                  {[30,60,120,180].map(x=> <option key={x} value={x}>{x}s</option>)}
-                </select>
+    const TempoHeatmap = ({ stats, terms }) => (
+      <div className="card rounded-xl p-4">
+        <div className="text-lg font-semibold mb-2">Tempo Heatmap</div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {terms.map(t => {
+            const st = stats[t.it] || { correct:0, total:0 };
+            const acc = st.total ? st.correct/st.total : 0;
+            const bg = tileColor(st.total, acc);
+            return (
+              <div key={t.it} className="rounded border p-3" style={{background:bg}} title={`${t.it} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}>
+                <div className="font-semibold">{t.it}</div>
+                <div className="text-xs">{st.total ? `${Math.round(acc*100)}%` : '—'}</div>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Toggle label="Goal" checked={prefs.goalEnabled} onChange={v => { const n={...prefs, goalEnabled:v}; setPrefs(n); savePrefs(n);} } />
-                <input type="number" min="1" max="100" className="border rounded p-1 w-16" value={prefs.goalTarget} onChange={e => { const n={...prefs, goalTarget:Number(e.target.value)}; setPrefs(n); savePrefs(n);} } />
-                <span className="text-xs text-gray-500">correct answers</span>
-              </div>
-              <ActionButton onClick={onResetStats} className="bg-rose-600 hover:bg-rose-700">Reset Stats</ActionButton>
-              <ActionButton onClick={onExportCSV} className="bg-emerald-600 hover:bg-emerald-700" title="Export CSV of training stats">Export CSV</ActionButton>
-            </div>
-          </div>
-
-          {/* Presets */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-semibold">Filter Presets</h4>
-              <div className="flex items-center gap-2">
-                <input value={newPresetName} onChange={e=>setNewPresetName(e.target.value)} placeholder="Preset name…" className="border rounded p-1" />
-                <ActionButton onClick={saveCurrentAsPreset} className="bg-blue-600 hover:bg-blue-700">Save Preset</ActionButton>
-              </div>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {presets.map(pr => (
-                <div key={pr.id} className="border rounded p-2 flex items-center justify-between">
-                  <div className="text-sm">{pr.name}</div>
-                  <div className="flex gap-2">
-                    <ActionButton onClick={()=>applyPreset(pr.id)} className="bg-purple-600 hover:bg-purple-700">Apply</ActionButton>
-                    {pr.id.startsWith('user_') && (
-                      <ActionButton onClick={()=>deletePreset(pr.id)} className="bg-gray-600 hover:bg-gray-700">Delete</ActionButton>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="mt-4 grid md:grid-cols-3 gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold">Strings</h4>
-                <div className="text-xs">
-                  <button className="underline mr-2" onClick={() => setAll('strings', true)}>All</button>
-                  <button className="underline" onClick={() => setAll('strings', false)}>None</button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {STRINGS.map(s => (
-                  <button key={s} onClick={() => toggleGroup('strings', s)}
-                    className={`px-3 py-1 rounded-full text-sm border ${f.strings[s] ? 'bg-purple-600 text-white border-purple-700' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold">Positions</h4>
-                <div className="text-xs">
-                  <button className="underline mr-2" onClick={() => setAll('positions', true)}>All</button>
-                  <button className="underline" onClick={() => setAll('positions', false)}>None</button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {POSITIONS.map(p => (
-                  <button key={p} onClick={() => toggleGroup('positions', p)}
-                    className={`px-3 py-1 rounded-full text-sm border ${f.positions[p] ? 'bg-purple-600 text-white border-purple-700' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
-                    Pos {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold">Fingers</h4>
-                <div className="text-xs">
-                  <button className="underline mr-2" onClick={() => setAll('fingers', true)}>All</button>
-                  <button className="underline" onClick={() => setAll('fingers', false)}>None</button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {FINGERS.map(fn => (
-                  <button key={fn} onClick={() => toggleGroup('fingers', fn)}
-                    className={`px-3 py-1 rounded-full text-sm border ${f.fingers[fn] ? 'bg-purple-600 text-white border-purple-700' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
-                    F{fn}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-500 mt-3">Focus Mode pulls questions only from your selected subset (falls back to all if none selected).</p>
+            );
+          })}
         </div>
-      );
-    };
+      </div>
+    );
 
-    /* =========================
-       Tempo Data + Heatmap
-       ========================= */
+    /* =========================================================
+       Tempo data
+    ========================================================== */
     const TEMPOS = [
-      { it:"Prestissimo", en:"super fast" },
-      { it:"Presto",      en:"very fast" },
-      { it:"Allegro",     en:"fast, happy" },
-      { it:"Allegretto",  en:"fairly brisk" },
-      { it:"Andante",     en:"walking speed" },
-      { it:"Andantino",   en:"little walking (near Andante)" },
-      { it:"Adagio",      en:"slow, at ease" },
-      { it:"Largo",       en:"broad, slow" },
-      { it:"Lento",       en:"very slow" },
+      { it:'Prestissimo', en:'super fast' },
+      { it:'Presto',      en:'very fast' },
+      { it:'Allegro',     en:'fast, happy' },
+      { it:'Allegretto',  en:'fairly brisk' },
+      { it:'Andante',     en:'walking speed' },
+      { it:'Andantino',   en:'little walking (near Andante)' },
+      { it:'Adagio',      en:'slow, at ease' },
+      { it:'Largo',       en:'broad, slow' },
+      { it:'Lento',       en:'very slow' },
     ];
-    const TEMPO_STATS_KEY = 'positions.tempo.stats.v1';
-    const TEMPO_BEST_KEY  = 'positions.tempo.best.v1';
-    const loadTempoStats = () => { try { return JSON.parse(localStorage.getItem(TEMPO_STATS_KEY)) || {}; } catch { return {}; } };
-    const saveTempoStats = (obj) => { try { localStorage.setItem(TEMPO_STATS_KEY, JSON.stringify(obj)); } catch {} };
-    const loadTempoBest = () => { try { return JSON.parse(localStorage.getItem(TEMPO_BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return {bestScore:0,bestStreak:0}; } };
-    const saveTempoBest = (obj) => { try { localStorage.setItem(TEMPO_BEST_KEY, JSON.stringify(obj)); } catch {} };
 
-    const TempoHeatmap = ({ stats }) => {
-      const order = TEMPOS.map(t => t.it);
+    /* =========================================================
+       Bieler Method data (condensed from topics you listed)
+    ========================================================== */
+    const BIELER_VOCAB = [
+      { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
+      { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
+      { term:'Hand Frame', def:'Stable spacing of fingers across semitone/whole-tone patterns; frame travels during shifts.' },
+      { term:'First Trained Function', def:'Accurate finger placement (intonation and spacing) within a stable frame.' },
+      { term:'Second Trained Function', def:'Finger independence and agility (lifting/placing without disturbing neighbors).' },
+      { term:'Third Trained Function', def:'Shifting—moving the whole hand while preserving the frame and sound line.' },
+      { term:'Fourth Trained Function', def:'Vibrato—finger/hand oscillation integrated with intonation and tone aim.' },
+      { term:'Bow Hold', def:'Flexible, pronation-ready grip with curved fingers and mobile thumb.' },
+      { term:'Contact Point', def:'Soundpoint between bridge and fingerboard; chosen by speed/pressure/tilt.' },
+      { term:'Bow Angles', def:'String crossings via forearm/upper arm levels; keep hair tangent to soundpoint.' },
+      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
+      { term:'Legato', def:'Multiple notes under one bow with seamless changes.' },
+      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
+      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
+      { term:'Spiccato', def:'Controlled bounce near the balance point—vertical energy, horizontal timing.' },
+      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
+      { term:'Ricochet', def:'Thrown bow that rebounds multiple times with one impulse.' },
+      { term:'Firm Staccato', def:'In-the-string articulated stops in one bow direction.' },
+      { term:'Flying Staccato', def:'Off-the-string successive stops in a single bow.' },
+      { term:'Nature', def:'Use body’s natural alignments—economy, ease, resonance.' },
+      { term:'Nurture', def:'Stepwise training—patterns before speed; stability before flourish.' },
+      { term:'Knowledge', def:'Clear mental models: maps, sound ideals, mechanics.' },
+      { term:'Necessity', def:'Technique serves musical intent; choose tools by purpose.' },
+    ];
+
+    const BIELER_CONCEPT_QA = [
+      { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
+      { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
+      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
+      { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
+    ];
+
+    const BIELER_APPLY = [
+      { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
+      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
+      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
+    ];
+
+    /* =========================================================
+       Confetti
+    ========================================================== */
+    const ConfettiBurst = ({ seed }) => {
+      const [pieces, setPieces] = useState([]);
+      useEffect(() => {
+        if (!seed) return;
+        const EMOJI = ['✨','🎉','🎊','⭐','💥','🌟'];
+        const n = 24;
+        const arr = Array.from({ length: n }, (_, i) => ({
+          id: i, left: Math.random()*100, rot: (Math.random()*40)-20, delay: Math.random()*100, emoji: EMOJI[Math.floor(Math.random()*EMOJI.length)]
+        }));
+        setPieces(arr);
+        const t = setTimeout(()=>setPieces([]), 900);
+        return () => clearTimeout(t);
+      }, [seed]);
+      if (!pieces.length) return null;
       return (
-        <div className="w-full max-w-3xl bg-white rounded-lg shadow p-4 mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Tempo Heatmap</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {order.map(it => {
-              const st = stats[it] || { correct:0, total:0 };
-              const acc = st.total ? st.correct/st.total : 0;
-              const bg = tileColor(st.total, acc);
-              return (
-                <div key={it} className="rounded border p-3" style={{ background:bg }} title={`${it} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}>
-                  <div className="font-semibold">{it}</div>
-                  <div className="text-xs">{st.total ? `${Math.round(acc*100)}%` : '—'}</div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-xs text-gray-500 mt-2">Tracks your accuracy for each Italian term over time.</p>
+        <div className="pointer-events-none fixed inset-0 overflow-hidden z-50">
+          {pieces.map(p => (
+            <span key={p.id} style={{position:'absolute', left:`${p.left}vw`, top:'-10px', transform:`rotate(${p.rot}deg)`, animation:'fall 0.9s ease-in forwards', animationDelay:`${p.delay}ms`, fontSize:'20px' }}>
+              {p.emoji}
+            </span>
+          ))}
+          <style>{`@keyframes fall{to{transform:translateY(110vh); opacity:.65;}}`}</style>
         </div>
       );
     };
 
-    /* =========================
-       Tempo Trainer (Flashcards)
-       ========================= */
+    /* =========================================================
+       Games
+    ========================================================== */
+
+    // Tempo Trainer (flashcards)
     const TempoTrainer = ({ onBack, prefs }) => {
-      const [index, setIndex] = useState(0);
+      const [i, setI] = useState(0);
       const [show, setShow] = useState(false);
       const { speak } = useCallouts(prefs.callouts);
-
-      useEffect(() => { speak(TEMPOS[index].it); }, [index]); // call out term
-
-      const next = () => { setShow(false); setIndex((index + 1) % TEMPOS.length); };
-      const prev = () => { setShow(false); setIndex((index - 1 + TEMPOS.length) % TEMPOS.length); };
-      const reveal = () => setShow(true);
-
-      useEffect(() => {
-        const onKey = (e) => {
-          const k = e.key.toLowerCase();
-          if (k === ' ') { e.preventDefault(); reveal(); }
-          else if (k === 'n' || k === 'arrowright') next();
-          else if (k === 'p' || k === 'arrowleft') prev();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [index, show]);
-
-      const card = TEMPOS[index];
-
+      useEffect(()=>{ speak(TEMPOS[i].it); }, [i]);
+      const next = () => { setShow(false); setI((i+1)%TEMPOS.length); };
+      const prev = () => { setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
+      useEffect(()=>{
+        const onKey = (e)=>{ const k = e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='arrowright'||k==='n') next(); if(k==='arrowleft'||k==='p') prev(); };
+        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
+      }, [i, show]);
+      const card = TEMPOS[i];
       return (
-        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl">
-            <h2 className="text-3xl font-bold text-center text-purple-700 mb-4 font-inter">Tempo Trainer (Flashcards)</h2>
-            <div className="border-2 border-gray-300 rounded-xl p-6 text-center">
-              <p className="text-xl font-inter text-gray-800 mb-4">{card.it}</p>
-              {show ? (
-                <div className="space-y-1">
-                  <p className="text-lg font-semibold text-green-700 font-inter">{card.en}</p>
-                  <p className="text-sm text-gray-500">Tip: say it aloud, then “conduct” a feel to match.</p>
-                </div>
-              ) : (
-                <p className="text-gray-400 italic font-inter">Press Space or tap “Reveal”.</p>
-              )}
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
+            <h2 className="text-2xl font-bold mb-4">Tempo Trainer (Flashcards)</h2>
+            <div className="rounded-xl border-2 p-6 text-center">
+              <div className="text-xl font-bold">{card.it}</div>
+              {show ? <div className="mt-2">
+                <div className="text-green-700 font-semibold">{card.en}</div>
+                <div className="text-xs muted mt-1">Say the feel out loud, then tap Next.</div>
+              </div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
             </div>
-            <div className="flex justify-center gap-3 mt-6">
-              <ActionButton onClick={reveal} className="bg-blue-600 hover:bg-blue-700">Reveal</ActionButton>
-              <ActionButton onClick={prev} className="bg-gray-600 hover:bg-gray-700">Previous</ActionButton>
-              <ActionButton onClick={next} className="bg-purple-600 hover:bg-purple-700">Next</ActionButton>
+            <div className="flex gap-2 mt-6 justify-center">
+              <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
+              <button className="btn btn-gray" onClick={prev}>Previous</button>
+              <button className="btn btn-purple" onClick={next}>Next</button>
             </div>
-            <p className="text-center text-sm text-gray-500 mt-4 font-inter">
-              Card {index + 1} / {TEMPOS.length} · Shortcuts: Space (reveal), ←/→ or P/N (nav)
-            </p>
+            <div className="text-xs muted mt-3 text-center">Shortcuts: Space, ←/→ or P/N</div>
           </div>
-          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    /* =========================
-       Tempo Tester (MCQ + Heatmap)
-       ========================= */
+    // Tempo Tester (MCQ with review misses + heatmap)
     const TempoTester = ({ onBack, prefs }) => {
       const [best, setBest] = useState(loadTempoBest());
       const [stats, setStats] = useState(loadTempoStats());
@@ -568,613 +486,681 @@
       const [answered, setAnswered] = useState(0);
       const [streak, setStreak] = useState(0);
       const [confettiSeed, setConfettiSeed] = useState(0);
-      const [roundEvents, setRoundEvents] = useState([]);
+      const [events, setEvents] = useState([]);
+      const [reviewList, setReviewList] = useState(null);
       const { speak } = useCallouts(prefs.callouts);
       const beeps = useBeeps(prefs.sound);
       const optionsRef = useRef([]);
-      const [question, setQuestion] = useState(null);
+      const [q, setQ] = useState(null);
 
-      useEffect(() => { setTimer(prefs.roundLen || 60); }, [prefs.roundLen]);
-
-      const pickQuestion = () => {
-        const correct = getRandomItem(TEMPOS);
-        const distractors = shuffle(TEMPOS.filter(t => t.it !== correct.it)).slice(0,3);
+      const pickQ = (forced=null) => {
+        const correct = forced || getRandomItem(TEMPOS);
+        const distractors = shuffle(TEMPOS.filter(t=>t.it!==correct.it)).slice(0,3);
         const options = shuffle([correct.en, ...distractors.map(d=>d.en)]);
-        const q = { it: correct.it, correct: correct.en, options };
-        setQuestion(q);
+        setQ({ it: correct.it, correct: correct.en, options });
         optionsRef.current = options;
         speak(correct.it);
       };
 
-      useEffect(() => { pickQuestion(); }, []);
-
-      useEffect(() => {
+      useEffect(()=>{ setTimer(prefs.roundLen || 60); }, [prefs.roundLen]);
+      useEffect(()=>{ pickQ(); },[]);
+      useEffect(()=>{
         if (finished) return;
-        const id = setInterval(() => {
-          setTimer(t => {
-            if (t <= 1) {
-              clearInterval(id);
-              setFinished(true);
-              const nb = { bestScore: Math.max(best.bestScore, score), bestStreak: Math.max(best.bestStreak, streak) };
-              setBest(nb); saveTempoBest(nb);
-              return 0;
-            }
-            return t - 1;
-          });
-        }, 1000);
-        return () => clearInterval(id);
+        const id = setInterval(()=>setTimer(t=>{
+          if (t<=1){ clearInterval(id); setFinished(true); const nb = { bestScore:Math.max(best.bestScore, score), bestStreak:Math.max(best.bestStreak, streak) }; setBest(nb); saveTempoBest(nb); return 0; }
+          return t-1;
+        }), 1000);
+        return ()=>clearInterval(id);
       }, [finished, score, streak, best]);
 
-      const record = (it, ok) => {
+      const bump = (it, ok) => {
         const st = stats[it] || { correct:0, total:0 };
-        const next = { ...stats, [it]: { correct: st.correct + (ok ? 1 : 0), total: st.total + 1 } };
+        const next = { ...stats, [it]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
         setStats(next); saveTempoStats(next);
       };
 
       const handleAnswer = (choice) => {
-        if (finished || !question) return;
-        const ok = choice === question.correct;
-        record(question.it, ok);
-        setRoundEvents(e => [{ t: Date.now(), it: question.it, chosen: choice, correct: question.correct, ok }, ...e]);
-        setAnswered(a => a + 1);
-        if (ok) {
-          beeps.good(); setScore(s => s + 1); setStreak(x => x + 1);
-          if (prefs.confetti) setConfettiSeed(x => x + 1);
-        } else {
-          beeps.bad(); setStreak(0);
-        }
-        setTimeout(pickQuestion, ok ? 400 : 800);
+        if (finished || !q) return;
+        const ok = (choice === q.correct);
+        bump(q.it, ok);
+        setEvents(e => [{ t: Date.now(), it:q.it, chosen:choice, correct:q.correct, ok }, ...e]);
+        setAnswered(a=>a+1);
+        if (ok){ beeps.good(); setScore(s=>s+1); setStreak(x=>x+1); if (prefs.confetti) setConfettiSeed(x=>x+1); setTimeout(()=>pickQ(), 360); }
+        else { beeps.bad(); setStreak(0); setTimeout(()=>pickQ(), 760); }
       };
 
-      useEffect(() => {
-        const onKey = (e) => {
-          if (finished) return;
-          const k = e.key.toLowerCase();
-          if (['1','2','3','4'].includes(k)) {
-            const idx = Number(k)-1;
-            const choice = optionsRef.current?.[idx];
-            if (choice) handleAnswer(choice);
-          }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [finished, question]);
+      useEffect(()=>{
+        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const ch=optionsRef.current?.[idx]; if(ch) handleAnswer(ch); } };
+        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
+      }, [finished, q]);
 
-      const resetRound = () => {
-        setScore(0); setAnswered(0); setStreak(0);
-        setTimer(prefs.roundLen || 60);
+      const endReviewList = useMemo(()=>{
+        const misses = [...events].filter(e=>!e.ok).reverse();
+        const uniqueByTerm = [];
+        const seen = new Set();
+        for (const m of misses){ if(!seen.has(m.it)){ uniqueByTerm.push(m); seen.add(m.it); } }
+        return uniqueByTerm;
+      }, [events]);
+
+      const startReview = () => {
+        if (!endReviewList.length) return;
+        setReviewList(endReviewList.map(m => TEMPOS.find(t=>t.it===m.it)));
         setFinished(false);
-        setRoundEvents([]);
-        setConfettiSeed(0);
-        pickQuestion();
+        setScore(0); setAnswered(0); setStreak(0); setEvents([]);
+        pickQ(endReviewList[0] && { it:endReviewList[0].it, en:endReviewList[0].correct });
       };
 
-      const exportCSV = () => {
-        const rows = [['time','term_it','chosen_en','correct_en','ok']];
-        [...roundEvents].reverse().forEach(e => rows.push([new Date(e.t).toISOString(), e.it, e.chosen, e.correct, e.ok?'1':'0']));
-        const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'tempo_round.csv';
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      const reset = () => {
+        setFinished(false); setScore(0); setAnswered(0); setStreak(0); setEvents([]); setReviewList(null); setConfettiSeed(0);
+        setTimer(prefs.roundLen || 60); pickQ();
       };
 
       return (
-        <div className="relative flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+        <div className="relative p-4 min-h-screen flex flex-col items-center">
           <ConfettiBurst seed={confettiSeed} />
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl">
-            <h2 className="text-3xl font-bold text-center text-purple-700 mb-2 font-inter">Tempo Tester (Multiple Choice)</h2>
-            <div className="flex flex-col items-center text-sm text-gray-700">
-              <div className="mb-1">
-                Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Best score: <b>{best.bestScore}</b> · Best streak: <b>{best.bestStreak}</b>
-              </div>
-              <div className="mb-4 text-xs text-gray-500">Shortcuts: press <b>1–4</b> to answer quickly.</div>
-            </div>
-
-            {finished ? (
-              <div className="text-center">
-                <p className="text-xl font-inter mb-2">Round over! Final score: <b>{score}</b> / {answered}</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <ActionButton onClick={resetRound} className="bg-purple-600 hover:bg-purple-700">Play Again</ActionButton>
-                  <ActionButton onClick={exportCSV} className="bg-emerald-600 hover:bg-emerald-700">Export Round CSV</ActionButton>
-                </div>
-              </div>
-            ) : question && (
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
+            <h2 className="text-2xl font-bold mb-2">Tempo Tester (Multiple Choice)</h2>
+            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Best: <b>{best.bestScore}</b> · Best streak: <b>{best.bestStreak}</b></div>
+            {!finished && q && (
               <>
-                <div className="text-center mb-6">
-                  <p className="text-2xl font-bold text-gray-800 font-inter">What does <b>{question.it}</b> mean?</p>
-                  <p className="text-sm text-gray-500 mt-2">Listen to the call-out, then choose the best translation.</p>
+                <div className="text-center mb-5">
+                  <div className="text-xl font-bold">What does <b>{q.it}</b> mean?</div>
+                  <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
                 </div>
-
-                <div className="flex flex-wrap justify-center gap-3">
-                  {question.options.map((opt, i) => (
-                    <ActionButton key={i} onClick={() => handleAnswer(opt)} className="bg-blue-600 hover:bg-blue-700 text-lg w-60 flex items-center justify-center gap-2" title={`Press ${i+1}`}>
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/20 text-sm">{i+1}</span>
-                      <span>{opt}</span>
-                    </ActionButton>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {q.options.map((opt,i)=>(
+                    <button key={i} className="btn btn-blue" title={`Press ${i+1}`} onClick={()=>handleAnswer(opt)}>
+                      <span className="pill" style="background:rgba(0,0,0,.15)">{i+1}</span>&nbsp; {opt}
+                    </button>
                   ))}
                 </div>
               </>
             )}
+            {finished && (
+              <div className="text-center">
+                <div className="text-xl font-semibold">Round over! Final score: {score} / {answered}</div>
+                <div className="mt-3">
+                  <button className="btn btn-purple mr-2" onClick={reset}>Play Again</button>
+                  <button className="btn btn-green" disabled={!endReviewList.length} onClick={startReview}>
+                    Review Misses {endReviewList.length ? `(${endReviewList.length})` : ''}
+                  </button>
+                </div>
+                {!!endReviewList.length && (
+                  <div className="mt-4 text-left">
+                    <div className="font-semibold mb-2">Missed items</div>
+                    <ul className="text-sm">
+                      {endReviewList.map((m,idx)=><li key={idx} className="mb-1">• {m.it} → <span className="ink700">{m.correct}</span></li>)}
+                    </ul>
+                    <div className="text-xs muted mt-1">“Review Misses” starts a short round using just these terms.</div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <div className="mt-6 w-full max-w-3xl">
-            <TempoHeatmap stats={stats} />
+          <div className="w-full mt-6" style={{maxWidth:900}}>
+            <TempoHeatmap stats={stats} terms={TEMPOS} />
           </div>
 
-          <ActionButton onClick={onBack} className="mt-4 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    /* =========================
-       Fingerboard Games (compact working versions)
-       ========================= */
-
-    // Speed Ladder (compact)
-    const SpeedLadderGame = ({ onBack, prefs, stats, setStats }) => {
-      const combos = useMemo(() => {
-        const arr = [];
-        STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => arr.push({ s, p, f, valid: NOTES_DATA[s][p][f] }))));
+    // Speed Ladder (fingerboard, adaptive & coach)
+    const SpeedLadderGame = ({ onBack, prefs, setPrefs, stats, setStats }) => {
+      const allCombos = useMemo(()=>{
+        const arr=[]; STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>arr.push({s,p,f,valid:NOTES_DATA[s][p][f]}))));
         return arr;
       }, []);
-      const [q, setQ] = useState(null);
+      const beeps = useBeeps(prefs.sound);
+      const { speak } = useCallouts(prefs.callouts);
+      const [question, setQuestion] = useState(null);
       const [score, setScore] = useState(0);
       const [answered, setAnswered] = useState(0);
       const [timer, setTimer] = useState(prefs.roundLen || 120);
       const [finished, setFinished] = useState(false);
+      const [streak, setStreak] = useState(0);
+      const [bestStreak, setBestStreak] = useState(loadBest().bestStreak);
+      const [bestScore, setBestScore] = useState(loadBest().bestScore);
       const [confettiSeed, setConfettiSeed] = useState(0);
-      const beeps = useBeeps(prefs.sound);
-      const { speak } = useCallouts(prefs.callouts);
+      const [qCounter, setQCounter] = useState(0);
       const optionsRef = useRef([]);
+      const lastMissRef = useRef(null);
 
-      const newQ = () => {
-        const c = getRandomItem(combos);
+      const candidates = useMemo(()=>{
+        const f = prefs.filters||{};
+        const okS = f.strings||{}; const okP = f.positions||{}; const okF = f.fingers||{};
+        const sel = allCombos.filter(c => (okS[c.s]!==false) && (okP[c.p]!==false) && (okF[c.f]!==false));
+        return sel.length ? sel : allCombos;
+      }, [allCombos, prefs.filters]);
+
+      const weightedPick = () => {
+        if (!prefs.adaptive) return getRandomItem(candidates);
+        const entries = candidates.map(c=>{
+          const k = `${c.s}:${c.p}:${c.f}`; const st = stats[k]; const total = st?.total ?? 0; const correct = st?.correct ?? 0;
+          const acc = total > 0 ? correct/total : 0; const unseenBoost = total===0 ? .6 : 0;
+          let weight = .1 + (1-acc) + unseenBoost;
+          if (prefs.coach) weight *= 1 + (1-acc);
+          return { combo:c, weight: Math.max(.05, weight) };
+        });
+        if (prefs.coach && prefs.coachRetry && lastMissRef.current){
+          const idx = entries.findIndex(e=> e.combo.s===lastMissRef.current.s && e.combo.p===lastMissRef.current.p && e.combo.f===lastMissRef.current.f);
+          if (idx>=0) entries[idx].weight*=2.2;
+        }
+        const sum = entries.reduce((a,e)=>a+e.weight,0)||1; let r = Math.random()*sum;
+        for (const e of entries){ if((r-=e.weight)<=0) return e.combo; }
+        return entries[entries.length-1].combo;
+      };
+
+      const newQuestion = (preset=null) => {
+        const c = preset || weightedPick();
         const correct = getRandomItem(c.valid);
-        const opts = shuffle([correct, ...getRandomDistractors(new Set([correct]), 3)]);
-        setQ({ ...c, correct, options: opts });
+        const opts = shuffle([correct, ...getRandomDistractors(new Set([correct]),3)]);
         optionsRef.current = opts;
+        setQuestion({ ...c, correct, options: opts });
+        setQCounter(x=>x+1);
         speak(`${c.s}, position ${c.p}, finger ${c.f}`);
       };
 
-      useEffect(() => { setTimer(prefs.roundLen || 120); }, [prefs.roundLen]);
-      useEffect(() => { newQ(); }, []); // first
-
-      useEffect(() => {
+      useEffect(()=>{ newQuestion(); }, []);
+      useEffect(()=>{
         if (finished) return;
-        const id = setInterval(() => {
-          setTimer(t => {
-            if (t <= 1) { clearInterval(id); setFinished(true); return 0; }
-            return t - 1;
-          });
-        }, 1000);
-        return () => clearInterval(id);
-      }, [finished]);
+        const id = setInterval(()=>setTimer(t=>{
+          if(t<=1){ clearInterval(id); setFinished(true);
+            const bs = Math.max(bestScore, score); const bk = Math.max(bestStreak, streak);
+            setBestScore(bs); setBestStreak(bk); saveBest({ bestScore:bs, bestStreak:bk }); return 0;
+          } return t-1;
+        }), 1000);
+        return ()=>clearInterval(id);
+      }, [finished, score, streak, bestScore, bestStreak]);
 
-      const updateStats = (key, ok) => {
+      const handleAnswer = (note) => {
+        if (finished || !question) return;
+        const key = `${question.s}:${question.p}:${question.f}`;
         const prev = stats[key] || { correct:0, total:0 };
-        const next = { ...stats, [key]: { correct: prev.correct + (ok?1:0), total: prev.total + 1 } };
-        setStats(next); saveStats(next);
-      };
-
-      const answer = (note) => {
-        if (finished || !q) return;
-        const ok = note === q.correct;
-        const key = `${q.s}:${q.p}:${q.f}`;
-        updateStats(key, ok);
+        const ok = (note===question.correct);
+        const updated = { ...stats, [key]: { correct: prev.correct + (ok?1:0), total: prev.total + 1 } };
+        setStats(updated); saveStats(updated);
         setAnswered(a=>a+1);
-        if (ok) { beeps.good(); setScore(s=>s+1); if (prefs.confetti) setConfettiSeed(x=>x+1); }
-        else { beeps.bad(); }
-        setTimeout(newQ, ok ? 450 : 900);
+        if (ok){
+          lastMissRef.current=null; beeps.good(); setScore(s=>s+1); setStreak(x=>x+1); if (prefs.confetti) setConfettiSeed(x=>x+1);
+          setTimeout(()=>newQuestion(), prefs.coach ? 380 : 550);
+        } else {
+          lastMissRef.current={ s:question.s, p:question.p, f:question.f, valid:question.valid };
+          beeps.bad(); setStreak(0);
+          setTimeout(()=>{
+            if (prefs.coach && prefs.coachRetry){ const miss=lastMissRef.current; if(miss){ const c = getRandomItem(miss.valid); const opts = shuffle([c, ...getRandomDistractors(new Set([c]),3)]); optionsRef.current=opts; setQuestion({ ...miss, correct:c, options:opts }); return; } }
+            newQuestion();
+          }, 900);
+        }
       };
 
-      useEffect(() => {
-        const onKey = (e) => {
-          const k = e.key.toLowerCase();
-          if (['1','2','3','4'].includes(k)) {
-            const idx = Number(k)-1;
-            const note = optionsRef.current?.[idx];
-            if (note) answer(note);
-          }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [q, finished]);
+      useEffect(()=>{
+        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const note=optionsRef.current?.[idx]; if(note) handleAnswer(note); } };
+        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
+      }, [finished, question]);
+
+      const reset = () => { setScore(0); setAnswered(0); setTimer(prefs.roundLen||120); setFinished(false); setStreak(0); setConfettiSeed(0); newQuestion(); };
 
       return (
-        <div className="relative flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+        <div className="relative p-4 min-h-screen flex flex-col items-center">
           <ConfettiBurst seed={confettiSeed} />
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl">
-            <h2 className="text-3xl font-bold text-center text-purple-700 mb-2 font-inter">Speed Ladder</h2>
-            <div className="text-center mb-4 text-sm text-gray-700">
-              Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}
-            </div>
-            {q && (
+          <div className="card rounded-xl p-8" style={{maxWidth:740, width:'100%'}}>
+            <h2 className="text-2xl font-bold mb-2">Speed Ladder</h2>
+            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Best: <b>{bestScore}</b> · Best streak: <b>{bestStreak}</b></div>
+            {!finished && question && (
               <>
-                <p className="text-center text-2xl font-bold text-gray-800 font-inter mb-4">
-                  What note can you play with <b>F{q.f}</b> on <b>{q.s}</b> in <b>Pos {q.p}</b>?
-                </p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  {q.options.map((opt, i) => (
-                    <ActionButton key={i} onClick={()=>answer(opt)} className="bg-blue-600 hover:bg-blue-700 text-lg w-36 flex items-center justify-center gap-2" title={`Press ${i+1}`}>
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/20 text-sm">{i+1}</span>
-                      <span>{opt}</span>
-                    </ActionButton>
+                <div className="text-center mb-5">
+                  <div className="text-xl font-bold">
+                    What note can you play with <b>F{question.f}</b> on <b>{question.s}</b> in <b>Position {question.p}</b>?
+                  </div>
+                  <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {question.options.map((note, i)=>(
+                    <button key={i} className="btn btn-blue" title={`Press ${i+1}`} onClick={()=>handleAnswer(note)}>
+                      <span className="pill" style="background:rgba(0,0,0,.15)">{i+1}</span>&nbsp; {note}
+                    </button>
                   ))}
                 </div>
               </>
             )}
-            {finished && <p className="text-center mt-6 text-lg">Round over! Score: <b>{score}</b> / {answered}</p>}
-            <div className="flex justify-center gap-2 mt-4">
-              <ActionButton onClick={()=>{ setScore(0); setAnswered(0); setFinished(false); setTimer(prefs.roundLen||120); newQ(); }} className="bg-purple-600 hover:bg-purple-700">Play Again</ActionButton>
-              <ActionButton onClick={onBack} className="bg-gray-600 hover:bg-gray-700">Back</ActionButton>
-            </div>
+            {finished && (
+              <div className="text-center">
+                <div className="text-xl font-semibold">Round over! Final score: {score} / {answered}</div>
+                <button className="btn btn-purple mt-3" onClick={reset}>Play Again</button>
+              </div>
+            )}
           </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
     // Flashcards (fingerboard)
     const allLocationsForNote = (note) => {
-      const spots = [];
-      STRINGS.forEach(s =>
-        POSITIONS.forEach(p =>
-          FINGERS.forEach(f => {
-            if (NOTES_DATA[s][p][f].includes(note)) spots.push({ s, p, f });
-          })
-        )
-      );
+      const spots=[]; STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>{ if(NOTES_DATA[s][p][f].includes(note)) spots.push({s,p,f}); })));
       return spots;
     };
     const groupLocationsByString = (note) => {
-      const byString = new Map(STRINGS.map(s => [s, []]));
-      for (const loc of allLocationsForNote(note)) byString.get(loc.s).push(loc);
+      const by = new Map(STRINGS.map(s=>[s,[]]));
+      for (const loc of allLocationsForNote(note)) by.get(loc.s).push(loc);
       const lines = [];
-      for (const s of STRINGS) {
-        const arr = byString.get(s);
-        if (arr && arr.length) {
-          const parts = arr
-            .sort((a, b) => Number(a.p) - Number(b.p) || Number(a.f) - Number(b.f))
-            .map(({ p, f }) => `Pos ${p} (F${f})`);
-          lines.push(`${s}: ${parts.join(', ')}`);
-        }
+      for (const s of STRINGS){
+        const arr = by.get(s).sort((a,b)=>Number(a.p)-Number(b.p)||Number(a.f)-Number(b.f));
+        if (arr.length) lines.push(`${s}: ${arr.map(({p,f})=>`Pos ${p} (F${f})`).join(', ')}`);
       }
       return lines.join('  |  ');
     };
 
     const Flashcards = ({ onBack }) => {
-      const uniqNotes = useMemo(() => [...new Set(ALL_NOTES_UNIQUE)].sort(), []);
+      const [mode, setMode] = useState('A');
       const [i, setI] = useState(0);
-      const [show, setShow] = useState(false);
-      const next = () => { setShow(false); setI((i+1)%uniqNotes.length); };
-      const prev = () => { setShow(false); setI((i-1+uniqNotes.length)%uniqNotes.length); };
-      const reveal = () => setShow(true);
-      useEffect(() => {
-        const onKey = (e) => {
-          const k = e.key.toLowerCase();
-          if (k === ' ') { e.preventDefault(); reveal(); }
-          else if (k === 'n' || k === 'arrowright') next();
-          else if (k === 'p' || k === 'arrowleft') prev();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [i, show]);
-
-      const note = uniqNotes[i];
-
+      const [show,setShow] = useState(false);
+      const deckA = useMemo(()=>{
+        const cards=[]; STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>cards.push({q:`What note(s) under F${f} on ${s} in Position ${p}?`, a: NOTES_DATA[s][p][f].join(' or ')}))));
+        return cards;
+      },[]);
+      const uniq = useMemo(()=>[...new Set(ALL_NOTES_UNIQUE)].sort(),[]);
+      const deckB = useMemo(()=>uniq.map(n=>({q:`Where can you play ${n} (Pos 1–5)?`, a:groupLocationsByString(n)})),[uniq]);
+      const deck = mode==='A'?deckA:deckB;
+      const next=()=>{ setShow(false); setI((i+1)%deck.length); };
+      const prev=()=>{ setShow(false); setI((i-1+deck.length)%deck.length); };
+      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); }, [i,show]);
       return (
-        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl">
-            <h2 className="text-3xl font-bold text-center text-purple-700 mb-4 font-inter">Flashcards (Fingerboard)</h2>
-            <div className="border-2 border-gray-300 rounded-xl p-6 text-center">
-              <p className="text-xl font-inter text-gray-800 mb-4">Where can you play <b>{note}</b> (Positions 1–3)?</p>
-              {show ? (
-                <p className="text-lg font-semibold text-green-700 font-inter whitespace-pre-line">{groupLocationsByString(note)}</p>
-              ) : (
-                <p className="text-gray-400 italic font-inter">Press Space or tap “Reveal”.</p>
-              )}
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
+            <h2 className="text-2xl font-bold mb-4">Flashcards</h2>
+            <div className="flex gap-2 mb-3">
+              <button className={`btn ${mode==='A'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('A'); setI(0); setShow(false);}}>Deck A</button>
+              <button className={`btn ${mode==='B'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('B'); setI(0); setShow(false);}}>Deck B</button>
             </div>
-            <div className="flex justify-center gap-3 mt-6">
-              <ActionButton onClick={reveal} className="bg-blue-600 hover:bg-blue-700">Reveal</ActionButton>
-              <ActionButton onClick={prev} className="bg-gray-600 hover:bg-gray-700">Previous</ActionButton>
-              <ActionButton onClick={next} className="bg-purple-600 hover:bg-purple-700">Next</ActionButton>
+            <div className="rounded-xl border-2 p-6 text-center">
+              <div className="text-lg font-bold">{deck[i].q}</div>
+              {show ? <div className="mt-2 ink700 whitespace-pre-wrap">{deck[i].a}</div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
             </div>
-            <p className="text-center text-sm text-gray-500 mt-4 font-inter">
-              Card {i + 1} / {uniqNotes.length} · Shortcuts: Space (reveal), ←/→ or P/N (nav)
-            </p>
+            <div className="flex gap-2 mt-6 justify-center">
+              <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
+              <button className="btn btn-gray" onClick={prev}>Previous</button>
+              <button className="btn btn-purple" onClick={next}>Next</button>
+            </div>
+            <div className="text-xs muted mt-3 text-center">Card {i+1} / {deck.length} · Shortcuts: Space, ←/→ or P/N</div>
           </div>
-          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    // Bingo
+    // Bingo (short, same spirit)
     const BingoBoard = ({ onBack }) => {
       const base = [
-        "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–3","Sight-read in Pos 2",
-        "G-string Pos 1 quiz","C major in Pos 2 aloud","Find 3 ways to play D","E-string Pos 3 quiz","Slur → up-bow staccato",
-        "Name all Cs Pos 1–3","D major in Pos 3 aloud","Echo dynamics on repeat","Open A & D ring check","A-string Pos 3 quiz",
-        "List all F#s Pos 1–3","Gigue pickup (up-bow)","Martelé ×8 bars","Map staff lines → fingers","D-string Pos 2 quiz",
-        "Slow spiccato ×8 bars","Note→Locations speed drill","Record 30s and review","Scales: 2-oct sprint"
+        "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–5","Sight-read in Pos 2",
+        "G-string Pos 1 quiz","C major in Pos 3 aloud","Find 3 ways to play D","E-string Pos 4 quiz","Slur → up-bow staccato",
+        "Name all Cs Pos 1–5","D major in Pos 5 aloud","Echo dynamics on repeat","Open A & D ring check","A-string Pos 3 quiz",
+        "List all F#s Pos 1–5","Gigue pickup (up-bow)","Martelé ×8 bars","Map staff lines → fingers","D-string Pos 4 quiz",
+        "Contact-point ladders","Slow spiccato ×8 bars","Tempo flashcards ×20","Record 30s and review"
       ];
-      const make = () => {
-        const grid = shuffle(base).slice(0, 24);
-        grid.splice(12, 0, 'FREE');
-        return grid;
-      };
-      const [cells, setCells] = useState(make());
-      const [state, setState] = useState(() => Object.fromEntries(cells.map(t => [t, t==='FREE'])));
-
-      const toggle = (t) => { if (t==='FREE') return; setState(s => ({...s, [t]: !s[t]})); };
-      const reshuffle = () => { const g = make(); setCells(g); setState(Object.fromEntries(g.map(t=>[t,t==='FREE']))); };
-
-      const hasBingo = useMemo(() => {
-        const get = (r, c) => state[cells[r*5+c]];
-        for (let r=0;r<5;r++) if ([0,1,2,3,4].every(c=>get(r,c))) return true;
-        for (let c=0;c<5;c++) if ([0,1,2,3,4].every(r=>get(r,c))) return true;
-        if ([0,1,2,3,4].every(i=>get(i,i))) return true;
-        if ([0,1,2,3,4].every(i=>get(i,4-i))) return true;
-        return false;
-      }, [state, cells]);
-
-      const checked = Object.values(state).filter(Boolean).length;
-
+      const makeBoard=()=>{ const grid = shuffle(base).slice(0,24); grid.splice(12,0,'FREE'); return grid; };
+      const [tiles,setTiles]=useState(makeBoard);
+      const [on,setOn]=useState(()=>{ const o={}; tiles.forEach(t=>o[t]= (t==='FREE')); return o; });
+      const toggle=(t)=>{ if(t==='FREE') return; setOn(s=>({...s,[t]:!s[t]})); };
+      const reset=()=>{ const nx=makeBoard(); setTiles(nx); const o={}; nx.forEach(t=>o[t]=(t==='FREE')); setOn(o); };
+      const checked = Object.values(on).filter(Boolean).length;
       return (
-        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-3xl">
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-6 w-full" style={{maxWidth:960}}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-3xl font-bold text-purple-700 font-inter">Positions Bingo</h2>
-              <ActionButton onClick={reshuffle} className="bg-purple-600 hover:bg-purple-700">New Board</ActionButton>
+              <div className="text-2xl font-bold">Positions Bingo</div>
+              <button className="btn btn-purple" onClick={reset}>New Board</button>
             </div>
-            <p className="text-sm text-gray-600 mb-3">Checked: {checked}/25 {hasBingo && <span className="text-green-600 font-semibold">· BINGO! 🎉</span>}</p>
+            <div className="muted text-sm mb-2">Checked: {checked}/25 · Center is FREE</div>
             <div className="grid grid-cols-5 gap-2">
-              {cells.map((t, i) => (
-                <button key={i} onClick={()=>toggle(t)} className={`p-2 text-center text-xs sm:text-sm md:text-base border-2 rounded-lg h-20 md:h-24 transition-colors ${state[t] ? 'bg-green-500 text-white border-green-700' : 'bg-gray-200 text-gray-800 border-gray-300'} ${t==='FREE'?'font-bold':''}`} aria-pressed={!!state[t]}>
+              {tiles.map((t,i)=>(
+                <button key={i} onClick={()=>toggle(t)}
+                  className={`rounded-lg border-2 p-2 h-24 text-xs ${on[t]?'bg-green-500 text-white border-green-700':'bg-gray-200 text-gray-800 border-gray-300'}`}>
                   {t}
                 </button>
               ))}
             </div>
           </div>
-          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    // Dice
+    // Dice (short)
     const DiceOfDestinyGame = ({ onBack }) => {
-      const full = [
-        'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–3',
-        'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 2 aloud','Find 3 ways to play D','E-string Pos 3 quiz',
-        'Slur → up-bow staccato','Name all Cs Pos 1–3','D major in Pos 3 aloud','Echo dynamics on repeat','Open A & D ring check',
-        'A-string Pos 3 quiz','List all F#s Pos 1–3','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 2 quiz',
+      const poolFull = [
+        'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–5',
+        'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 3 aloud','Find 3 ways to play D','E-string Pos 4 quiz',
+        'Slur → up-bow staccato','Name all Cs Pos 1–5','D major in Pos 5 aloud','Echo dynamics on repeat','Open A & D ring check',
+        'A-string Pos 3 quiz','List all F#s Pos 1–5','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 4 quiz',
       ];
-      const [pool, setPool] = useState(full);
-      const [challenge, setChallenge] = useState('');
-      const [rolling, setRolling] = useState(false);
-      const [history, setHistory] = useState([]);
-      const roll = () => {
-        setRolling(true); setChallenge('Rolling...');
-        setTimeout(() => {
-          const p = pool.length ? pool : full;
-          const pick = getRandomItem(p);
-          setChallenge(pick);
-          setHistory(h => [pick, ...h].slice(0, 6));
-          setPool(p.filter(c => c !== pick));
-          setRolling(false);
-        }, 650);
-      };
+      const [pool,setPool]=useState(poolFull);
+      const [cur,setCur]=useState('');
+      const [busy,setBusy]=useState(false);
+      const [history,setHistory]=useState([]);
+      const roll=()=>{ setBusy(true); setCur('…'); setTimeout(()=>{ const p = pool.length ? pool : poolFull; const pick = getRandomItem(p); setCur(pick); setHistory(h=>[pick,...h].slice(0,6)); setPool(p.filter(x=>x!==pick)); setBusy(false); }, 560); };
       return (
-        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
-          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl text-center">
-            <h2 className="text-3xl font-bold text-purple-700 mb-4 font-inter">Dice of Destiny</h2>
-            <p className="text-gray-600 font-inter mb-4">Roll for a focused challenge. Avoids repeats until the set cycles.</p>
-            <ActionButton onClick={roll} disabled={rolling} className="bg-green-600 hover:bg-green-700 my-4 text-2xl">{rolling ? '...' : 'Roll Dice'}</ActionButton>
-            <div className="bg-gray-200 rounded-lg p-4 mt-6">
-              <p className="text-xl font-semibold font-inter text-gray-800">Your Destiny:</p>
-              <p className="text-2xl mt-2 font-bold text-gray-700 font-inter min-h-[3rem]">{challenge || 'Click "Roll Dice" to begin!'}</p>
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
+            <h2 className="text-2xl font-bold mb-4">Dice of Destiny</h2>
+            <button disabled={busy} className="btn btn-green text-xl" onClick={roll}>{busy?'…':'Roll Dice'}</button>
+            <div className="rounded-lg p-4 mt-6" style="background:rgba(0,0,0,.07)">
+              <div className="text-sm muted">Your Destiny:</div>
+              <div className="text-xl font-bold mt-2">{cur || 'Press Roll to begin!'}</div>
             </div>
-            {history.length > 0 && (
-              <div className="mt-6 text-left">
-                <p className="text-sm font-semibold text-gray-700 mb-2">Recent rolls</p>
-                <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
-                  {history.map((h, i) => <li key={i}>{h}</li>)}
-                </ul>
+            {!!history.length && <div className="mt-4">
+              <div className="font-semibold text-sm mb-1">Recent rolls</div>
+              <ul className="text-sm">{history.map((h,i)=><li key={i}>• {h}</li>)}</ul>
+            </div>}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* =========================================================
+       Bieler Method Lab (Vocabulary → Concept Check → Applications)
+    ========================================================== */
+    const BielerLab = ({ onBack }) => {
+      const [mode,setMode]=useState('vocab'); // vocab | concept | apply
+      // Vocab flashcards
+      const [i,setI]=useState(0); const [show,setShow]=useState(false);
+      const next=()=>{ setShow(false); setI((i+1)%BIELER_VOCAB.length); };
+      const prev=()=>{ setShow(false); setI((i-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
+
+      // MCQ helpers
+      const makeConceptQ = () => {
+        const item = getRandomItem(BIELER_CONCEPT_QA);
+        const options = shuffle([item.a, ...shuffle(item.wrong).slice(0,3)]);
+        return { prompt:item.q, correct:item.a, options };
+      };
+      const makeApplyQ = () => {
+        const item = getRandomItem(BIELER_APPLY);
+        const options = shuffle([item.answer, ...shuffle(item.wrong).slice(0,3)]);
+        return { prompt:item.scenario, correct:item.answer, options };
+      };
+      const [cq,setCq]=useState(makeConceptQ());
+      const [aq,setAq]=useState(makeApplyQ());
+      const [scoreC,setScoreC]=useState(0), [answeredC,setAnsweredC]=useState(0);
+      const [scoreA,setScoreA]=useState(0), [answeredA,setAnsweredA]=useState(0);
+
+      const answerConcept = (opt)=>{ const ok = opt===cq.correct; setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); setTimeout(()=>setCq(makeConceptQ()), ok?350:700); };
+      const answerApply   = (opt)=>{ const ok = opt===aq.correct; setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); setTimeout(()=>setAq(makeApplyQ()), ok?350:700); };
+
+      return (
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-6 w-full" style={{maxWidth:980}}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Bieler Method Lab</h2>
+              <div className="flex gap-2">
+                <button className={`btn ${mode==='vocab'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('vocab')}>Vocabulary</button>
+                <button className={`btn ${mode==='concept'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('concept')}>Concept Check</button>
+                <button className={`btn ${mode==='apply'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('apply')}>Applications</button>
+              </div>
+            </div>
+
+            {mode==='vocab' && (
+              <div className="mt-4">
+                <div className="rounded-xl border-2 p-6 text-center">
+                  <div className="text-xl font-bold">{BIELER_VOCAB[i].term}</div>
+                  {show ? <div className="mt-2 ink700">{BIELER_VOCAB[i].def}</div> : <div className="muted italic">Press Reveal to show definition.</div>}
+                </div>
+                <div className="flex gap-2 mt-4 justify-center">
+                  <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
+                  <button className="btn btn-gray" onClick={prev}>Previous</button>
+                  <button className="btn btn-purple" onClick={next}>Next</button>
+                </div>
+                <div className="text-xs muted mt-2 text-center">Card {i+1} / {BIELER_VOCAB.length}</div>
+              </div>
+            )}
+
+            {mode==='concept' && (
+              <div className="mt-4">
+                <div className="muted text-sm mb-2">Score: {scoreC} / {answeredC}</div>
+                <div className="text-lg font-semibold mb-2">{cq.prompt}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {cq.options.map((o,idx)=><button key={idx} className="btn btn-blue" onClick={()=>answerConcept(o)}>{o}</button>)}
+                </div>
+              </div>
+            )}
+
+            {mode==='apply' && (
+              <div className="mt-4">
+                <div className="muted text-sm mb-2">Score: {scoreA} / {answeredA}</div>
+                <div className="text-lg font-semibold mb-2">Choose the best practice approach:</div>
+                <div className="ink700 mb-3"><i>Scenario: </i>{aq.prompt}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {aq.options.map((o,idx)=><button key={idx} className="btn btn-blue" onClick={()=>answerApply(o)}>{o}</button>)}
+                </div>
               </div>
             )}
           </div>
-          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    // Seybold Hub (compact)
-    const SeyboldHub = ({ onBack }) => {
-      const KEY = "seybold.hub.v1";
-      const [state, setState] = useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || { notes:"" }; } catch { return { notes:"" }; } });
-      useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }, [state]);
-      return (
-        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
-          <div className="bg-white rounded-xl shadow p-6 w-full max-w-3xl">
-            <h2 className="text-2xl font-bold text-purple-700 mb-3">Seybold Hub (Notes)</h2>
-            <textarea className="border rounded w-full p-3 h-72" value={state.notes} onChange={e=>setState(s=>({...s, notes:e.target.value}))} placeholder="Weekly checklist, logs, reflections… (Your notes autosave)"/>
-          </div>
-          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
-        </div>
-      );
-    };
-
-    // Scoreboard (compact)
-    const Scoreboard = ({ onBack }) => {
-      const KEY = "positions.scoreboard.v1";
-      const [rows, setRows] = useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
-      useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(rows)); } catch {} }, [rows]);
-      const add = () => setRows(r => [{ date:new Date().toISOString().slice(0,10), task:"", points:0 }, ...r]);
-      const total = rows.reduce((a,b)=>a + Number(b.points||0), 0);
-      return (
-        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
-          <div className="bg-white rounded-xl shadow p-6 w-full max-w-4xl">
-            <h2 className="text-2xl font-bold text-purple-700 mb-3">Scoreboard</h2>
-            <ActionButton onClick={add} className="bg-emerald-600 hover:bg-emerald-700">Add Row</ActionButton>
-            <div className="overflow-x-auto mt-3">
-              <table className="min-w-full text-sm">
-                <thead><tr className="text-left"><th className="p-2">Date</th><th className="p-2">Task</th><th className="p-2">Points (0–5)</th></tr></thead>
-                <tbody>
-                  {rows.map((r,i)=>(
-                    <tr key={i} className="border-t">
-                      <td className="p-2"><input className="border p-1 rounded w-28" value={r.date} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,date:e.target.value}:y))}/></td>
-                      <td className="p-2"><input className="border p-1 rounded w-64" value={r.task||""} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,task:e.target.value}:y))}/></td>
-                      <td className="p-2"><input type="number" min="0" max="5" className="border p-1 rounded w-16" value={r.points||0} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,points:Number(e.target.value)}:y))}/></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-3 text-sm text-gray-700">Total points: <b>{total}</b></p>
-          </div>
-          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
-        </div>
-      );
-    };
-
-    // Boss Fights (compact)
-    const BossFights = ({ onBack }) => {
-      const [answer, setAnswer] = useState("");
-      const [msg, setMsg] = useState("");
-      const check = () => {
-        const ok = /(G.*Pos\s*2.*F4).*(D.*Pos\s*3.*F2)/i.test(answer);
-        setMsg(ok ? "Boss I cleared! 🎉" : "Not quite—try again.");
+    /* =========================================================
+       Filters & Panels
+    ========================================================== */
+    const FiltersPanel = ({ prefs, setPrefs, stats, onResetStats, onExportCSV }) => {
+      const f = prefs.filters;
+      const toggle=(group,key)=>{
+        setPrefs(p=>{ const next={...p, filters:{...p.filters, [group]:{...p.filters[group],[key]:!p.filters[group][key]}}}; savePrefs(next); return next; });
+      };
+      const setAll=(group,val)=>{
+        setPrefs(p=>{ const obj=Object.fromEntries(Object.keys(p.filters[group]).map(k=>[k,val])); const next={...p, filters:{...p.filters, [group]:obj}}; savePrefs(next); return next; });
       };
       return (
-        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
-          <div className="bg-white rounded-xl shadow p-6 w-full max-w-3xl">
-            <h2 className="text-2xl font-bold text-purple-700 mb-3">Boss Fights (I)</h2>
-            <p className="mb-2 font-semibold">Find two valid locations: G string, Pos 2, F4 AND D string, Pos 3, F2</p>
-            <textarea className="border rounded w-full p-2 h-24" placeholder="Type your locations/plan…" value={answer} onChange={e=>setAnswer(e.target.value)}/>
-            <div className="mt-3 flex gap-2">
-              <ActionButton onClick={check} className="bg-blue-600 hover:bg-blue-700">Check Answer</ActionButton>
-              <ActionButton onClick={onBack} className="bg-gray-600 hover:bg-gray-700">Back</ActionButton>
+        <div className="card rounded-xl p-4">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="text-sm">Round: 
+              <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen} onChange={e=>{ const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
+                {[30,60,120,180].map(x=><option key={x} value={x}>{x}s</option>)}
+              </select>
             </div>
-            {!!msg && <p className="mt-3 font-semibold">{msg}</p>}
+            <div className="flex flex-wrap gap-3 items-center">
+              <label className="text-sm"><input type="checkbox" checked={prefs.adaptive} onChange={e=>{ const n={...prefs, adaptive:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Adaptive</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.coach} onChange={e=>{ const n={...prefs, coach:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Coach</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.coachRetry} onChange={e=>{ const n={...prefs, coachRetry:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Retry after miss</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.sound} onChange={e=>{ const n={...prefs, sound:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Sound</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.confetti} onChange={e=>{ const n={...prefs, confetti:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Confetti</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.callouts} onChange={e=>{ const n={...prefs, callouts:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Call-outs</label>
+            </div>
+            <div className="flex gap-2">
+              <button className="btn btn-rose" onClick={onResetStats}>Reset All Stats</button>
+              <button className="btn btn-green" onClick={onExportCSV}>Export CSV</button>
+            </div>
           </div>
+
+          <div className="grid md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold">Strings</div>
+                <div className="text-xs"><span className="linkish" onClick={()=>setAll('strings',true)}>All</span> · <span className="linkish" onClick={()=>setAll('strings',false)}>None</span></div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {STRINGS.map(s=>(
+                  <button key={s} className={`pill ${f.strings[s]?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>toggle('strings',s)}>{s}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold">Positions</div>
+                <div className="text-xs"><span className="linkish" onClick={()=>setAll('positions',true)}>All</span> · <span className="linkish" onClick={()=>setAll('positions',false)}>None</span></div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {POSITIONS.map(p=>(
+                  <button key={p} className={`pill ${f.positions[p]?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>toggle('positions',p)}>Pos {p}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold">Fingers</div>
+                <div className="text-xs"><span className="linkish" onClick={()=>setAll('fingers',true)}>All</span> · <span className="linkish" onClick={()=>setAll('fingers',false)}>None</span></div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {FINGERS.map(fn=>(
+                  <button key={fn} className={`pill ${f.fingers[fn]?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>toggle('fingers',fn)}>F{fn}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs muted mt-3">Focus Mode pulls only from your selected subset (falls back to all if deselected).</p>
         </div>
       );
     };
 
-    /* =========================
-       Dashboard
-       ========================= */
+    /* =========================================================
+       Dashboard + Help tooltips + Theme + Backup
+    ========================================================== */
     const Dashboard = ({ go, prefs, setPrefs, stats, setStats }) => {
-      const [best, setBest] = useState(loadBest());
-      const [presets, setPresets] = useState(loadPresets());
+      const [helpKey,setHelpKey]=useState(null);
+      const [theme, setThemeState] = useState(getTheme());
+      const [updateReady,setUpdateReady]=useState(false);
 
-      const resetAll = () => { localStorage.removeItem(BEST_KEY); localStorage.removeItem(STATS_KEY); setBest({ bestScore: 0, bestStreak: 0 }); setStats({}); };
+      // Backup & Restore
+      const backup = () => {
+        const payload = {
+          [PREFS_KEY]: JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'),
+          [STATS_KEY]: JSON.parse(localStorage.getItem(STATS_KEY) || 'null'),
+          [BEST_KEY]: JSON.parse(localStorage.getItem(BEST_KEY) || 'null'),
+          [TEMPO_STATS_KEY]: JSON.parse(localStorage.getItem(TEMPO_STATS_KEY) || 'null'),
+          [TEMPO_BEST_KEY]: JSON.parse(localStorage.getItem(TEMPO_BEST_KEY) || 'null'),
+          [SEYBOLD_KEY]: JSON.parse(localStorage.getItem(SEYBOLD_KEY) || 'null'),
+          [SCORE_KEY]: JSON.parse(localStorage.getItem(SCORE_KEY) || 'null'),
+          [BADGES_KEY]: JSON.parse(localStorage.getItem(BADGES_KEY) || 'null'),
+          [PRESETS_KEY]: JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null'),
+          [SESSIONLOG_KEY]: JSON.parse(localStorage.getItem(SESSIONLOG_KEY) || 'null'),
+        };
+        const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='vpq_backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      };
+      const restore = async (file) => {
+        try {
+          const txt = await file.text();
+          const obj = JSON.parse(txt);
+          Object.entries(obj).forEach(([k,v])=>{ if (v!==undefined && v!==null) localStorage.setItem(k, JSON.stringify(v)); });
+          alert('Backup restored. The page will now reload to apply it.'); location.reload();
+        } catch(e){ alert('Import failed: ' + e.message); }
+      };
+      const inputRef = useRef(null);
+
       const exportCSV = () => {
         const rows = [['string','position','finger','correct','total','accuracy']];
-        STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
-          const k = `${s}:${p}:${f}`; const st = stats[k] || { correct:0, total:0 }; const acc = st.total ? (st.correct / st.total) : 0;
-          rows.push([s,p,f, String(st.correct), String(st.total), acc.toFixed(4)]);
+        STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>{
+          const k=`${s}:${p}:${f}`; const st=stats[k]||{correct:0,total:0}; const acc=st.total?(st.correct/st.total):0;
+          rows.push([s,p,f,String(st.correct),String(st.total),acc.toFixed(4)]);
         })));
-        const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'positions_training_stats.csv';
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download='positions_training_stats.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       };
 
-      return (
-        <div className="flex flex-col items-center p-4">
-          <AppHeader title="Violin Positions Quest" subtitle="Your daily mission to master the fingerboard!" />
+      const resetAll = () => { if(!confirm('Reset all fingerboard stats & bests?')) return;
+        localStorage.removeItem(BEST_KEY); localStorage.removeItem(STATS_KEY); setStats({}); alert('Stats cleared.'); };
 
-          <FiltersPanel
-            prefs={prefs} setPrefs={setPrefs}
-            onResetStats={resetAll} onExportCSV={exportCSV}
-            best={best} presets={presets} setPresets={setPresets}
-          />
-
-          <AccuracyHeatmap stats={stats} />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-            <GameCard title="Speed Ladder" description="Timed direct-hit note quiz. Shortcuts: 1–4" onClick={() => go('speed')} />
-            <GameCard title="Dice of Destiny" description="Press your luck for a random practice challenge." onClick={() => go('dice')} />
-            <GameCard title="Positions Bingo" description="Fill a line. Center is FREE. Press R to reshuffle." onClick={() => go('bingo')} />
-            <GameCard title="Flashcards Mode" description="Note → grouped locations (Positions 1–3)." onClick={() => go('cards')} />
-            <GameCard title="Seybold Hub" description="Simple weekly notes (autosaves)." onClick={() => go('seybold')} />
-            <GameCard title="Scoreboard" description="Daily points tracker." onClick={() => go('scoreboard')} />
-            <GameCard title="Boss Fights I" description="Beat the check to clear the boss." onClick={() => go('boss')} />
-            <GameCard title="Tempo Trainer" description="Flashcards: Italian → English, with call-outs." onClick={() => go('tempoTrainer')} />
-            <GameCard title="Tempo Tester" description="Timed multiple choice + tempo heatmap." onClick={() => go('tempoTester')} />
-          </div>
-        </div>
-      );
-    };
-
-    /* =========================
-       App Shell (safe resolver)
-       ========================= */
-    const App = () => {
-      const [view, setView] = useState('dashboard');
-      const [prefs, setPrefs] = useState(loadPrefs());
-      const [stats, setStats] = useState(loadStats());
-      useEffect(() => { savePrefs(prefs); }, [prefs]);
-      useEffect(() => { saveStats(stats); }, [stats]);
-
-      const go = (v) => setView(v);
-
-      // Guarded registry: never ReferenceError if a component gets removed later
-      const registry = {
-        tempoTrainer : (typeof TempoTrainer        !== 'undefined') ? (props) => <TempoTrainer {...props} /> : null,
-        tempoTester  : (typeof TempoTester         !== 'undefined') ? (props) => <TempoTester {...props} /> : null,
-        speed        : (typeof SpeedLadderGame     !== 'undefined') ? (props) => <SpeedLadderGame {...props} prefs={prefs} stats={stats} setStats={setStats}/> : null,
-        dice         : (typeof DiceOfDestinyGame   !== 'undefined') ? (props) => <DiceOfDestinyGame {...props} /> : null,
-        bingo        : (typeof BingoBoard          !== 'undefined') ? (props) => <BingoBoard {...props} /> : null,
-        cards        : (typeof Flashcards          !== 'undefined') ? (props) => <Flashcards {...props} /> : null,
-        seybold      : (typeof SeyboldHub          !== 'undefined') ? (props) => <SeyboldHub {...props} /> : null,
-        scoreboard   : (typeof Scoreboard          !== 'undefined') ? (props) => <Scoreboard {...props} /> : null,
-        boss         : (typeof BossFights          !== 'undefined') ? (props) => <BossFights {...props} /> : null,
-      };
-
-      const renderView = () => {
-        if (view === 'dashboard') {
-          return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
+      useEffect(()=>{
+        // SW update prompt
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration().then(reg=>{
+            if (!reg) return;
+            reg.addEventListener('updatefound', ()=>{ setUpdateReady(true); });
+          });
+          navigator.serviceWorker.addEventListener('controllerchange', ()=>{ /* optional auto-reload */ });
         }
-        const Rend = registry[view];
-        if (Rend) return <Rend onBack={() => setView('dashboard')} />;
-        return <MissingView name={view} onBack={() => setView('dashboard')} />;
-      };
+      },[]);
+
+      const toggleTheme = () => { const next = theme==='light'?'dark':'light'; setTheme(next); setThemeState(next); };
 
       return (
-        <div className="min-h-screen bg-gray-100 font-inter">
-          <ErrorBoundary>
-            {renderView()}
-          </ErrorBoundary>
+        <div className="p-4">
+          <header className="mb-4 flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold">Violin Positions Quest</div>
+              <div className="muted text-sm">Your daily mission to master the fingerboard—and beyond.</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="btn btn-gray" onClick={toggleTheme}>{theme==='dark'?'Light':'Dark'} Mode</button>
+              <button className="btn btn-green" onClick={backup}>Backup</button>
+              <button className="btn btn-blue" onClick={()=>inputRef.current?.click()}>Restore</button>
+              <input ref={inputRef} type="file" accept="application/json" hidden onChange={e=>e.target.files[0] && restore(e.target.files[0])}/>
+            </div>
+          </header>
+
+          <div className="grid-cards">
+            <CardButton title="Speed Ladder" description="Adaptive fingerboard quiz (Pos 1–5). Coach + retries." onClick={()=>go('speed')} onHelp={()=>setHelpKey('speed')} />
+            <CardButton title="Flashcards Mode" description="Two decks: direct hits + note→locations." onClick={()=>go('cards')} onHelp={()=>setHelpKey('cards')} />
+            <CardButton title="Positions Bingo" description="Fill a line with focused tasks." onClick={()=>go('bingo')} onHelp={()=>setHelpKey('bingo')} />
+            <CardButton title="Dice of Destiny" description="Roll for a practice challenge." onClick={()=>go('dice')} onHelp={()=>setHelpKey('dice')} />
+            <CardButton title="Tempo Trainer" description="Italian→English flashcards with call-outs." onClick={()=>go('tempoTrainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
+            <CardButton title="Tempo Tester" description="Timed MCQ with heatmap + review misses." onClick={()=>go('tempoTester')} onHelp={()=>setHelpKey('tempoTester')} />
+            <CardButton title="Bieler Method Lab" description="Vocabulary → concepts → applications." onClick={()=>go('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
+          </div>
+
+          <div className="mt-6 grid gap-4" style="grid-template-columns:1fr;">
+            <FiltersPanel prefs={prefs} setPrefs={setPrefs} stats={stats} onResetStats={resetAll} onExportCSV={exportCSV} />
+            <AccuracyHeatmap stats={stats} />
+          </div>
+
+          <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How to play">
+            {helpKey ? HELP[helpKey] : ''}
+          </Modal>
+
+          <Toast open={updateReady} text="An update is ready. Refresh to get the latest." action="Refresh" onAction={()=>location.reload()} />
         </div>
       );
     };
 
-    // Mount the app
+    /* =========================================================
+       App
+    ========================================================== */
+    const App = () => {
+      const [view,setView]=useState('dashboard');
+      const [prefs,setPrefs]=useState(loadPrefs());
+      const [stats,setStats]=useState(loadStats());
+
+      useEffect(()=>savePrefs(prefs),[prefs]);
+      useEffect(()=>saveStats(stats),[stats]);
+
+      const go = (v)=>setView(v);
+
+      // iOS audio/TTS unlock on first gesture
+      useEffect(()=>{
+        const unlock=()=>{ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx&&ctx.state==='suspended') ctx.resume(); }catch{} if(window.speechSynthesis){ try{ window.speechSynthesis.cancel(); }catch{} } window.removeEventListener('touchend',unlock); window.removeEventListener('click',unlock); };
+        window.addEventListener('touchend',unlock,{once:true}); window.addEventListener('click',unlock,{once:true});
+      },[]);
+
+      return (
+        <div style={{minHeight:'100vh'}}>
+          {view==='dashboard'   && <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />}
+          {view==='speed'       && <SpeedLadderGame prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} onBack={()=>setView('dashboard')} />}
+          {view==='cards'       && <Flashcards onBack={()=>setView('dashboard')} />}
+          {view==='bingo'       && <BingoBoard onBack={()=>setView('dashboard')} />}
+          {view==='dice'        && <DiceOfDestinyGame onBack={()=>setView('dashboard')} />}
+          {view==='tempoTrainer'&& <TempoTrainer prefs={prefs} onBack={()=>setView('dashboard')} />}
+          {view==='tempoTester' && <TempoTester prefs={prefs} onBack={()=>setView('dashboard')} />}
+          {view==='bielerLab'   && <BielerLab onBack={()=>setView('dashboard')} />}
+        </div>
+      );
+    };
+
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
-
-    // iOS/Chromebook audio/TTS unlock on first user gesture
-    const unlock = () => {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (ctx && ctx.state === 'suspended') ctx.resume();
-      } catch {}
-      if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch {} }
-      window.removeEventListener('touchend', unlock);
-      window.removeEventListener('click', unlock);
-    };
-    window.addEventListener('touchend', unlock, { once: true });
-    window.addEventListener('click', unlock, { once: true });
   </script>
 
-  <!-- Service worker registration -->
+  <!-- Service worker registration + gentle “update ready” hook -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js", { scope: "./" });
+        navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(()=>{});
       });
     }
   </script>
