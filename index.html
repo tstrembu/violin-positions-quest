@@ -100,44 +100,31 @@
       scroll-snap-type: x mandatory;
     }
     
-    .fb-pos {
-      flex: 0 0 var(--posw);
-      width: var(--posw);
-      scroll-snap-align: start;
+    /* 1) Let grid items actually shrink inside the grid columns */
+    .fb-pos { min-width: 0; overflow: hidden; }
+    
+    /* 2) Make the 5-note matrix responsive instead of fixed-width */
+    .fb-grid{
+      display:grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr)); /* was: repeat(5, var(--cell)) */
+      gap:6px;
     }
     
-    .fb-grid {
-      display: grid;
-      grid-template-columns: repeat(5, var(--cell));
-      gap: 6px;
+    /* 3) Keep tiles square-ish without relying on --cell */
+    .fb-tile{
+      height:auto;                 /* was: calc(var(--cell) + 14px) */
+      aspect-ratio: 1 / 1.1;       /* room for label + band */
+      padding:6px 4px;
     }
     
-    .fb-tile {
-      height: calc(var(--cell) + 14px);
-      padding: 6px 4px;
-      line-height: 1.05;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      text-align: center;
-      border-radius: .5rem;
-      font-variant-numeric: tabular-nums;
+    /* 4) Optional: avoid any bleed when the strip becomes a grid */
+    @media (min-width:768px){
+      .fb-strip { overflow:hidden; }  /* was: overflow: visible; */
     }
     
-    .fb-band {
-      height: 8px;
-      width: 100%;
-      border-radius: 4px;
-      background: rgba(0,0,0,.08);
-    }
-    
-    /* Promote to grid on wider screens */
-    @media (min-width: 768px){
-      .fb-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); overflow: visible; }
-      .fb-pos   { width: auto; flex: initial; }
-    }
-    @media (min-width: 1280px){
-      .fb-strip { grid-template-columns: repeat(5, minmax(0,1fr)); }
+    /* 5) Fallback if a browser lacks aspect-ratio (rare now) */
+    @supports not (aspect-ratio: 1){
+      .fb-tile { height: 72px; }
     }
   </style>
 
