@@ -1,5 +1,15 @@
 // sw.js (at /violin-positions-quest/sw.js)
 const CACHE = "vpq-v2"; // ← bump this string
+const ASSETS = [
+    "./",                 // resolves to /violin-positions-quest/
+  "./index.html",
+  "./404.html",         // GH Pages SPA fallback (optional but nice)
+  "./manifest.webmanifest",
+  "./sw.js",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/maskable-512.png"
+];
 const APP_SHELL = [
   "./",                 // resolves to /violin-positions-quest/
   "./index.html",
