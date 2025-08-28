@@ -341,7 +341,45 @@
       shift: "Shift Coach: Stay on one string. Given start note/location and target note, choose the most efficient new position/finger (requires a shift).",
       harmonics: "Harmonics Lab: Learn natural harmonic nodes (1/2, 1/3, 1/4) per string with flashcards and quick checks. Great for tone and intonation reference."
     };
+    
+    /* =========================================================
+       Evidence-based buckets for the fingerboard heatmap
+       - Wilson 95% lower bound classifies red/yellow/green
+       - Opacity scales with attempts (stability)
+    ========================================================= */
+    const wilsonLowerBound = (correct, total, z = 1.96) => {
+      if (total === 0) return 0;
+      const phat = correct / total;
+      const z2 = z * z;
+      const denom = 1 + z2 / total;
+      const center = (phat + z2 / (2 * total)) / denom;
+      const margin = (z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total)) / denom;
+      return Math.max(0, center - margin);
+    };
 
+    // Maps stats -> color + label using Wilson lower bound
+    const bucketColorFor = (correct, total) => {
+      if (!total) {
+        return { bg: 'rgba(120,120,120,0.18)', fg: 'inherit', bucket: 'unseen', lb: 0 };
+      }
+      const lb = wilsonLowerBound(correct, total, 1.96); // 95% LB
+      // Thresholds: <0.65 = red, 0.65–0.85 = yellow, ≥0.85 = green
+      let hue, bucket;
+      if (lb < 0.65) { hue = 0; bucket = 'needs'; }            // red
+      else if (lb < 0.85) { hue = 45; bucket = 'growing'; }    // yellow/amber
+      else { hue = 140; bucket = 'strong'; }                   // green
+
+      // Opacity rises with attempts (stability), from ~0.30 to ~0.95
+      const stability = 1 - Math.exp(-total / 8);
+      const alpha = 0.30 + 0.65 * stability;
+
+      // Use comma-separated HSLA for broad browser support
+      const bg = `hsla(${hue}, 85%, 45%, ${alpha.toFixed(3)})`;
+      // Ensure readable text (yellow gets dark text, others white)
+      const fg = bucket === 'growing' ? '#111827' : 'white';
+      return { bg, fg, bucket, lb };
+    };
+    
     /* =========================================================
        Heatmaps
     ========================================================== */
@@ -352,43 +390,64 @@
     };
 
     const AccuracyHeatmap = ({ stats }) => (
-      <div className="card rounded-xl p-4">
-        <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STRINGS.map(s => (
-            <div key={s} className="rounded-lg border">
-              <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
-                {s} string
-              </div>
-              <div className="p-2">
-                <div className="grid grid-cols-5 gap-2">
-                  {POSITIONS.map(p => (
-                    <div key={p} className="rounded-md border">
-                      <div className="text-xs px-2 py-1 border-b">Pos {p}</div>
-                      {/* Immediate win #1: finger tiles 5-wide (F0–F4) */}
-                      <div className="grid gap-1 p-2" style={{gridTemplateColumns:'repeat(5,minmax(0,1fr))'}}>
-                        {FINGERS.map(f => {
-                          const k = `${s}:${p}:${f}`;
-                          const st = stats[k] || { correct:0, total:0 };
-                          const acc = st.total ? st.correct/st.total : 0;
-                          const bg = tileColor(st.total, acc);
-                          return (
-                            <div key={f} className="rounded p-2 text-center text-xs font-semibold" style={{background:bg}} title={`${s} Pos ${p} F${f} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}>
-                              F{f}<br/>{st.total ? `${Math.round(acc*100)}%` : '—'}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+  <div className="card rounded-xl p-4">
+    <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {STRINGS.map(s => (
+        <div key={s} className="rounded-lg border">
+          <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
+            {s} string
+          </div>
+          <div className="p-2">
+            <div className="grid grid-cols-5 gap-2">
+              {POSITIONS.map(p => (
+                <div key={p} className="rounded-md border">
+                  <div className="text-xs px-2 py-1 border-b">Pos {p}</div>
+                  <div className="grid gap-1 p-2" style={{ gridTemplateColumns:'repeat(5,minmax(0,1fr))' }}>
+                    {FINGERS.map(f => {
+                      const valid = !!validCell(s, p, f);
+                      if (!valid) {
+                        // visually mark impossible cells as N/A (not “unseen”)
+                        return (
+                          <div key={f}
+                            className="rounded p-2 text-center text-xs font-semibold"
+                            style={{ border: '1px dashed rgba(0,0,0,0.25)', background: 'transparent', color: 'var(--ink-500)' }}
+                            title={`${s} Pos ${p} F${f} — N/A`}>
+                            F{f}<br/>—
+                          </div>
+                        );
+                      }
+                      const k = `${s}:${p}:${f}`;
+                      const st = stats[k] || { correct:0, total:0 };
+                      const { bg, fg, lb } = bucketColorFor(st.correct, st.total);
+                      const acc = st.total ? (st.correct / st.total) : 0;
+                      const tip = `${s} Pos ${p} F${f} — ${st.correct}/${st.total} `
+                                + `(${Math.round(acc*100)}%) · LB95 ${Math.round(lb*100)}%`;
+
+                      return (
+                        <div key={f}
+                          className="rounded p-2 text-center text-xs font-semibold"
+                          style={{ background: bg, color: fg }}
+                          title={tip}>
+                          F{f}<br/>{st.total ? `${Math.round(acc*100)}%` : '—'}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-        <p className="text-xs muted mt-2">Gray = unseen, red = needs work, green = strong.</p>
-      </div>
-    );
+      ))}
+    </div>
+
+    <p className="text-xs muted mt-2">
+      Legend — Gray: unseen · Red: needs work (LB&lt;65%) · Yellow: developing (65–85%) · Green: strong (≥85%).
+      Bands use the 95% Wilson lower confidence bound; opacity increases with attempts (stability).
+    </p>
+  </div>
+);
 
     const TempoHeatmap = ({ stats, terms }) => (
       <div className="card rounded-xl p-4">
