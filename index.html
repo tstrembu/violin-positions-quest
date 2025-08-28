@@ -85,47 +85,77 @@
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     *, *::before, *::after { box-sizing: border-box; }
    
-    /* ---- Fingerboard heatmap layout ---- */
+    /* ---- Fingerboard heatmap layout (fixed overlap) ---- */
     :root{
-      --posw: clamp(300px, 96vw, 360px);   /* width of each position card on small screens */
-      --cell: clamp(48px, 9vw, 62px);      /* width/height basis for tiles */
+      /* width of a *position card* inside a string at small/medium sizes */
+      --posw: clamp(160px, 45%, 220px);
     }
-    
-    .fb-strip {
-      display: flex;
+
+   /* horizontal strip by default (phones/tablet/half-screen) */
+   .fb-strip{
+      display:flex;
+      gap:12px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      padding-bottom:6px;
+      scroll-snap-type:x mandatory;
+    }
+
+   /* each position card keeps a real width and won't collapse */
+   .fb-pos{
+     flex: 0 0 var(--posw);     /* no shrink; shows as a scrollable carousel */
+     min-width: var(--posw);
+     scroll-snap-align: start;
+     overflow:hidden;
+    }
+
+   /* grid of the 5 fingers inside one position card */
+   .fb-grid{
+     display:grid;
+     grid-template-columns: repeat(5, minmax(0, 1fr));
+     gap:6px;
+    }
+
+   /* tile internals: prevent label/percent/band collisions */
+   .fb-tile{
+     position: relative;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     justify-content: center;
+     gap: 2px;
+     line-height: 1.1;
+     aspect-ratio: 1 / 1.15;
+     padding: 6px 4px;
+     min-width: 0;              /* allow text to shrink instead of overflow */
+   }
+
+   .fb-band{
+     position: absolute;
+     left: 6px; right: 6px; bottom: 6px;
+     height: 10px; border-radius: 6px;
+   }
+
+  /* on large screens, lay the positions out as a 5-col grid (no scroll) */
+  @media (min-width: 1024px){
+    .fb-strip{
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 6px;
-      scroll-snap-type: x mandatory;
+      overflow: visible;
     }
-    
-    /* 1) Let grid items actually shrink inside the grid columns */
-    .fb-pos { min-width: 0; overflow: hidden; }
-    
-    /* 2) Make the 5-note matrix responsive instead of fixed-width */
-    .fb-grid{
-      display:grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr)); /* was: repeat(5, var(--cell)) */
-      gap:6px;
-    }
-    
-    /* 3) Keep tiles square-ish without relying on --cell */
-    .fb-tile{
-      height:auto;                 /* was: calc(var(--cell) + 14px) */
-      aspect-ratio: 1 / 1.1;       /* room for label + band */
-      padding:6px 4px;
-    }
-    
-    /* 4) Optional: avoid any bleed when the strip becomes a grid */
-    @media (min-width:768px){
-      .fb-strip { overflow:hidden; }  /* was: overflow: visible; */
-    }
-    
-    /* 5) Fallback if a browser lacks aspect-ratio (rare now) */
-    @supports not (aspect-ratio: 1){
-      .fb-tile { height: 72px; }
-    }
+    .fb-pos{ flex: initial; min-width: 0; }
+  }
+
+  /* small fallback if a browser lacks aspect-ratio (rare) */
+  @supports not (aspect-ratio: 1){
+    .fb-tile { height: 72px; }
+  }
+  /* optional: two rows of positions inside each string on md screens */
+  @media (min-width: 768px) and (max-width: 1023px){
+    .fb-strip{ flex-wrap: wrap; }
+    .fb-pos{ flex: 1 1 calc(50% - 12px); min-width: 0; }
+  }
   </style>
 
   <!-- Tailwind (utility helpers only) -->
