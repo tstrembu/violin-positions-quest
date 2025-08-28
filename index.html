@@ -76,6 +76,10 @@
     .grid-cards { display:grid; gap: 24px; grid-template-columns: repeat(1, minmax(0,1fr)); }
     @media(min-width:640px){ .grid-cards{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
     @media(min-width:1024px){ .grid-cards{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -111,6 +115,12 @@
     const TEMPO_STATS_KEY = 'positionsQuest.tempo.stats.v1';
     const TEMPO_BEST_KEY  = 'positionsQuest.tempo.best.v1';
 
+    // NEW stats keys for added modes
+    const HEIGHT_STATS_KEY  = 'positionsQuest.height.stats.v1';
+    const LOCATOR_STATS_KEY = 'positionsQuest.locator.stats.v1';
+    const SHIFT_STATS_KEY   = 'positionsQuest.shift.stats.v1';
+    const HARM_STATS_KEY    = 'positionsQuest.harmonics.stats.v1';
+
     /* =========================================================
        Theme
     ========================================================== */
@@ -129,36 +139,37 @@
     const getRandomItem = (arr) => arr[Math.floor(Math.random()*arr.length)];
 
     /* =========================================================
-       Fingerboard Data (Positions 1–5)
+       Fingerboard Data (Positions 1–5) + Open strings
     ========================================================== */
     const STRINGS = ['G','D','A','E'];
     const POSITIONS = ['1','2','3','4','5'];
-    const FINGERS = ['1','2','3','4'];
+    // include F0 (open)
+    const FINGERS = ['0','1','2','3','4'];
 
     const NOTES_DATA = {
       G: {
-        1: { 1: ['A♭','A'], 2: ['B♭','B'], 3: ['C','C#'], 4: ['D'] },
+        1: { 0: ['G'], 1: ['A♭','A'], 2: ['B♭','B'], 3: ['C','C#'], 4: ['D'] },
         2: { 1: ['B♭','B'], 2: ['B','C'], 3: ['C','C#'], 4: ['D','D#'] },
         3: { 1: ['C','C#'], 2: ['C#','D'], 3: ['D','D#'], 4: ['E','F'] },
         4: { 1: ['D','D#'], 2: ['D#','E'], 3: ['E','F'],   4: ['F#','G'] },
         5: { 1: ['E','F'],   2: ['F','F#'], 3: ['F#','G'], 4: ['G#','A'] },
       },
       D: {
-        1: { 1: ['E♭','E'], 2: ['F','F#'], 3: ['G','G#'], 4: ['A'] },
+        1: { 0: ['D'], 1: ['E♭','E'], 2: ['F','F#'], 3: ['G','G#'], 4: ['A'] },
         2: { 1: ['F','F#'], 2: ['F#','G'], 3: ['G','G#'], 4: ['A','A#'] },
         3: { 1: ['G','G#'], 2: ['G#','A'], 3: ['A','A#'], 4: ['B','C'] },
         4: { 1: ['A','A#'], 2: ['A#','B'], 3: ['B','C'],  4: ['C#','D'] },
         5: { 1: ['B','C'],  2: ['C','C#'], 3: ['C#','D'], 4: ['D#','E'] },
       },
       A: {
-        1: { 1: ['B♭','B'], 2: ['C','C#'], 3: ['D','D#'], 4: ['E'] },
+        1: { 0: ['A'], 1: ['B♭','B'], 2: ['C','C#'], 3: ['D','D#'], 4: ['E'] },
         2: { 1: ['C','C#'], 2: ['C#','D'], 3: ['D','D#'], 4: ['E','F'] },
         3: { 1: ['D','D#'], 2: ['D#','E'], 3: ['E','F'],  4: ['F#','G'] },
         4: { 1: ['E','F'],  2: ['F','F#'], 3: ['F#','G'], 4: ['G#','A'] },
         5: { 1: ['F#','G'], 2: ['G','G#'], 3: ['G#','A'], 4: ['A#','B'] },
       },
       E: {
-        1: { 1: ['F','F#'], 2: ['G','G#'], 3: ['A','A#'], 4: ['B'] },
+        1: { 0: ['E'], 1: ['F','F#'], 2: ['G','G#'], 3: ['A','A#'], 4: ['B'] },
         2: { 1: ['G','G#'], 2: ['G#','A'], 3: ['A','A#'], 4: ['B','C'] },
         3: { 1: ['A','A#'], 2: ['A#','B'], 3: ['B','C'],  4: ['C#','D'] },
         4: { 1: ['B','C'],  2: ['C','C#'], 3: ['C#','D'], 4: ['D#','E'] },
@@ -166,35 +177,31 @@
       },
     };
 
-    /* ======= NEW: helpers for low/high labeling ======= */
+    // Low/High helper
     const fingerHeight = (note, options) => {
-      // options: the NOTES_DATA cell array in ascending pitch (as in your data)
-      if (!options || options.length === 0) return 'natural';
-      if (options.length === 1) return 'natural';
-      const idx = options.indexOf(note);
-      if (idx === -1) return 'natural';
-      if (idx === 0) return 'low';
-      if (idx === options.length - 1) return 'high';
-      return 'natural'; // middle values rare in 1–5 but safe default
+      if (!Array.isArray(options)) return 'natural';
+      if (options.length <= 1) return 'natural';
+      const [low, high] = [options[0], options[options.length-1]];
+      if (note === low) return 'low';
+      if (note === high) return 'high';
+      return 'natural';
     };
 
-    /* ======= NEW: open strings ======= */
-    const OPEN_NOTES = { G:'G', D:'D', A:'A', E:'E' };
-
-    /* ======= NEW: simple natural harmonics (teaching first) ======= */
-    // minimal, musical, and unambiguous set
+    // Simple harmonics set per string
     const HARMONICS = {
-      // nodeRatio: [noteName, teachingLabel]
-      // 1/2 = octave, 1/3 ≈ P12 (octave+fifth), 1/4 = 2 octaves
-      G: { '1/2':['G', 'octave'], '1/3':['D', 'oct+5th'], '1/4':['G', '2 oct'] },
-      D: { '1/2':['D', 'octave'], '1/3':['A', 'oct+5th'], '1/4':['D', '2 oct'] },
-      A: { '1/2':['A', 'octave'], '1/3':['E', 'oct+5th'], '1/4':['A', '2 oct'] },
-      E: { '1/2':['E', 'octave'], '1/3':['B', 'oct+5th'], '1/4':['E', '2 oct'] },
+      G: { '1/2':['G','octave'], '1/3':['D','oct+5th'], '1/4':['G','2 oct'] },
+      D: { '1/2':['D','octave'], '1/3':['A','oct+5th'], '1/4':['D','2 oct'] },
+      A: { '1/2':['A','octave'], '1/3':['E','oct+5th'], '1/4':['A','2 oct'] },
+      E: { '1/2':['E','octave'], '1/3':['B','oct+5th'], '1/4':['E','2 oct'] },
     };
 
+    // Unique note list (guard against undefined cells)
     const ALL_NOTES_UNIQUE = (() => {
       const set = new Set();
-      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => NOTES_DATA[s][p][f].forEach(n => set.add(n)))));
+      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
+        const cell = NOTES_DATA[s]?.[p]?.[f];
+        if (Array.isArray(cell)) cell.forEach(n => set.add(n));
+      })));
       return [...set];
     })();
 
@@ -233,6 +240,10 @@
     const loadTempoBest = () => { try { return JSON.parse(localStorage.getItem(TEMPO_BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
     const saveTempoBest = (obj) => { try { localStorage.setItem(TEMPO_BEST_KEY, JSON.stringify(obj)); } catch {} };
 
+    // New per-mode stats helpers
+    const loadJSON = (k, fallback={}) => { try { return JSON.parse(localStorage.getItem(k)) || fallback; } catch { return fallback; } };
+    const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
     /* =========================================================
        Audio & call-outs
     ========================================================== */
@@ -264,7 +275,7 @@
     ========================================================== */
     const Modal = ({ open, onClose, title, children }) => !open ? null : (
       <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal card rounded-xl p-5" onClick={e=>e.stopPropagation()}>
+        <div className="modal card rounded-xl p-5" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}>
           <div className="flex items-center justify-between mb-2">
             <div className="text-lg font-bold">{title}</div>
             <button className="btn btn-gray" onClick={onClose}>Close</button>
@@ -306,12 +317,13 @@
       cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is under finger X?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
       bingo: "Positions Bingo: a 5×5 practice board with violin tasks. Mark squares as you complete them. The center is FREE. Press R to reshuffle the board.",
       dice: "Dice of Destiny: press Roll for a focused practice challenge. The dice avoids repeats until the set cycles. Copy your challenge to notes if you like.",
-      seybold: "Seybold Hub: weekly planner + logs tied to Positions 1–5. Track etudes, bowing focus, interval plans, and reflections aligned with Seybold Volumes 1–8.",
-      scoreboard: "Scoreboard & Badges: log daily points (0–5) for activities. Earn badges automatically as certain milestones are reached.",
-      boss: "Boss Fights: short written checks for positions, intervals, and planning. Clear each boss by typing a valid path or solution.",
       tempoTrainer: "Tempo Trainer: flashcards for Italian tempo terms with optional speech call-outs. Reveal the meaning, then say the feel out loud.",
       tempoTester: "Tempo Tester: timed multiple choice. Press 1–4 to answer. At the end, review your misses and retry just those items. A heat map tracks per-term accuracy.",
-      bielerLab: "Bieler Method Lab: progressive study of Ida Bieler’s approach. First build vocabulary, then test conceptual understanding, then apply ideas to musical scenarios and bow/left-hand technique."
+      bielerLab: "Bieler Method Lab: progressive study of Ida Bieler’s approach. First build vocabulary, then test conceptual understanding, then apply ideas to musical scenarios and bow/left-hand technique.",
+      height: "Finger Height Drill: Low vs High fingers. Prompt: note + string/position/finger. Answer Low or High (L/H). Builds intonation patterns across positions.",
+      locator: "Note Locator: Given a pitch (e.g., B♭), pick a valid location (string, position, finger). Reinforces multiple locations for the same note.",
+      shift: "Shift Coach: Stay on one string. Given start note/location and target note, choose the most efficient new position/finger (requires a shift).",
+      harmonics: "Harmonics Lab: Learn natural harmonic nodes (1/2, 1/3, 1/4) per string with flashcards and quick checks. Great for tone and intonation reference."
     };
 
     /* =========================================================
@@ -329,7 +341,6 @@
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STRINGS.map(s => (
             <div key={s} className="rounded-lg border">
-              {/* React style must be an object */}
               <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
                 {s} string
               </div>
@@ -465,6 +476,41 @@
           <style>{`@keyframes fall{to{transform:translateY(110vh); opacity:.65;}}`}</style>
         </div>
       );
+    };
+
+    /* =========================================================
+       Shared helpers for fingerboard
+    ========================================================== */
+    const validCell = (s,p,f) => Array.isArray(NOTES_DATA[s]?.[p]?.[f]) ? NOTES_DATA[s][p][f] : null;
+
+    // All combos that actually exist in NOTES_DATA
+    const allActualCombos = () => {
+      const arr = [];
+      for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
+        const cell = validCell(s,p,f);
+        if (cell) arr.push({ s, p, f, valid: cell });
+      }
+      return arr;
+    };
+
+    // locations for a note across all strings/positions/fingers
+    const allLocationsForNote = (note) => {
+      const spots=[];
+      for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
+        const cell = validCell(s,p,f);
+        if (cell && cell.includes(note)) spots.push({s,p,f});
+      }
+      return spots;
+    };
+    const groupLocationsByString = (note) => {
+      const by = new Map(STRINGS.map(s=>[s,[]]));
+      for (const loc of allLocationsForNote(note)) by.get(loc.s).push(loc);
+      const lines = [];
+      for (const s of STRINGS){
+        const arr = by.get(s).sort((a,b)=>Number(a.p)-Number(b.p)||Number(a.f)-Number(b.f));
+        if (arr.length) lines.push(`${s}: ${arr.map(({p,f})=>`Pos ${p} (F${f})`).join(', ')}`);
+      }
+      return lines.join('  |  ');
     };
 
     /* =========================================================
@@ -629,12 +675,386 @@
       );
     };
 
+    /* ===================== NEW: Finger Height Drill ===================== */
+    const HeightDrill = ({ onBack, prefs }) => {
+      const [q, setQ] = useState(null);
+      const [score, setScore] = useState(0);
+      const [answered, setAnswered] = useState(0);
+      const [timer, setTimer] = useState(prefs.roundLen || 60);
+      const [stats, setStats] = useState(loadJSON(HEIGHT_STATS_KEY, {}));
+      const [confettiSeed, setConfettiSeed] = useState(0);
+      const beeps = useBeeps(prefs.sound);
+      const { speak } = useCallouts(prefs.callouts);
+
+      const combos = useMemo(()=>{
+        // only cells with true low/high choice (length >= 2)
+        return allActualCombos().filter(c => c.valid.length >= 2);
+      },[]);
+
+      const pick = () => {
+        const c = getRandomItem(combos);
+        const note = getRandomItem(c.valid);
+        const label = fingerHeight(note, c.valid); // 'low'|'high'|'natural'
+        speak(`${c.s}, position ${c.p}, finger ${c.f}`);
+        setQ({ ...c, note, label }); // label is the correct answer
+      };
+
+      useEffect(()=>{ pick(); },[]);
+      useEffect(()=>{
+        const id = setInterval(()=>setTimer(t => {
+          if (t <= 1) { clearInterval(id); return 0; }
+          return t-1;
+        }), 1000);
+        return ()=>clearInterval(id);
+      },[]);
+
+      const bump = (key, ok) => {
+        const st = stats[key] || { low:{correct:0,total:0}, high:{correct:0,total:0}, natural:{correct:0,total:0} };
+        const next = { ...stats, [key]: {
+          low: { correct: st.low.correct + (ok && q.label==='low'?1:0), total: st.low.total + (q.label==='low'?1:0) },
+          high:{ correct: st.high.correct+ (ok && q.label==='high'?1:0), total: st.high.total + (q.label==='high'?1:0) },
+          natural:{ correct: st.natural.correct+ (ok && q.label==='natural'?1:0), total: st.natural.total + (q.label==='natural'?1:0) },
+        } };
+        setStats(next); saveJSON(HEIGHT_STATS_KEY, next);
+      };
+
+      const answer = (choice) => {
+        if (!q || timer===0) return;
+        const ok = (choice.toLowerCase() === q.label);
+        const key = `${q.s}:${q.p}:${q.f}`;
+        bump(key, ok);
+        setAnswered(a=>a+1);
+        if (ok) { beeps.good(); setScore(s=>s+1); if (prefs.confetti) setConfettiSeed(x=>x+1); setTimeout(pick, 350); }
+        else { beeps.bad(); setTimeout(pick, 700); }
+      };
+
+      useEffect(()=>{
+        const onKey = e => {
+          const k = e.key.toLowerCase();
+          if (k==='l') answer('low');
+          if (k==='h') answer('high');
+        };
+        window.addEventListener('keydown', onKey);
+        return ()=>window.removeEventListener('keydown', onKey);
+      }, [q, timer]);
+
+      return (
+        <div className="relative p-4 min-h-screen flex flex-col items-center">
+          <ConfettiBurst seed={confettiSeed} />
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
+            <h2 className="text-2xl font-bold mb-2">Finger Height Drill (Low / High)</h2>
+            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Shortcuts: L / H</div>
+            {q && (
+              <>
+                <div className="text-center mb-5">
+                  <div className="text-xl font-bold">To play <b>{q.note}</b> on <b>{q.s}</b>, Pos <b>{q.p}</b>, F<b>{q.f}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
+                  <button className="btn btn-purple" onClick={()=>answer('high')}>High</button>
+                </div>
+                <div className="text-xs muted mt-4 text-center">Tip: “Low” is the first (flat) value in a cell like [F, F#]; “High” is the sharp.</div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* ===================== NEW: Note Locator ===================== */
+    const NoteLocator = ({ onBack, prefs }) => {
+      const [q,setQ] = useState(null);
+      const [timer,setTimer] = useState(prefs.roundLen || 90);
+      const [score,setScore] = useState(0);
+      const [answered,setAnswered] = useState(0);
+      const [stats, setStats] = useState(loadJSON(LOCATOR_STATS_KEY, {}));
+      const beeps = useBeeps(prefs.sound);
+      const { speak } = useCallouts(prefs.callouts);
+
+      const labelLoc = o => `${o.s} · Pos ${o.p} · F${o.f}`;
+
+      const makeQ = () => {
+        const note = getRandomItem(ALL_NOTES_UNIQUE);
+        const correctLocs = allLocationsForNote(note);
+        if (!correctLocs.length) return makeQ();
+        const correct = getRandomItem(correctLocs);
+        // plausible distractors: same string near pos/finger OR same pos on neighbor string
+        const opts = [{...correct, ok:true}];
+        const pushIfUnique = cand => {
+          if (!opts.some(o=>o.s===cand.s && o.p===cand.p && o.f===cand.f)) opts.push(cand);
+        };
+        while (opts.length < 4) {
+          const s = Math.random()<0.6 ? correct.s : getRandomItem(STRINGS);
+          const p = String(Math.max(1, Math.min(5, Number(correct.p) + (Math.random()<0.5?1:-1))));
+          const f = String(Math.max(0, Math.min(4, Number(correct.f) + (Math.random()<0.5?1:-1))));
+          const cand = { s, p, f, ok:false };
+          const cell = validCell(s,p,f);
+          // ensure it's not a true location for the note
+          if (!cell || !cell.includes(note)) pushIfUnique(cand);
+        }
+        speak(note);
+        setQ({ note, opts: shuffle(opts) });
+      };
+
+      useEffect(()=>{ makeQ(); },[]);
+      useEffect(()=>{
+        const id = setInterval(()=>setTimer(t => t<=1 ? 0 : t-1), 1000);
+        return ()=>clearInterval(id);
+      },[]);
+
+      const bump = (note, ok) => {
+        const st = stats[note] || { correct:0, total:0 };
+        const next = { ...stats, [note]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
+        setStats(next); saveJSON(LOCATOR_STATS_KEY, next);
+      };
+
+      const answer = (o) => {
+        const ok = !!o.ok;
+        beeps[ok?'good':'bad']();
+        bump(q.note, ok);
+        setAnswered(a=>a+1);
+        if (ok) setScore(s=>s+1);
+        setTimeout(makeQ, ok?350:700);
+      };
+
+      return (
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:800}}>
+            <h2 className="text-2xl font-bold mb-2">Note Locator</h2>
+            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+            {q && (
+              <>
+                <div className="text-xl font-bold text-center">Where can you play <b>{q.note}</b>?</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                  {q.opts.map((o,i)=>(
+                    <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
+                      <span className="pill" style={{background:'rgba(0,0,0,.15)'}}>{i+1}</span>&nbsp; {labelLoc(o)}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs muted mt-4 text-center">Hint: Many notes have multiple correct places. This drill builds mapping fluency.</div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* ===================== NEW: Shift Coach ===================== */
+    const ShiftCoach = ({ onBack, prefs }) => {
+      const [q,setQ] = useState(null);
+      const [score,setScore] = useState(0);
+      const [answered,setAnswered] = useState(0);
+      const [timer,setTimer] = useState(prefs.roundLen || 90);
+      const [stats, setStats] = useState(loadJSON(SHIFT_STATS_KEY, {}));
+      const beeps = useBeeps(prefs.sound);
+
+      // helpers
+      const locationsForNoteOnString = (note, s) => allLocationsForNote(note).filter(l => l.s === s);
+      const samePosExists = (A, B) => A.some(a => B.some(b => a.p===b.p));
+      const pathCost = (a, b) => Math.abs(Number(a.p) - Number(b.p)); // same string fixed; prefer minimal Δpos
+      const bestPair = (A, B) => {
+        let best = null;
+        for (const a of A) for (const b of B) {
+          const cost = pathCost(a,b);
+          if (!best || cost < best.cost) best = {a,b,cost};
+        }
+        return best;
+      };
+
+      const makePrompt = () => {
+        const s = getRandomItem(STRINGS);
+        const n1 = getRandomItem(ALL_NOTES_UNIQUE);
+        const n2 = getRandomItem(ALL_NOTES_UNIQUE);
+        const A = locationsForNoteOnString(n1, s);
+        const B = locationsForNoteOnString(n2, s);
+        if (!A.length || !B.length) return makePrompt();
+        if (samePosExists(A,B)) return makePrompt(); // avoid trivial non-shift
+        const best = bestPair(A,B);
+        // start location is best.a
+        const start = best.a;
+        const correctEnd = best.b;
+        const opts = [{...correctEnd, ok:true}];
+        // build plausible wrong ends near the correctEnd position
+        const pushUnique = cand => {
+          if (!opts.some(o=>o.p===cand.p && o.f===cand.f)) opts.push(cand);
+        };
+        while (opts.length < 4) {
+          const p = String(Math.max(1, Math.min(5, Number(correctEnd.p) + (Math.random()<0.5?1:-1))));
+          const f = getRandomItem(FINGERS.filter(x=>x!=='0')); // avoid open for shifted end
+          const cand = { s, p, f, ok:false };
+          const cell = validCell(s,p,f);
+          // prefer candidates that do NOT produce the target note
+          pushUnique(cand);
+        }
+        setQ({ string:s, startNote:n1, targetNote:n2, start, opts: shuffle(opts) });
+      };
+
+      useEffect(()=>{ makePrompt(); },[]);
+      useEffect(()=>{
+        const id = setInterval(()=>setTimer(t => t<=1 ? 0 : t-1), 1000);
+        return ()=>clearInterval(id);
+      },[]);
+
+      const bump = (key, ok) => {
+        const st = stats[key] || { correct:0, total:0 };
+        const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
+        setStats(next); saveJSON(SHIFT_STATS_KEY, next);
+      };
+
+      const answer = (o) => {
+        const ok = !!o.ok;
+        const key = `${q.string}:${q.startNote}->${q.targetNote}`;
+        bump(key, ok);
+        beeps[ok?'good':'bad']();
+        setAnswered(a=>a+1);
+        if (ok) setScore(s=>s+1);
+        setTimeout(makePrompt, ok?350:700);
+      };
+
+      const labelLoc = o => `Pos ${o.p} · F${o.f}`;
+
+      return (
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:860}}>
+            <h2 className="text-2xl font-bold mb-2">Shift Coach</h2>
+            <div className="muted text-sm mb-4">Stay on one string. Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+            {q && (
+              <>
+                <div className="rounded-md p-4" style={{background:'rgba(0,0,0,.05)'}}>
+                  <div className="font-semibold mb-1">String: <b>{q.string}</b></div>
+                  <div className="text-sm">Start at <b>{q.startNote}</b> → <span className="muted">({`Pos ${q.start.p}, F${q.start.f}`})</span></div>
+                  <div className="text-sm">Target note: <b>{q.targetNote}</b></div>
+                </div>
+                <div className="text-center text-sm muted mt-2 mb-4">Which <b>position + finger</b> is the best landing spot for the target?</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {q.opts.map((o,i)=>(
+                    <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
+                      <span className="pill" style={{background:'rgba(0,0,0,.15)'}}>{i+1}</span>&nbsp; {labelLoc(o)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* ===================== NEW: Harmonics Lab ===================== */
+    const HarmonicsLab = ({ onBack, prefs }) => {
+      const [mode, setMode] = useState('flash'); // flash | quiz
+      const [i, setI] = useState(0);
+      const [show, setShow] = useState(false);
+      const [stats, setStats] = useState(loadJSON(HARM_STATS_KEY, {}));
+      const beeps = useBeeps(prefs.sound);
+
+      const deck = useMemo(()=>{
+        const cards = [];
+        for (const s of STRINGS) {
+          for (const ratio of Object.keys(HARMONICS[s])) {
+            const [pitch, label] = HARMONICS[s][ratio];
+            cards.push({ s, ratio, label, pitch });
+          }
+        }
+        return cards;
+      },[]);
+
+      const next = () => { setShow(false); setI((i+1)%deck.length); };
+      const prev = () => { setShow(false); setI((i-1+deck.length)%deck.length); };
+
+      // quiz
+      const [q, setQ] = useState(null);
+      const makeQ = () => {
+        const s = getRandomItem(STRINGS);
+        const target = getRandomItem(Object.entries(HARMONICS[s])); // [ratio,[note,label]]
+        const correctRatio = target[0];
+        const noteName = target[1][0];
+        const display = `${s} string — play the ${noteName} harmonic`;
+        // distract ratios (pick other ratios on same string)
+        const ratios = Object.keys(HARMONICS[s]);
+        const distracts = shuffle(ratios.filter(r=>r!==correctRatio)).slice(0,3);
+        const options = shuffle([correctRatio, ...distracts]).map(r => ({r, ok: r===correctRatio}));
+        setQ({ s, note: noteName, display, options });
+      };
+
+      useEffect(()=>{ if(mode==='quiz') makeQ(); }, [mode]);
+
+      const bump = (key, ok) => {
+        const st = stats[key] || { correct:0, total:0 };
+        const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
+        setStats(next); saveJSON(HARM_STATS_KEY, next);
+      };
+
+      const answer = (opt) => {
+        const ok = !!opt.ok;
+        beeps[ok?'good':'bad']();
+        const key = `${q.s}:${q.note}`;
+        bump(key, ok);
+        setTimeout(makeQ, ok?350:700);
+      };
+
+      return (
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:820}}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Harmonics Lab</h2>
+              <div className="flex gap-2">
+                <button className={`btn ${mode==='flash'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('flash')}>Flashcards</button>
+                <button className={`btn ${mode==='quiz'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('quiz')}>Quick Quiz</button>
+              </div>
+            </div>
+
+            {mode==='flash' && (
+              <div className="mt-4">
+                <div className="rounded-xl border-2 p-6 text-center">
+                  <div className="text-xl font-bold">{deck[i].s} string — Node {deck[i].ratio}</div>
+                  {show ? (
+                    <div className="mt-2 ink700">
+                      <div><b>Pitch:</b> {deck[i].pitch}</div>
+                      <div><b>Type:</b> {deck[i].label}</div>
+                      <div className="text-xs muted mt-1">Light touch directly above the node; release pressure for a clear chime.</div>
+                    </div>
+                  ) : <div className="muted italic">Press Reveal to show details.</div>}
+                </div>
+                <div className="flex gap-2 mt-4 justify-center">
+                  <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
+                  <button className="btn btn-gray" onClick={prev}>Previous</button>
+                  <button className="btn btn-purple" onClick={next}>Next</button>
+                </div>
+                <div className="text-xs muted mt-2 text-center">Card {i+1} / {deck.length}</div>
+              </div>
+            )}
+
+            {mode==='quiz' && (
+              <div className="mt-4">
+                {!q ? <div className="muted">Loading…</div> : (
+                  <>
+                    <div className="text-lg font-semibold mb-2">Which node ratio produces this harmonic?</div>
+                    <div className="rounded-md p-4 mb-3" style={{background:'rgba(0,0,0,.05)'}}>
+                      {q.display}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {q.options.map((o,idx)=>(
+                        <button key={idx} className="btn btn-blue" onClick={()=>answer(o)}>{o.r}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
     // Speed Ladder (fingerboard)
     const SpeedLadderGame = ({ onBack, prefs, stats, setStats }) => {
-      const allCombos = useMemo(()=>{
-        const arr=[]; STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>arr.push({s,p,f,valid:NOTES_DATA[s][p][f]}))));
-        return arr;
-      }, []);
+      const allCombos = useMemo(()=>allActualCombos(), []);
       const beeps = useBeeps(prefs.sound);
       const { speak } = useCallouts(prefs.callouts);
       const [question, setQuestion] = useState(null);
@@ -769,27 +1189,15 @@
     };
 
     // Flashcards (fingerboard)
-    const allLocationsForNote = (note) => {
-      const spots=[]; STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>{ if(NOTES_DATA[s][p][f].includes(note)) spots.push({s,p,f}); })));
-      return spots;
-    };
-    const groupLocationsByString = (note) => {
-      const by = new Map(STRINGS.map(s=>[s,[]]));
-      for (const loc of allLocationsForNote(note)) by.get(loc.s).push(loc);
-      const lines = [];
-      for (const s of STRINGS){
-        const arr = by.get(s).sort((a,b)=>Number(a.p)-Number(b.p)||Number(a.f)-Number(b.f));
-        if (arr.length) lines.push(`${s}: ${arr.map(({p,f})=>`Pos ${p} (F${f})`).join(', ')}`);
-      }
-      return lines.join('  |  ');
-    };
-
     const Flashcards = ({ onBack }) => {
       const [mode, setMode] = useState('A');
       const [i, setI] = useState(0);
       const [show,setShow] = useState(false);
       const deckA = useMemo(()=>{
-        const cards=[]; STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>cards.push({q:`What note(s) under F${f} on ${s} in Position ${p}?`, a: NOTES_DATA[s][p][f].join(' or ')}))));
+        const cards=[]; for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
+          const cell = validCell(s,p,f);
+          if (cell) cards.push({q:`What note(s) under F${f} on ${s} in Position ${p}?`, a: cell.join(' or ')});
+        }
         return cards;
       },[]);
       const uniq = useMemo(()=>[...new Set(ALL_NOTES_UNIQUE)].sort(),[]);
@@ -985,9 +1393,9 @@
       return (
         <div className="card rounded-xl p-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="text-sm">Round: 
+            <div className="text-sm">Round:
               <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen} onChange={e=>{ const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
-                {[30,60,120,180].map(x=><option key={x} value={x}>{x}s</option>)}
+                {[30,60,90,120,180].map(x=><option key={x} value={x}>{x}s</option>)}
               </select>
             </div>
             <div className="flex flex-wrap gap-3 items-center">
@@ -1040,7 +1448,7 @@
             </div>
           </div>
 
-          <p className="text-xs muted mt-3">Focus Mode pulls only from your selected subset (falls back to all if deselected).</p>
+          <p className="text-xs muted mt-3">Focus Mode pulls only from your selected subset (falls back to all if deselected). F0 = open string (Pos 1 only).</p>
         </div>
       );
     };
@@ -1066,6 +1474,10 @@
           [BADGES_KEY]: JSON.parse(localStorage.getItem(BADGES_KEY) || 'null'),
           [PRESETS_KEY]: JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null'),
           [SESSIONLOG_KEY]: JSON.parse(localStorage.getItem(SESSIONLOG_KEY) || 'null'),
+          [HEIGHT_STATS_KEY]: JSON.parse(localStorage.getItem(HEIGHT_STATS_KEY) || 'null'),
+          [LOCATOR_STATS_KEY]: JSON.parse(localStorage.getItem(LOCATOR_STATS_KEY) || 'null'),
+          [SHIFT_STATS_KEY]: JSON.parse(localStorage.getItem(SHIFT_STATS_KEY) || 'null'),
+          [HARM_STATS_KEY]: JSON.parse(localStorage.getItem(HARM_STATS_KEY) || 'null'),
         };
         const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
         const url = URL.createObjectURL(blob);
@@ -1093,7 +1505,10 @@
       };
 
       const resetAll = () => { if(!confirm('Reset all fingerboard stats & bests?')) return;
-        localStorage.removeItem(BEST_KEY); localStorage.removeItem(STATS_KEY); setStats({}); alert('Stats cleared.'); };
+        localStorage.removeItem(BEST_KEY); localStorage.removeItem(STATS_KEY);
+        localStorage.removeItem(HEIGHT_STATS_KEY); localStorage.removeItem(LOCATOR_STATS_KEY);
+        localStorage.removeItem(SHIFT_STATS_KEY); localStorage.removeItem(HARM_STATS_KEY);
+        setStats({}); alert('Stats cleared.'); };
 
       useEffect(()=>{
         // SW update prompt
@@ -1125,6 +1540,10 @@
 
           <div className="grid-cards">
             <CardButton title="Speed Ladder" description="Adaptive fingerboard quiz (Pos 1–5). Coach + retries." onClick={()=>go('speed')} onHelp={()=>setHelpKey('speed')} />
+            <CardButton title="Finger Height Drill" description="Low vs High fingers for intonation." onClick={()=>go('height')} onHelp={()=>setHelpKey('height')} />
+            <CardButton title="Note Locator" description="Pick a valid string/position/finger for a pitch." onClick={()=>go('locator')} onHelp={()=>setHelpKey('locator')} />
+            <CardButton title="Shift Coach" description="Choose efficient shifts on one string." onClick={()=>go('shift')} onHelp={()=>setHelpKey('shift')} />
+            <CardButton title="Harmonics Lab" description="Natural nodes (1/2, 1/3, 1/4) per string." onClick={()=>go('harmonics')} onHelp={()=>setHelpKey('harmonics')} />
             <CardButton title="Flashcards Mode" description="Two decks: direct hits + note→locations." onClick={()=>go('cards')} onHelp={()=>setHelpKey('cards')} />
             <CardButton title="Positions Bingo" description="Fill a line with focused tasks." onClick={()=>go('bingo')} onHelp={()=>setHelpKey('bingo')} />
             <CardButton title="Dice of Destiny" description="Roll for a practice challenge." onClick={()=>go('dice')} onHelp={()=>setHelpKey('dice')} />
@@ -1170,6 +1589,10 @@
         <div style={{minHeight:'100vh'}}>
           {view==='dashboard'   && <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />}
           {view==='speed'       && <SpeedLadderGame prefs={prefs} stats={stats} setStats={setStats} onBack={()=>setView('dashboard')} />}
+          {view==='height'      && <HeightDrill prefs={prefs} onBack={()=>setView('dashboard')} />}
+          {view==='locator'     && <NoteLocator prefs={prefs} onBack={()=>setView('dashboard')} />}
+          {view==='shift'       && <ShiftCoach prefs={prefs} onBack={()=>setView('dashboard')} />}
+          {view==='harmonics'   && <HarmonicsLab prefs={prefs} onBack={()=>setView('dashboard')} />}
           {view==='cards'       && <Flashcards onBack={()=>setView('dashboard')} />}
           {view==='bingo'       && <BingoBoard onBack={()=>setView('dashboard')} />}
           {view==='dice'        && <DiceOfDestinyGame onBack={()=>setView('dashboard')} />}
