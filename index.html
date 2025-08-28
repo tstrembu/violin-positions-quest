@@ -365,17 +365,21 @@ const AccuracyHeatmap = ({ stats }) => (
 
           {/* ⬇️ safety net for narrow panes */}
           <div className="p-2 overflow-x-auto">
-            {/* responsive positions grid (1–3 cols, 5 on XL) */}
-            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+            <div className="
+              grid gap-2
+              grid-flow-col auto-cols-[minmax(320px,1fr)]   /* small: horizontal scroller */
+              md:grid-flow-row md:auto-cols-auto md:grid-cols-3
+              xl:grid-cols-5
+            ">
               {POSITIONS.map(p => (
                 <div
                   key={p}
                   className="fb-pos rounded-md border overflow-hidden"
-                  style={{ minWidth: 260 }} // ensures the inner 5-finger grid never collapses
+                  style={{ minWidth: 320 }} // ensures the inner 5-finger grid never collapses
                 >
                   <div
                     className="fb-grid grid gap-1 p-2"
-                    style={{ gridTemplateColumns: 'repeat(5, minmax(48px, 1fr))' }}
+                    style={{ gridTemplateColumns: 'repeat(5, minmax(52px, 1fr))' }}
                   >
                     {FINGERS.map(f => {
                       const isReal = !!validCell(s, p, f);
