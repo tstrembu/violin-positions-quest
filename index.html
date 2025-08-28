@@ -83,6 +83,7 @@
 
     /* A11y live region */
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+    *, *::before, *::after { box-sizing: border-box; }
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -381,14 +382,6 @@
                             <div
                               key={f}
                               className="fb-tile rounded text-center text-xs font-semibold flex flex-col justify-between"
-                              style={{
-                                background: style.bg,
-                                border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
-                                padding: '6px 4px',
-                                height: 56,
-                                fontVariantNumeric: 'tabular-nums'
-                              }}
-                            >
                               title={
                                 isReal
                                   ? `${s} • Pos ${p} • F${f} — ${st.correct||0}/${st.total||0}  (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
@@ -399,14 +392,28 @@
                                   ? `On ${s} string, position ${p}, finger ${f}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent`
                                   : 'Invalid cell'
                               }
+                              style={{
+                                background: style.bg,
+                                border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
+                                padding: '6px 4px',
+                                height: 56,
+                                fontVariantNumeric: 'tabular-nums'
+                              }}
                             >
-                              <div style={{color: isReal ? style.text : '#9ca3af'}}>
-                                F{f}
-                              </div>
-    
-                              <div style={{color: isReal ? style.text : '#9ca3af', marginTop: 2}}>
+                              <div style={{ color: isReal ? style.text : '#9ca3af' }}>F{f}</div>
+                              <div style={{ color: isReal ? style.text : '#9ca3af', marginTop: 2 }}>
                                 {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
                               </div>
+                              <div
+                                style={{
+                                  height: 8,
+                                  width: '100%',
+                                  borderRadius: 4,
+                                  background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)',
+                                  marginTop: 6
+                                }}
+                              />
+                            </div>
     
                               {/* Evidence band */}
                               <div
