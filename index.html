@@ -343,50 +343,12 @@
     };
     
     /* =========================================================
-       Evidence-based buckets for the fingerboard heatmap
-       - Wilson 95% lower bound classifies red/yellow/green
-       - Opacity scales with attempts (stability)
-    ========================================================= */
-    const wilsonLowerBound = (correct, total, z = 1.96) => {
-      if (total === 0) return 0;
-      const phat = correct / total;
-      const z2 = z * z;
-      const denom = 1 + z2 / total;
-      const center = (phat + z2 / (2 * total)) / denom;
-      const margin = (z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total)) / denom;
-      return Math.max(0, center - margin);
-    };
-
-    // Maps stats -> color + label using Wilson lower bound
-    const bucketColorFor = (correct, total) => {
-      if (!total) {
-        return { bg: 'rgba(120,120,120,0.18)', fg: 'inherit', bucket: 'unseen', lb: 0 };
-      }
-      const lb = wilsonLowerBound(correct, total, 1.96); // 95% LB
-      // Thresholds: <0.65 = red, 0.65–0.85 = yellow, ≥0.85 = green
-      let hue, bucket;
-      if (lb < 0.65) { hue = 0; bucket = 'needs'; }            // red
-      else if (lb < 0.85) { hue = 45; bucket = 'growing'; }    // yellow/amber
-      else { hue = 140; bucket = 'strong'; }                   // green
-
-      // Opacity rises with attempts (stability), from ~0.30 to ~0.95
-      const stability = 1 - Math.exp(-total / 8);
-      const alpha = 0.30 + 0.65 * stability;
-
-      // Use comma-separated HSLA for broad browser support
-      const bg = `hsla(${hue}, 85%, 45%, ${alpha.toFixed(3)})`;
-      // Ensure readable text (yellow gets dark text, others white)
-      const fg = bucket === 'growing' ? '#111827' : 'white';
-      return { bg, fg, bucket, lb };
-    };
-    
-    /* =========================================================
        Heatmaps
     ========================================================== */
     const tileColor = (total, acc) => {
       if (!total) return 'rgba(120,120,120,0.18)';
-      const hue = 140*acc; const sat = .85; const light = .45 + .1*acc;
-      return `hsl(${hue}deg ${sat*100}% ${light*100}%)`;
+      const hue = 140 * acc, sat = 85, light = 45 + 10 * acc;
+      return `hsla(${hue}, ${sat}%, ${light}%, 1)`;
     };
 
     const AccuracyHeatmap = ({ stats }) => (
@@ -495,7 +457,12 @@
       </div>
     );
 
-        // ---- Evidence-based color + stability ----
+    
+    /* =========================================================
+       Evidence-based approach and color stability for the fingerboard heatmap
+       - Wilson 95% lower bound classifies red/yellow/green
+       - Opacity scales with attempts (stability)
+    ========================================================= */
     const wilsonLowerBound = (correct, total, z = 1.96) => {
       if (!total) return 0;
       const p = correct / total;
