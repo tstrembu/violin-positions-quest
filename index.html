@@ -13,17 +13,20 @@
     html, body { height: 100%; }
     body { margin: 0; background: #f3f4f6; }
   </style>
+
   <!-- PWA hooks -->
   <link rel="manifest" href="/violin-positions-quest/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/violin-positions-quest/icons/icon-192.png">
   <meta name="theme-color" content="#6d28d9">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <!-- Tailwind Play CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = { theme: { extend: { fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] }}}};
   </script>
+
   <!-- React 18 UMD + Babel for in-browser JSX -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -74,7 +77,39 @@
     );
 
     /* =========================
-       Core Fingerboard Data (unchanged)
+       Error guard (prevents blank screens)
+       ========================= */
+    class ErrorBoundary extends React.Component {
+      constructor(props){ super(props); this.state = { hasError:false, err:null }; }
+      static getDerivedStateFromError(err){ return { hasError:true, err }; }
+      componentDidCatch(err, info){ /* optional: log */ }
+      render(){
+        if (this.state.hasError) {
+          return (
+            <div className="p-6 max-w-xl mx-auto text-center">
+              <h2 className="text-xl font-bold text-rose-700 mb-2">Something went wrong</h2>
+              <p className="text-sm text-gray-600 mb-4">Try going back to the dashboard or reload.</p>
+              <div className="flex gap-2 justify-center">
+                <button onClick={()=>location.reload()} className="px-4 py-2 bg-purple-600 text-white rounded-full">Reload</button>
+                <button onClick={()=>window.history.back()} className="px-4 py-2 bg-gray-700 text-white rounded-full">Back</button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    const MissingView = ({ name="this view", onBack }) => (
+      <div className="p-6 max-w-xl mx-auto text-center">
+        <h2 className="text-2xl font-bold text-amber-700 mb-2">View not available</h2>
+        <p className="text-sm text-gray-600 mb-4">“{name}” isn’t loaded in this build.</p>
+        <button onClick={onBack} className="px-4 py-2 bg-gray-700 text-white rounded-full">Back</button>
+      </div>
+    );
+
+    /* =========================
+       Core Fingerboard Data
        ========================= */
     const NOTES_DATA = {
       G: {
@@ -103,16 +138,9 @@
     const FINGERS = ['1', '2', '3', '4'];
 
     /* =========================
-       Helpers & Persistence (shared)
+       Helpers & Persistence
        ========================= */
-    const shuffle = (arr) => {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    };
+    const shuffle = (arr) => { const a = [...arr]; for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
     const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
     const ALL_NOTES_UNIQUE = (() => {
@@ -128,21 +156,16 @@
     const getRandomDistractors = (excludeSet, count = 3) => {
       const pool = ALL_NOTES_UNIQUE.filter(n => !excludeSet.has(n));
       const picks = new Set();
-      while (picks.size < Math.min(count, pool.length)) {
-        picks.add(pool[Math.floor(Math.random() * pool.length)]);
-      }
+      while (picks.size < Math.min(count, pool.length)) picks.add(pool[Math.floor(Math.random() * pool.length)]);
       return [...picks];
     };
 
-    const BEST_KEY = 'positionsQuest.speed.best';
-    const STATS_KEY = 'positionsQuest.speed.stats';
-    const PREFS_KEY = 'positionsQuest.prefs';
-    const PRESETS_KEY = 'positionsQuest.filterPresets.v1';
-    const SESSIONLOG_KEY = 'positionsQuest.sessions.v1';
-
+    // Fingerboard stats
+    const BEST_KEY = 'positions.best.v1';
+    const STATS_KEY = 'positions.stats.v1';
+    const PREFS_KEY = 'positions.prefs.v1';
     const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore: 0, bestStreak: 0 }; } catch { return { bestScore: 0, bestStreak: 0 }; } };
     const saveBest = (obj) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(obj)); } catch {} };
-
     const loadStats = () => { try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; } catch { return {}; } };
     const saveStats = (obj) => { try { localStorage.setItem(STATS_KEY, JSON.stringify(obj)); } catch {} };
 
@@ -154,30 +177,15 @@
     const loadPrefs = () => {
       try {
         const p = JSON.parse(localStorage.getItem(PREFS_KEY));
-        return {
-          sound: true,
-          confetti: true,
-          adaptive: true,
-          coach: true,
-          coachRetry: true,
-          callouts: true,     // enable by default for Tempo games
-          roundLen: 120,
-          goalEnabled: false,
-          goalTarget: 10,
-          filters: { ...defaultFilters, ...(p?.filters || {}) },
-          ...(p || {})
-        };
+        return { sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true, callouts:true, roundLen:120, goalEnabled:false, goalTarget:10, filters:{ ...defaultFilters, ...(p?.filters||{}) }, ...(p||{}) };
       } catch {
-        return {
-          sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
-          callouts: true, roundLen: 120, goalEnabled: false, goalTarget: 10, filters: defaultFilters
-        };
+        return { sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true, callouts:true, roundLen:120, goalEnabled:false, goalTarget:10, filters: defaultFilters };
       }
     };
     const savePrefs = (obj) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {} };
 
     /* =========================
-       Confetti + Audio + Callouts (shared)
+       Confetti + Audio + Callouts
        ========================= */
     const ConfettiBurst = ({ seed }) => {
       const [pieces, setPieces] = useState([]);
@@ -186,11 +194,7 @@
         const EMOJI = ['✨','🎉','🎊','⭐','💥','🌟'];
         const n = 26;
         const arr = Array.from({ length: n }, (_, i) => ({
-          id: i,
-          left: Math.random() * 100,
-          rot: (Math.random() * 40) - 20,
-          delay: Math.random() * 100,
-          emoji: EMOJI[Math.floor(Math.random() * EMOJI.length)],
+          id: i, left: Math.random() * 100, rot: (Math.random() * 40) - 20, delay: Math.random() * 100, emoji: EMOJI[Math.floor(Math.random() * EMOJI.length)],
         }));
         setPieces(arr);
         const t = setTimeout(() => setPieces([]), 900);
@@ -200,20 +204,7 @@
       return (
         <div className="pointer-events-none fixed inset-0 overflow-hidden z-50">
           {pieces.map(p => (
-            <span
-              key={p.id}
-              style={{
-                position: 'absolute',
-                left: `${p.left}vw`,
-                top: '-10px',
-                transform: `rotate(${p.rot}deg)`,
-                animation: `fall 0.9s ease-in forwards`,
-                animationDelay: `${p.delay}ms`,
-                fontSize: '20px',
-              }}
-            >
-              {p.emoji}
-            </span>
+            <span key={p.id} style={{ position:'absolute', left:`${p.left}vw`, top:'-10px', transform:`rotate(${p.rot}deg)`, animation:`fall 0.9s ease-in forwards`, animationDelay:`${p.delay}ms`, fontSize:'20px' }}>{p.emoji}</span>
           ))}
           <style>{`@keyframes fall { to { transform: translateY(110vh); opacity: 0.6; } }`}</style>
         </div>
@@ -252,26 +243,8 @@
     };
 
     /* =========================
-       Filters / Presets / Analytics UI (unchanged)
+       Heatmap helpers
        ========================= */
-    const loadPresets = () => {
-      try {
-        const p = JSON.parse(localStorage.getItem(PRESETS_KEY));
-        if (p) return p;
-      } catch {}
-      const seeded = [
-        { id: 'f1', name: 'F1 Drills (Low-1 focus)', filters: { strings: {...defaultFilters.strings}, positions: {...defaultFilters.positions}, fingers: { '1': true, '2': false, '3': false, '4': false } } },
-        { id: 'pos2da', name: 'All Pos-2 on D/A', filters: { strings: { G:false, D:true, A:true, E:false }, positions: { '1': false, '2': true, '3': false }, fingers: {...defaultFilters.fingers} } },
-      ];
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(seeded));
-      return seeded;
-    };
-    const savePresets = (list) => { try { localStorage.setItem(PRESETS_KEY, JSON.stringify(list)); } catch {} };
-
-    const PREFS_KEY_TEMPO = 'positionsQuest.tempo.prefs.v1'; // optional: future
-    const loadSessions = () => { try { return JSON.parse(localStorage.getItem(SESSIONLOG_KEY)) || []; } catch { return []; } };
-    const saveSessions = (arr) => { try { localStorage.setItem(SESSIONLOG_KEY, JSON.stringify(arr)); } catch {} };
-
     const tileColor = (total, acc) => {
       if (!total) return 'rgba(120,120,120,0.18)';
       const hue = 140 * acc;
@@ -280,7 +253,7 @@
     };
 
     /* =========================
-       Accuracy Heatmap (fingerboard) — unchanged
+       Accuracy Heatmap (fingerboard)
        ========================= */
     const AccuracyHeatmap = ({ stats }) => {
       return (
@@ -302,9 +275,7 @@
                             const acc = st.total ? st.correct / st.total : 0;
                             const bg = tileColor(st.total, acc);
                             return (
-                              <div key={f} className="rounded p-2 text-center text-xs font-semibold"
-                                   title={`${s} Pos ${p} F${f} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}
-                                   style={{ background: bg }}>
+                              <div key={f} className="rounded p-2 text-center text-xs font-semibold" title={`${s} Pos ${p} F${f} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`} style={{ background: bg }}>
                                 F{f}<br/>{st.total ? `${Math.round(acc*100)}%` : '—'}
                               </div>
                             );
@@ -323,8 +294,20 @@
     };
 
     /* =========================
-       FILTERS PANEL (unchanged)
+       Filters Panel
        ========================= */
+    const PRESETS_KEY = 'positions.presets.v1';
+    const loadPresets = () => {
+      try { const p = JSON.parse(localStorage.getItem(PRESETS_KEY)); if (p) return p; } catch {}
+      const seeded = [
+        { id: 'f1', name: 'F1 Drills (Low-1 focus)', filters: { strings: {...defaultFilters.strings}, positions: {...defaultFilters.positions}, fingers: { '1': true, '2': false, '3': false, '4': false } } },
+        { id: 'pos2da', name: 'All Pos-2 on D/A', filters: { strings: { G:false, D:true, A:true, E:false }, positions: { '1': false, '2': true, '3': false }, fingers: {...defaultFilters.fingers} } },
+      ];
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(seeded));
+      return seeded;
+    };
+    const savePresets = (list) => { try { localStorage.setItem(PRESETS_KEY, JSON.stringify(list)); } catch {} };
+
     const FiltersPanel = ({ prefs, setPrefs, onResetStats, onExportCSV, best, presets, setPresets }) => {
       const f = prefs.filters;
       const [newPresetName, setNewPresetName] = useState('');
@@ -375,19 +358,13 @@
               <Toggle label="Audio call-outs" checked={prefs.callouts} onChange={v => { const n={...prefs, callouts:v}; setPrefs(n); savePrefs(n);} } />
               <div className="flex items-center gap-2 text-sm">
                 <label>Round:</label>
-                <select
-                  value={prefs.roundLen}
-                  onChange={e => { const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n);} }
-                  className="border rounded p-1"
-                >
+                <select value={prefs.roundLen} onChange={e => { const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n);} } className="border rounded p-1">
                   {[30,60,120,180].map(x=> <option key={x} value={x}>{x}s</option>)}
                 </select>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Toggle label="Goal" checked={prefs.goalEnabled} onChange={v => { const n={...prefs, goalEnabled:v}; setPrefs(n); savePrefs(n);} } />
-                <input type="number" min="1" max="100" className="border rounded p-1 w-16"
-                  value={prefs.goalTarget}
-                  onChange={e => { const n={...prefs, goalTarget:Number(e.target.value)}; setPrefs(n); savePrefs(n);} } />
+                <input type="number" min="1" max="100" className="border rounded p-1 w-16" value={prefs.goalTarget} onChange={e => { const n={...prefs, goalTarget:Number(e.target.value)}; setPrefs(n); savePrefs(n);} } />
                 <span className="text-xs text-gray-500">correct answers</span>
               </div>
               <ActionButton onClick={onResetStats} className="bg-rose-600 hover:bg-rose-700">Reset Stats</ActionButton>
@@ -474,13 +451,13 @@
             </div>
           </div>
 
-          <p className="text-xs text-gray-500 mt-3">Focus Mode pulls questions only from your selected subset (falls back to all if deselected).</p>
+          <p className="text-xs text-gray-500 mt-3">Focus Mode pulls questions only from your selected subset (falls back to all if none selected).</p>
         </div>
       );
     };
 
     /* =========================
-       Tempo Data + Storage
+       Tempo Data + Heatmap
        ========================= */
     const TEMPOS = [
       { it:"Prestissimo", en:"super fast" },
@@ -493,19 +470,13 @@
       { it:"Largo",       en:"broad, slow" },
       { it:"Lento",       en:"very slow" },
     ];
-
-    const TEMPO_STATS_KEY = 'positionsQuest.tempo.stats.v1';
-    const TEMPO_BEST_KEY  = 'positionsQuest.tempo.best.v1';
-
+    const TEMPO_STATS_KEY = 'positions.tempo.stats.v1';
+    const TEMPO_BEST_KEY  = 'positions.tempo.best.v1';
     const loadTempoStats = () => { try { return JSON.parse(localStorage.getItem(TEMPO_STATS_KEY)) || {}; } catch { return {}; } };
     const saveTempoStats = (obj) => { try { localStorage.setItem(TEMPO_STATS_KEY, JSON.stringify(obj)); } catch {} };
-
     const loadTempoBest = () => { try { return JSON.parse(localStorage.getItem(TEMPO_BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return {bestScore:0,bestStreak:0}; } };
     const saveTempoBest = (obj) => { try { localStorage.setItem(TEMPO_BEST_KEY, JSON.stringify(obj)); } catch {} };
 
-    /* =========================
-       Tempo Heatmap
-       ========================= */
     const TempoHeatmap = ({ stats }) => {
       const order = TEMPOS.map(t => t.it);
       return (
@@ -517,8 +488,7 @@
               const acc = st.total ? st.correct/st.total : 0;
               const bg = tileColor(st.total, acc);
               return (
-                <div key={it} className="rounded border p-3" style={{ background:bg }}
-                     title={`${it} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}>
+                <div key={it} className="rounded border p-3" style={{ background:bg }} title={`${it} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}>
                   <div className="font-semibold">{it}</div>
                   <div className="text-xs">{st.total ? `${Math.round(acc*100)}%` : '—'}</div>
                 </div>
@@ -531,17 +501,14 @@
     };
 
     /* =========================
-       NEW Tempo Trainer (Flashcards)
+       Tempo Trainer (Flashcards)
        ========================= */
     const TempoTrainer = ({ onBack, prefs }) => {
       const [index, setIndex] = useState(0);
       const [show, setShow] = useState(false);
       const { speak } = useCallouts(prefs.callouts);
 
-      useEffect(() => {
-        // Speak the Italian term on first show or when index changes
-        speak(TEMPOS[index].it);
-      }, [index]);
+      useEffect(() => { speak(TEMPOS[index].it); }, [index]); // call out term
 
       const next = () => { setShow(false); setIndex((index + 1) % TEMPOS.length); };
       const prev = () => { setShow(false); setIndex((index - 1 + TEMPOS.length) % TEMPOS.length); };
@@ -569,7 +536,7 @@
               {show ? (
                 <div className="space-y-1">
                   <p className="text-lg font-semibold text-green-700 font-inter">{card.en}</p>
-                  <p className="text-sm text-gray-500">Tip: say it aloud, then speak a metronome feel to match.</p>
+                  <p className="text-sm text-gray-500">Tip: say it aloud, then “conduct” a feel to match.</p>
                 </div>
               ) : (
                 <p className="text-gray-400 italic font-inter">Press Space or tap “Reveal”.</p>
@@ -590,7 +557,7 @@
     };
 
     /* =========================
-       NEW Tempo Tester (Scored MCQ + Heatmap)
+       Tempo Tester (MCQ + Heatmap)
        ========================= */
     const TempoTester = ({ onBack, prefs }) => {
       const [best, setBest] = useState(loadTempoBest());
@@ -607,6 +574,8 @@
       const optionsRef = useRef([]);
       const [question, setQuestion] = useState(null);
 
+      useEffect(() => { setTimer(prefs.roundLen || 60); }, [prefs.roundLen]);
+
       const pickQuestion = () => {
         const correct = getRandomItem(TEMPOS);
         const distractors = shuffle(TEMPOS.filter(t => t.it !== correct.it)).slice(0,3);
@@ -617,8 +586,7 @@
         speak(correct.it);
       };
 
-      useEffect(() => { setTimer(prefs.roundLen || 60); }, [prefs.roundLen]);
-      useEffect(() => { pickQuestion(); }, []); // first question
+      useEffect(() => { pickQuestion(); }, []);
 
       useEffect(() => {
         if (finished) return;
@@ -650,15 +618,12 @@
         setRoundEvents(e => [{ t: Date.now(), it: question.it, chosen: choice, correct: question.correct, ok }, ...e]);
         setAnswered(a => a + 1);
         if (ok) {
-          beeps.good();
-          setScore(s => s + 1);
-          setStreak(x => x + 1);
+          beeps.good(); setScore(s => s + 1); setStreak(x => x + 1);
           if (prefs.confetti) setConfettiSeed(x => x + 1);
         } else {
-          beeps.bad();
-          setStreak(0);
+          beeps.bad(); setStreak(0);
         }
-        setTimeout(() => { pickQuestion(); }, ok ? 400 : 800);
+        setTimeout(pickQuestion, ok ? 400 : 800);
       };
 
       useEffect(() => {
@@ -717,20 +682,13 @@
             ) : question && (
               <>
                 <div className="text-center mb-6">
-                  <p className="text-2xl font-bold text-gray-800 font-inter">
-                    What does <b>{question.it}</b> mean?
-                  </p>
+                  <p className="text-2xl font-bold text-gray-800 font-inter">What does <b>{question.it}</b> mean?</p>
                   <p className="text-sm text-gray-500 mt-2">Listen to the call-out, then choose the best translation.</p>
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-3">
                   {question.options.map((opt, i) => (
-                    <ActionButton
-                      key={i}
-                      onClick={() => handleAnswer(opt)}
-                      className="bg-blue-600 hover:bg-blue-700 text-lg w-60 flex items-center justify-center gap-2"
-                      title={`Press ${i+1}`}
-                    >
+                    <ActionButton key={i} onClick={() => handleAnswer(opt)} className="bg-blue-600 hover:bg-blue-700 text-lg w-60 flex items-center justify-center gap-2" title={`Press ${i+1}`}>
                       <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/20 text-sm">{i+1}</span>
                       <span>{opt}</span>
                     </ActionButton>
@@ -750,51 +708,370 @@
     };
 
     /* =========================
-       (All your existing games/components below are unchanged)
-       Speed Ladder, Flashcards, Bingo, Dice, Seybold Hub, Scoreboard, Boss Fights…
+       Fingerboard Games (compact working versions)
        ========================= */
 
-    /* ==== Speed Ladder (unchanged) ==== */
-    // [kept exactly as in your current file]
-    // -- BEGIN existing Speed Ladder and related components --
-    // (For brevity in this snippet, your previously shared implementations of:
-    //  - SpeedLadderGame
-    //  - Flashcards
-    //  - BingoBoard
-    //  - SeyboldHub (+ DayChecklistTable, IntervalLog, BowLog, WeeklyReflection, MasterChart)
-    //  - Scoreboard
-    //  - BossFights
-    //  - DiceOfDestinyGame
-    //  - AccuracyHeatmap (already included above)
-    //  remain the same. Paste your existing definitions here exactly as-is.)
-    // -- END existing components --
+    // Speed Ladder (compact)
+    const SpeedLadderGame = ({ onBack, prefs, stats, setStats }) => {
+      const combos = useMemo(() => {
+        const arr = [];
+        STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => arr.push({ s, p, f, valid: NOTES_DATA[s][p][f] }))));
+        return arr;
+      }, []);
+      const [q, setQ] = useState(null);
+      const [score, setScore] = useState(0);
+      const [answered, setAnswered] = useState(0);
+      const [timer, setTimer] = useState(prefs.roundLen || 120);
+      const [finished, setFinished] = useState(false);
+      const [confettiSeed, setConfettiSeed] = useState(0);
+      const beeps = useBeeps(prefs.sound);
+      const { speak } = useCallouts(prefs.callouts);
+      const optionsRef = useRef([]);
+
+      const newQ = () => {
+        const c = getRandomItem(combos);
+        const correct = getRandomItem(c.valid);
+        const opts = shuffle([correct, ...getRandomDistractors(new Set([correct]), 3)]);
+        setQ({ ...c, correct, options: opts });
+        optionsRef.current = opts;
+        speak(`${c.s}, position ${c.p}, finger ${c.f}`);
+      };
+
+      useEffect(() => { setTimer(prefs.roundLen || 120); }, [prefs.roundLen]);
+      useEffect(() => { newQ(); }, []); // first
+
+      useEffect(() => {
+        if (finished) return;
+        const id = setInterval(() => {
+          setTimer(t => {
+            if (t <= 1) { clearInterval(id); setFinished(true); return 0; }
+            return t - 1;
+          });
+        }, 1000);
+        return () => clearInterval(id);
+      }, [finished]);
+
+      const updateStats = (key, ok) => {
+        const prev = stats[key] || { correct:0, total:0 };
+        const next = { ...stats, [key]: { correct: prev.correct + (ok?1:0), total: prev.total + 1 } };
+        setStats(next); saveStats(next);
+      };
+
+      const answer = (note) => {
+        if (finished || !q) return;
+        const ok = note === q.correct;
+        const key = `${q.s}:${q.p}:${q.f}`;
+        updateStats(key, ok);
+        setAnswered(a=>a+1);
+        if (ok) { beeps.good(); setScore(s=>s+1); if (prefs.confetti) setConfettiSeed(x=>x+1); }
+        else { beeps.bad(); }
+        setTimeout(newQ, ok ? 450 : 900);
+      };
+
+      useEffect(() => {
+        const onKey = (e) => {
+          const k = e.key.toLowerCase();
+          if (['1','2','3','4'].includes(k)) {
+            const idx = Number(k)-1;
+            const note = optionsRef.current?.[idx];
+            if (note) answer(note);
+          }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [q, finished]);
+
+      return (
+        <div className="relative flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <ConfettiBurst seed={confettiSeed} />
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl">
+            <h2 className="text-3xl font-bold text-center text-purple-700 mb-2 font-inter">Speed Ladder</h2>
+            <div className="text-center mb-4 text-sm text-gray-700">
+              Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}
+            </div>
+            {q && (
+              <>
+                <p className="text-center text-2xl font-bold text-gray-800 font-inter mb-4">
+                  What note can you play with <b>F{q.f}</b> on <b>{q.s}</b> in <b>Pos {q.p}</b>?
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {q.options.map((opt, i) => (
+                    <ActionButton key={i} onClick={()=>answer(opt)} className="bg-blue-600 hover:bg-blue-700 text-lg w-36 flex items-center justify-center gap-2" title={`Press ${i+1}`}>
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/20 text-sm">{i+1}</span>
+                      <span>{opt}</span>
+                    </ActionButton>
+                  ))}
+                </div>
+              </>
+            )}
+            {finished && <p className="text-center mt-6 text-lg">Round over! Score: <b>{score}</b> / {answered}</p>}
+            <div className="flex justify-center gap-2 mt-4">
+              <ActionButton onClick={()=>{ setScore(0); setAnswered(0); setFinished(false); setTimer(prefs.roundLen||120); newQ(); }} className="bg-purple-600 hover:bg-purple-700">Play Again</ActionButton>
+              <ActionButton onClick={onBack} className="bg-gray-600 hover:bg-gray-700">Back</ActionButton>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Flashcards (fingerboard)
+    const allLocationsForNote = (note) => {
+      const spots = [];
+      STRINGS.forEach(s =>
+        POSITIONS.forEach(p =>
+          FINGERS.forEach(f => {
+            if (NOTES_DATA[s][p][f].includes(note)) spots.push({ s, p, f });
+          })
+        )
+      );
+      return spots;
+    };
+    const groupLocationsByString = (note) => {
+      const byString = new Map(STRINGS.map(s => [s, []]));
+      for (const loc of allLocationsForNote(note)) byString.get(loc.s).push(loc);
+      const lines = [];
+      for (const s of STRINGS) {
+        const arr = byString.get(s);
+        if (arr && arr.length) {
+          const parts = arr
+            .sort((a, b) => Number(a.p) - Number(b.p) || Number(a.f) - Number(b.f))
+            .map(({ p, f }) => `Pos ${p} (F${f})`);
+          lines.push(`${s}: ${parts.join(', ')}`);
+        }
+      }
+      return lines.join('  |  ');
+    };
+
+    const Flashcards = ({ onBack }) => {
+      const uniqNotes = useMemo(() => [...new Set(ALL_NOTES_UNIQUE)].sort(), []);
+      const [i, setI] = useState(0);
+      const [show, setShow] = useState(false);
+      const next = () => { setShow(false); setI((i+1)%uniqNotes.length); };
+      const prev = () => { setShow(false); setI((i-1+uniqNotes.length)%uniqNotes.length); };
+      const reveal = () => setShow(true);
+      useEffect(() => {
+        const onKey = (e) => {
+          const k = e.key.toLowerCase();
+          if (k === ' ') { e.preventDefault(); reveal(); }
+          else if (k === 'n' || k === 'arrowright') next();
+          else if (k === 'p' || k === 'arrowleft') prev();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [i, show]);
+
+      const note = uniqNotes[i];
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl">
+            <h2 className="text-3xl font-bold text-center text-purple-700 mb-4 font-inter">Flashcards (Fingerboard)</h2>
+            <div className="border-2 border-gray-300 rounded-xl p-6 text-center">
+              <p className="text-xl font-inter text-gray-800 mb-4">Where can you play <b>{note}</b> (Positions 1–3)?</p>
+              {show ? (
+                <p className="text-lg font-semibold text-green-700 font-inter whitespace-pre-line">{groupLocationsByString(note)}</p>
+              ) : (
+                <p className="text-gray-400 italic font-inter">Press Space or tap “Reveal”.</p>
+              )}
+            </div>
+            <div className="flex justify-center gap-3 mt-6">
+              <ActionButton onClick={reveal} className="bg-blue-600 hover:bg-blue-700">Reveal</ActionButton>
+              <ActionButton onClick={prev} className="bg-gray-600 hover:bg-gray-700">Previous</ActionButton>
+              <ActionButton onClick={next} className="bg-purple-600 hover:bg-purple-700">Next</ActionButton>
+            </div>
+            <p className="text-center text-sm text-gray-500 mt-4 font-inter">
+              Card {i + 1} / {uniqNotes.length} · Shortcuts: Space (reveal), ←/→ or P/N (nav)
+            </p>
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    // Bingo
+    const BingoBoard = ({ onBack }) => {
+      const base = [
+        "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–3","Sight-read in Pos 2",
+        "G-string Pos 1 quiz","C major in Pos 2 aloud","Find 3 ways to play D","E-string Pos 3 quiz","Slur → up-bow staccato",
+        "Name all Cs Pos 1–3","D major in Pos 3 aloud","Echo dynamics on repeat","Open A & D ring check","A-string Pos 3 quiz",
+        "List all F#s Pos 1–3","Gigue pickup (up-bow)","Martelé ×8 bars","Map staff lines → fingers","D-string Pos 2 quiz",
+        "Slow spiccato ×8 bars","Note→Locations speed drill","Record 30s and review","Scales: 2-oct sprint"
+      ];
+      const make = () => {
+        const grid = shuffle(base).slice(0, 24);
+        grid.splice(12, 0, 'FREE');
+        return grid;
+      };
+      const [cells, setCells] = useState(make());
+      const [state, setState] = useState(() => Object.fromEntries(cells.map(t => [t, t==='FREE'])));
+
+      const toggle = (t) => { if (t==='FREE') return; setState(s => ({...s, [t]: !s[t]})); };
+      const reshuffle = () => { const g = make(); setCells(g); setState(Object.fromEntries(g.map(t=>[t,t==='FREE']))); };
+
+      const hasBingo = useMemo(() => {
+        const get = (r, c) => state[cells[r*5+c]];
+        for (let r=0;r<5;r++) if ([0,1,2,3,4].every(c=>get(r,c))) return true;
+        for (let c=0;c<5;c++) if ([0,1,2,3,4].every(r=>get(r,c))) return true;
+        if ([0,1,2,3,4].every(i=>get(i,i))) return true;
+        if ([0,1,2,3,4].every(i=>get(i,4-i))) return true;
+        return false;
+      }, [state, cells]);
+
+      const checked = Object.values(state).filter(Boolean).length;
+
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-3xl">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-3xl font-bold text-purple-700 font-inter">Positions Bingo</h2>
+              <ActionButton onClick={reshuffle} className="bg-purple-600 hover:bg-purple-700">New Board</ActionButton>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">Checked: {checked}/25 {hasBingo && <span className="text-green-600 font-semibold">· BINGO! 🎉</span>}</p>
+            <div className="grid grid-cols-5 gap-2">
+              {cells.map((t, i) => (
+                <button key={i} onClick={()=>toggle(t)} className={`p-2 text-center text-xs sm:text-sm md:text-base border-2 rounded-lg h-20 md:h-24 transition-colors ${state[t] ? 'bg-green-500 text-white border-green-700' : 'bg-gray-200 text-gray-800 border-gray-300'} ${t==='FREE'?'font-bold':''}`} aria-pressed={!!state[t]}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    // Dice
+    const DiceOfDestinyGame = ({ onBack }) => {
+      const full = [
+        'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–3',
+        'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 2 aloud','Find 3 ways to play D','E-string Pos 3 quiz',
+        'Slur → up-bow staccato','Name all Cs Pos 1–3','D major in Pos 3 aloud','Echo dynamics on repeat','Open A & D ring check',
+        'A-string Pos 3 quiz','List all F#s Pos 1–3','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 2 quiz',
+      ];
+      const [pool, setPool] = useState(full);
+      const [challenge, setChallenge] = useState('');
+      const [rolling, setRolling] = useState(false);
+      const [history, setHistory] = useState([]);
+      const roll = () => {
+        setRolling(true); setChallenge('Rolling...');
+        setTimeout(() => {
+          const p = pool.length ? pool : full;
+          const pick = getRandomItem(p);
+          setChallenge(pick);
+          setHistory(h => [pick, ...h].slice(0, 6));
+          setPool(p.filter(c => c !== pick));
+          setRolling(false);
+        }, 650);
+      };
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl text-center">
+            <h2 className="text-3xl font-bold text-purple-700 mb-4 font-inter">Dice of Destiny</h2>
+            <p className="text-gray-600 font-inter mb-4">Roll for a focused challenge. Avoids repeats until the set cycles.</p>
+            <ActionButton onClick={roll} disabled={rolling} className="bg-green-600 hover:bg-green-700 my-4 text-2xl">{rolling ? '...' : 'Roll Dice'}</ActionButton>
+            <div className="bg-gray-200 rounded-lg p-4 mt-6">
+              <p className="text-xl font-semibold font-inter text-gray-800">Your Destiny:</p>
+              <p className="text-2xl mt-2 font-bold text-gray-700 font-inter min-h-[3rem]">{challenge || 'Click "Roll Dice" to begin!'}</p>
+            </div>
+            {history.length > 0 && (
+              <div className="mt-6 text-left">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Recent rolls</p>
+                <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                  {history.map((h, i) => <li key={i}>{h}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    // Seybold Hub (compact)
+    const SeyboldHub = ({ onBack }) => {
+      const KEY = "seybold.hub.v1";
+      const [state, setState] = useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || { notes:"" }; } catch { return { notes:"" }; } });
+      useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }, [state]);
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow p-6 w-full max-w-3xl">
+            <h2 className="text-2xl font-bold text-purple-700 mb-3">Seybold Hub (Notes)</h2>
+            <textarea className="border rounded w-full p-3 h-72" value={state.notes} onChange={e=>setState(s=>({...s, notes:e.target.value}))} placeholder="Weekly checklist, logs, reflections… (Your notes autosave)"/>
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    // Scoreboard (compact)
+    const Scoreboard = ({ onBack }) => {
+      const KEY = "positions.scoreboard.v1";
+      const [rows, setRows] = useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+      useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(rows)); } catch {} }, [rows]);
+      const add = () => setRows(r => [{ date:new Date().toISOString().slice(0,10), task:"", points:0 }, ...r]);
+      const total = rows.reduce((a,b)=>a + Number(b.points||0), 0);
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow p-6 w-full max-w-4xl">
+            <h2 className="text-2xl font-bold text-purple-700 mb-3">Scoreboard</h2>
+            <ActionButton onClick={add} className="bg-emerald-600 hover:bg-emerald-700">Add Row</ActionButton>
+            <div className="overflow-x-auto mt-3">
+              <table className="min-w-full text-sm">
+                <thead><tr className="text-left"><th className="p-2">Date</th><th className="p-2">Task</th><th className="p-2">Points (0–5)</th></tr></thead>
+                <tbody>
+                  {rows.map((r,i)=>(
+                    <tr key={i} className="border-t">
+                      <td className="p-2"><input className="border p-1 rounded w-28" value={r.date} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,date:e.target.value}:y))}/></td>
+                      <td className="p-2"><input className="border p-1 rounded w-64" value={r.task||""} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,task:e.target.value}:y))}/></td>
+                      <td className="p-2"><input type="number" min="0" max="5" className="border p-1 rounded w-16" value={r.points||0} onChange={e=>setRows(x=>x.map((y,j)=>j===i?{...y,points:Number(e.target.value)}:y))}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-sm text-gray-700">Total points: <b>{total}</b></p>
+          </div>
+          <ActionButton onClick={onBack} className="mt-8 bg-gray-500 hover:bg-gray-600">Back</ActionButton>
+        </div>
+      );
+    };
+
+    // Boss Fights (compact)
+    const BossFights = ({ onBack }) => {
+      const [answer, setAnswer] = useState("");
+      const [msg, setMsg] = useState("");
+      const check = () => {
+        const ok = /(G.*Pos\s*2.*F4).*(D.*Pos\s*3.*F2)/i.test(answer);
+        setMsg(ok ? "Boss I cleared! 🎉" : "Not quite—try again.");
+      };
+      return (
+        <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen">
+          <div className="bg-white rounded-xl shadow p-6 w-full max-w-3xl">
+            <h2 className="text-2xl font-bold text-purple-700 mb-3">Boss Fights (I)</h2>
+            <p className="mb-2 font-semibold">Find two valid locations: G string, Pos 2, F4 AND D string, Pos 3, F2</p>
+            <textarea className="border rounded w-full p-2 h-24" placeholder="Type your locations/plan…" value={answer} onChange={e=>setAnswer(e.target.value)}/>
+            <div className="mt-3 flex gap-2">
+              <ActionButton onClick={check} className="bg-blue-600 hover:bg-blue-700">Check Answer</ActionButton>
+              <ActionButton onClick={onBack} className="bg-gray-600 hover:bg-gray-700">Back</ActionButton>
+            </div>
+            {!!msg && <p className="mt-3 font-semibold">{msg}</p>}
+          </div>
+        </div>
+      );
+    };
 
     /* =========================
-       Dashboard (adds two cards)
+       Dashboard
        ========================= */
-    const Dashboard = ({ go, prefs, setPrefs, stats, setStats, seyboldState }) => {
+    const Dashboard = ({ go, prefs, setPrefs, stats, setStats }) => {
       const [best, setBest] = useState(loadBest());
       const [presets, setPresets] = useState(loadPresets());
 
-      useEffect(() => {
-        const onStorage = () => setBest(loadBest());
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
-      }, []);
-
-      const resetAll = () => {
-        localStorage.removeItem(BEST_KEY);
-        localStorage.removeItem(STATS_KEY);
-        setBest({ bestScore: 0, bestStreak: 0 });
-        setStats({});
-      };
-
+      const resetAll = () => { localStorage.removeItem(BEST_KEY); localStorage.removeItem(STATS_KEY); setBest({ bestScore: 0, bestStreak: 0 }); setStats({}); };
       const exportCSV = () => {
         const rows = [['string','position','finger','correct','total','accuracy']];
         STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
-          const k = `${s}:${p}:${f}`;
-          const st = stats[k] || { correct:0, total:0 };
-          const acc = st.total ? (st.correct / st.total) : 0;
+          const k = `${s}:${p}:${f}`; const st = stats[k] || { correct:0, total:0 }; const acc = st.total ? (st.correct / st.total) : 0;
           rows.push([s,p,f, String(st.correct), String(st.total), acc.toFixed(4)]);
         })));
         const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -818,51 +1095,59 @@
           <AccuracyHeatmap stats={stats} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-            <GameCard title="Speed Ladder" description="2-minute round (configurable). Adaptive + Coach. Eyes-off call-outs. Replay misses. Shortcuts: 1–4" onClick={() => go('speed')} />
+            <GameCard title="Speed Ladder" description="Timed direct-hit note quiz. Shortcuts: 1–4" onClick={() => go('speed')} />
             <GameCard title="Dice of Destiny" description="Press your luck for a random practice challenge." onClick={() => go('dice')} />
             <GameCard title="Positions Bingo" description="Fill a line. Center is FREE. Press R to reshuffle." onClick={() => go('bingo')} />
-            <GameCard title="Flashcards Mode" description="Deck A: Direct Hit · Deck B: Note → grouped locations." onClick={() => go('cards')} />
-            <GameCard title="Seybold Hub" description="Weekly checklist, logs, reflections, master chart." onClick={() => go('seybold')} />
-            <GameCard title="Scoreboard & Badges" description="0–5 daily scoring + earned badges." onClick={() => go('scoreboard')} />
-            <GameCard title="Boss Fights I–III" description="Beat the checks to clear bosses." onClick={() => go('boss')} />
-            {/* NEW tempo cards */}
-            <GameCard title="Tempo Trainer" description="Flashcards for Italian → English with speech call-outs." onClick={() => go('tempoTrainer')} />
-            <GameCard title="Tempo Tester" description="Timed multiple choice with streaks, CSV export, and a tempo heatmap." onClick={() => go('tempoTester')} />
+            <GameCard title="Flashcards Mode" description="Note → grouped locations (Positions 1–3)." onClick={() => go('cards')} />
+            <GameCard title="Seybold Hub" description="Simple weekly notes (autosaves)." onClick={() => go('seybold')} />
+            <GameCard title="Scoreboard" description="Daily points tracker." onClick={() => go('scoreboard')} />
+            <GameCard title="Boss Fights I" description="Beat the check to clear the boss." onClick={() => go('boss')} />
+            <GameCard title="Tempo Trainer" description="Flashcards: Italian → English, with call-outs." onClick={() => go('tempoTrainer')} />
+            <GameCard title="Tempo Tester" description="Timed multiple choice + tempo heatmap." onClick={() => go('tempoTester')} />
           </div>
         </div>
       );
     };
 
     /* =========================
-       App Shell
+       App Shell (safe resolver)
        ========================= */
     const App = () => {
       const [view, setView] = useState('dashboard');
       const [prefs, setPrefs] = useState(loadPrefs());
       const [stats, setStats] = useState(loadStats());
-      const [seyboldState, setSeyboldState] = useState(() => {
-        try { return JSON.parse(localStorage.getItem("seybold.hub.v1")) || {}; } catch { return {}; }
-      });
       useEffect(() => { savePrefs(prefs); }, [prefs]);
       useEffect(() => { saveStats(stats); }, [stats]);
-      useEffect(() => { try { localStorage.setItem("seybold.hub.v1", JSON.stringify(seyboldState)); } catch {} }, [seyboldState]);
 
       const go = (v) => setView(v);
-      const markFlag = (k,v) => setSeyboldState(s=>({ ...s, flags:{ ...(s.flags||{}), [k]:v }}));
+
+      // Guarded registry: never ReferenceError if a component gets removed later
+      const registry = {
+        tempoTrainer : (typeof TempoTrainer        !== 'undefined') ? (props) => <TempoTrainer {...props} /> : null,
+        tempoTester  : (typeof TempoTester         !== 'undefined') ? (props) => <TempoTester {...props} /> : null,
+        speed        : (typeof SpeedLadderGame     !== 'undefined') ? (props) => <SpeedLadderGame {...props} prefs={prefs} stats={stats} setStats={setStats}/> : null,
+        dice         : (typeof DiceOfDestinyGame   !== 'undefined') ? (props) => <DiceOfDestinyGame {...props} /> : null,
+        bingo        : (typeof BingoBoard          !== 'undefined') ? (props) => <BingoBoard {...props} /> : null,
+        cards        : (typeof Flashcards          !== 'undefined') ? (props) => <Flashcards {...props} /> : null,
+        seybold      : (typeof SeyboldHub          !== 'undefined') ? (props) => <SeyboldHub {...props} /> : null,
+        scoreboard   : (typeof Scoreboard          !== 'undefined') ? (props) => <Scoreboard {...props} /> : null,
+        boss         : (typeof BossFights          !== 'undefined') ? (props) => <BossFights {...props} /> : null,
+      };
+
+      const renderView = () => {
+        if (view === 'dashboard') {
+          return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
+        }
+        const Rend = registry[view];
+        if (Rend) return <Rend onBack={() => setView('dashboard')} />;
+        return <MissingView name={view} onBack={() => setView('dashboard')} />;
+      };
 
       return (
         <div className="min-h-screen bg-gray-100 font-inter">
-          {view === 'dashboard'     && <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} seyboldState={seyboldState} />}
-          {view === 'speed'         && <SpeedLadderGame prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} onBack={() => setView('dashboard')} />}
-          {view === 'dice'          && <DiceOfDestinyGame onBack={() => setView('dashboard')} />}
-          {view === 'bingo'         && <BingoBoard onBack={() => setView('dashboard')} markFlag={markFlag} />}
-          {view === 'cards'         && <Flashcards onBack={() => setView('dashboard')} />}
-          {view === 'seybold'       && <SeyboldHub onBack={() => setView('dashboard')} />}
-          {view === 'scoreboard'    && <Scoreboard seyboldState={seyboldState} onBack={() => setView('dashboard')} />}
-          {view === 'boss'          && <BossFights onBack={() => setView('dashboard')} markFlag={markFlag} />}
-          {/* NEW views */}
-          {view === 'tempoTrainer'  && <TempoTrainer prefs={prefs} onBack={() => setView('dashboard')} />}
-          {view === 'tempoTester'   && <TempoTester prefs={prefs} onBack={() => setView('dashboard')} />}
+          <ErrorBoundary>
+            {renderView()}
+          </ErrorBoundary>
         </div>
       );
     };
@@ -871,15 +1156,13 @@
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 
-    // --- iOS audio/TTS unlock (first user gesture) ---
+    // iOS/Chromebook audio/TTS unlock on first user gesture
     const unlock = () => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         if (ctx && ctx.state === 'suspended') ctx.resume();
       } catch {}
-      if (window.speechSynthesis) {
-        try { window.speechSynthesis.cancel(); } catch {}
-      }
+      if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch {} }
       window.removeEventListener('touchend', unlock);
       window.removeEventListener('click', unlock);
     };
@@ -887,7 +1170,7 @@
     window.addEventListener('click', unlock, { once: true });
   </script>
 
-  <!-- Service worker registration (unchanged) -->
+  <!-- Service worker registration -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
