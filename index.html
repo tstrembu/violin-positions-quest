@@ -166,6 +166,32 @@
       },
     };
 
+    /* ======= NEW: helpers for low/high labeling ======= */
+    const fingerHeight = (note, options) => {
+      // options: the NOTES_DATA cell array in ascending pitch (as in your data)
+      if (!options || options.length === 0) return 'natural';
+      if (options.length === 1) return 'natural';
+      const idx = options.indexOf(note);
+      if (idx === -1) return 'natural';
+      if (idx === 0) return 'low';
+      if (idx === options.length - 1) return 'high';
+      return 'natural'; // middle values rare in 1–5 but safe default
+    };
+
+    /* ======= NEW: open strings ======= */
+    const OPEN_NOTES = { G:'G', D:'D', A:'A', E:'E' };
+
+    /* ======= NEW: simple natural harmonics (teaching first) ======= */
+    // minimal, musical, and unambiguous set
+    const HARMONICS = {
+      // nodeRatio: [noteName, teachingLabel]
+      // 1/2 = octave, 1/3 ≈ P12 (octave+fifth), 1/4 = 2 octaves
+      G: { '1/2':['G', 'octave'], '1/3':['D', 'oct+5th'], '1/4':['G', '2 oct'] },
+      D: { '1/2':['D', 'octave'], '1/3':['A', 'oct+5th'], '1/4':['D', '2 oct'] },
+      A: { '1/2':['A', 'octave'], '1/3':['E', 'oct+5th'], '1/4':['A', '2 oct'] },
+      E: { '1/2':['E', 'octave'], '1/3':['B', 'oct+5th'], '1/4':['E', '2 oct'] },
+    };
+
     const ALL_NOTES_UNIQUE = (() => {
       const set = new Set();
       STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => NOTES_DATA[s][p][f].forEach(n => set.add(n)))));
