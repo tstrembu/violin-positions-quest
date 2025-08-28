@@ -80,6 +80,9 @@
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }
     }
+
+    /* A11y live region */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -95,6 +98,8 @@
 </head>
 <body>
   <div id="root"></div>
+  <!-- A11y live region -->
+  <div id="sr" aria-live="polite" class="sr-only"></div>
 
   <!-- App -->
   <script type="text/babel">
@@ -137,6 +142,11 @@
       return a;
     };
     const getRandomItem = (arr) => arr[Math.floor(Math.random()*arr.length)];
+
+    // Immediate win #4: ASCII accidental normalizer for display
+    const NORM = {'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb',
+                  'C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#'};
+    const norm = n => NORM[n] || n;
 
     /* =========================================================
        Fingerboard Data (Positions 1–5) + Open strings
@@ -195,7 +205,7 @@
       E: { '1/2':['E','octave'], '1/3':['B','oct+5th'], '1/4':['E','2 oct'] },
     };
 
-    // Unique note list (guard against undefined cells)
+    // Unique note list
     const ALL_NOTES_UNIQUE = (() => {
       const set = new Set();
       STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
@@ -265,7 +275,13 @@
     const useCallouts = (enabled) => {
       const speak = (text) => {
         if (!enabled || !window.speechSynthesis) return;
-        try { const u = new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=1.0; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } catch {}
+        try { 
+          const u = new SpeechSynthesisUtterance(text); 
+          u.lang='en-US'; u.rate=1.0; 
+          // Immediate win #8: prevent overlap
+          window.speechSynthesis.cancel();
+          setTimeout(()=>window.speechSynthesis.speak(u), 0);
+        } catch {}
       };
       return { speak };
     };
@@ -321,7 +337,7 @@
       tempoTester: "Tempo Tester: timed multiple choice. Press 1–4 to answer. At the end, review your misses and retry just those items. A heat map tracks per-term accuracy.",
       bielerLab: "Bieler Method Lab: progressive study of Ida Bieler’s approach. First build vocabulary, then test conceptual understanding, then apply ideas to musical scenarios and bow/left-hand technique.",
       height: "Finger Height Drill: Low vs High fingers. Prompt: note + string/position/finger. Answer Low or High (L/H). Builds intonation patterns across positions.",
-      locator: "Note Locator: Given a pitch (e.g., B♭), pick a valid location (string, position, finger). Reinforces multiple locations for the same note.",
+      locator: "Note Locator: Given a pitch (e.g., Bb), pick a valid location (string, position, finger). Reinforces multiple locations for the same note.",
       shift: "Shift Coach: Stay on one string. Given start note/location and target note, choose the most efficient new position/finger (requires a shift).",
       harmonics: "Harmonics Lab: Learn natural harmonic nodes (1/2, 1/3, 1/4) per string with flashcards and quick checks. Great for tone and intonation reference."
     };
@@ -349,7 +365,8 @@
                   {POSITIONS.map(p => (
                     <div key={p} className="rounded-md border">
                       <div className="text-xs px-2 py-1 border-b">Pos {p}</div>
-                      <div className="grid grid-cols-2 gap-1 p-2">
+                      {/* Immediate win #1: finger tiles 5-wide (F0–F4) */}
+                      <div className="grid gap-1 p-2" style={{gridTemplateColumns:'repeat(5,minmax(0,1fr))'}}>
                         {FINGERS.map(f => {
                           const k = `${s}:${p}:${f}`;
                           const st = stats[k] || { correct:0, total:0 };
@@ -603,6 +620,7 @@
         if (finished || !q) return;
         const ok = (choice === q.correct);
         bump(q.it, ok);
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
         setEvents(e => [{ t: Date.now(), it:q.it, chosen:choice, correct:q.correct, ok }, ...e]);
         setAnswered(a=>a+1);
         if (ok){ beeps.good(); setScore(s=>s+1); setStreak(x=>x+1); if (prefs.confetti) setConfettiSeed(x=>x+1); setTimeout(()=>pickQ(), 360); }
@@ -723,6 +741,7 @@
         const ok = (choice.toLowerCase() === q.label);
         const key = `${q.s}:${q.p}:${q.f}`;
         bump(key, ok);
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
         setAnswered(a=>a+1);
         if (ok) { beeps.good(); setScore(s=>s+1); if (prefs.confetti) setConfettiSeed(x=>x+1); setTimeout(pick, 350); }
         else { beeps.bad(); setTimeout(pick, 700); }
@@ -747,7 +766,7 @@
             {q && (
               <>
                 <div className="text-center mb-5">
-                  <div className="text-xl font-bold">To play <b>{q.note}</b> on <b>{q.s}</b>, Pos <b>{q.p}</b>, F<b>{q.f}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
+                  <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> on <b>{q.s}</b>, Pos <b>{q.p}</b>, F<b>{q.f}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
                 </div>
                 <div className="flex gap-3 justify-center">
                   <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
@@ -762,7 +781,7 @@
       );
     };
 
-    /* ===================== NEW: Note Locator ===================== */
+    /* ===================== NEW: Note Locator (Immediate win #3) ===================== */
     const NoteLocator = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [timer,setTimer] = useState(prefs.roundLen || 90);
@@ -779,22 +798,22 @@
         const correctLocs = allLocationsForNote(note);
         if (!correctLocs.length) return makeQ();
         const correct = getRandomItem(correctLocs);
-        // plausible distractors: same string near pos/finger OR same pos on neighbor string
-        const opts = [{...correct, ok:true}];
-        const pushIfUnique = cand => {
-          if (!opts.some(o=>o.s===cand.s && o.p===cand.p && o.f===cand.f)) opts.push(cand);
-        };
-        while (opts.length < 4) {
-          const s = Math.random()<0.6 ? correct.s : getRandomItem(STRINGS);
-          const p = String(Math.max(1, Math.min(5, Number(correct.p) + (Math.random()<0.5?1:-1))));
-          const f = String(Math.max(0, Math.min(4, Number(correct.f) + (Math.random()<0.5?1:-1))));
-          const cand = { s, p, f, ok:false };
-          const cell = validCell(s,p,f);
-          // ensure it's not a true location for the note
-          if (!cell || !cell.includes(note)) pushIfUnique(cand);
-        }
+
+        const wrongPool = allActualCombos().filter(c => {
+          const cell = validCell(c.s, c.p, c.f) || [];
+          return !cell.includes(note);
+        });
+
+        // prefer “nearby” but guarantee fill
+        const nearby = wrongPool.filter(c => c.s===correct.s || c.p===correct.p || c.f===correct.f);
+        const fillers = nearby.length >= 3 ? nearby : wrongPool;
+
+        const opts = shuffle([{...correct, ok:true}, ...shuffle(fillers)
+          .filter(c => !(c.s===correct.s && c.p===correct.p && c.f===correct.f))
+          .slice(0,3).map(c => ({...c, ok:false}))]);
+
         speak(note);
-        setQ({ note, opts: shuffle(opts) });
+        setQ({ note, opts });
       };
 
       useEffect(()=>{ makeQ(); },[]);
@@ -811,6 +830,7 @@
 
       const answer = (o) => {
         const ok = !!o.ok;
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
         beeps[ok?'good':'bad']();
         bump(q.note, ok);
         setAnswered(a=>a+1);
@@ -825,7 +845,7 @@
             <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
             {q && (
               <>
-                <div className="text-xl font-bold text-center">Where can you play <b>{q.note}</b>?</div>
+                <div className="text-xl font-bold text-center">Where can you play <b>{norm(q.note)}</b>?</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {q.opts.map((o,i)=>(
                     <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
@@ -842,7 +862,7 @@
       );
     };
 
-    /* ===================== NEW: Shift Coach ===================== */
+    /* ===================== NEW: Shift Coach (Immediate win #2) ===================== */
     const ShiftCoach = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [score,setScore] = useState(0);
@@ -873,21 +893,21 @@
         if (!A.length || !B.length) return makePrompt();
         if (samePosExists(A,B)) return makePrompt(); // avoid trivial non-shift
         const best = bestPair(A,B);
-        // start location is best.a
         const start = best.a;
         const correctEnd = best.b;
+
+        // Immediate win #2: only real, valid (but wrong) landings on same string that don't produce the target
+        const pool = allActualCombos()
+          .filter(c => c.s === s)
+          .filter(c => !(validCell(c.s, c.p, c.f) || []).includes(n2));
+
         const opts = [{...correctEnd, ok:true}];
-        // build plausible wrong ends near the correctEnd position
-        const pushUnique = cand => {
-          if (!opts.some(o=>o.p===cand.p && o.f===cand.f)) opts.push(cand);
-        };
-        while (opts.length < 4) {
-          const p = String(Math.max(1, Math.min(5, Number(correctEnd.p) + (Math.random()<0.5?1:-1))));
-          const f = getRandomItem(FINGERS.filter(x=>x!=='0')); // avoid open for shifted end
-          const cand = { s, p, f, ok:false };
-          const cell = validCell(s,p,f);
-          // prefer candidates that do NOT produce the target note
-          pushUnique(cand);
+        for (const cand of shuffle(pool)) {
+          if (opts.length >= 4) break;
+          // avoid duplicates and avoid F0 as a shifted landing
+          if (cand.f !== '0' && !opts.some(o => o.p===cand.p && o.f===cand.f)) {
+            opts.push({...cand, ok:false});
+          }
         }
         setQ({ string:s, startNote:n1, targetNote:n2, start, opts: shuffle(opts) });
       };
@@ -908,6 +928,7 @@
         const ok = !!o.ok;
         const key = `${q.string}:${q.startNote}->${q.targetNote}`;
         bump(key, ok);
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
         beeps[ok?'good':'bad']();
         setAnswered(a=>a+1);
         if (ok) setScore(s=>s+1);
@@ -925,8 +946,8 @@
               <>
                 <div className="rounded-md p-4" style={{background:'rgba(0,0,0,.05)'}}>
                   <div className="font-semibold mb-1">String: <b>{q.string}</b></div>
-                  <div className="text-sm">Start at <b>{q.startNote}</b> → <span className="muted">({`Pos ${q.start.p}, F${q.start.f}`})</span></div>
-                  <div className="text-sm">Target note: <b>{q.targetNote}</b></div>
+                  <div className="text-sm">Start at <b>{norm(q.startNote)}</b> → <span className="muted">({`Pos ${q.start.p}, F${q.start.f}`})</span></div>
+                  <div className="text-sm">Target note: <b>{norm(q.targetNote)}</b></div>
                 </div>
                 <div className="text-center text-sm muted mt-2 mb-4">Which <b>position + finger</b> is the best landing spot for the target?</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -974,7 +995,6 @@
         const correctRatio = target[0];
         const noteName = target[1][0];
         const display = `${s} string — play the ${noteName} harmonic`;
-        // distract ratios (pick other ratios on same string)
         const ratios = Object.keys(HARMONICS[s]);
         const distracts = shuffle(ratios.filter(r=>r!==correctRatio)).slice(0,3);
         const options = shuffle([correctRatio, ...distracts]).map(r => ({r, ok: r===correctRatio}));
@@ -991,6 +1011,7 @@
 
       const answer = (opt) => {
         const ok = !!opt.ok;
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
         beeps[ok?'good':'bad']();
         const key = `${q.s}:${q.note}`;
         bump(key, ok);
@@ -1125,6 +1146,7 @@
         const ok = (note===question.correct);
         const updated = { ...stats, [key]: { correct: prev.correct + (ok?1:0), total: prev.total + 1 } };
         setStats(updated); saveStats(updated);
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
         setAnswered(a=>a+1);
         if (ok){
           lastMissRef.current=null; beeps.good(); setScore(s=>s+1); setStreak(x=>x+1); if (prefs.confetti) setConfettiSeed(x=>x+1);
@@ -1147,7 +1169,7 @@
       };
 
       useEffect(()=>{
-        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const note=optionsRef.current?.[idx]; if(note) handleAnswer(note); } };
+        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const raw=optionsRef.current?.[idx]; if(raw) handleAnswer(raw); } };
         window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
       }, [finished, question]);
 
@@ -1170,7 +1192,7 @@
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {question.options.map((note, i)=>(
                     <button key={i} className="btn btn-blue" title={`Press ${i+1}`} onClick={()=>handleAnswer(note)}>
-                      <span className="pill" style={{ background: 'rgba(0,0,0,.15)' }}>{i+1}</span>&nbsp; {note}
+                      <span className="pill" style={{ background: 'rgba(0,0,0,.15)' }}>{i+1}</span>&nbsp; {norm(note)}
                     </button>
                   ))}
                 </div>
@@ -1196,12 +1218,12 @@
       const deckA = useMemo(()=>{
         const cards=[]; for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
           const cell = validCell(s,p,f);
-          if (cell) cards.push({q:`What note(s) under F${f} on ${s} in Position ${p}?`, a: cell.join(' or ')});
+          if (cell) cards.push({q:`What note(s) under F${f} on ${s} in Position ${p}?`, a: cell.map(norm).join(' or ')});
         }
         return cards;
       },[]);
       const uniq = useMemo(()=>[...new Set(ALL_NOTES_UNIQUE)].sort(),[]);
-      const deckB = useMemo(()=>uniq.map(n=>({q:`Where can you play ${n} (Pos 1–5)?`, a:groupLocationsByString(n)})),[uniq]);
+      const deckB = useMemo(()=>uniq.map(n=>({q:`Where can you play ${norm(n)} (Pos 1–5)?`, a:groupLocationsByString(n)})),[uniq]);
       const deck = mode==='A'?deckA:deckB;
       const next=()=>{ setShow(false); setI((i+1)%deck.length); };
       const prev=()=>{ setShow(false); setI((i-1+deck.length)%deck.length); };
@@ -1323,8 +1345,8 @@
       const [scoreC,setScoreC]=useState(0), [answeredC,setAnsweredC]=useState(0);
       const [scoreA,setScoreA]=useState(0), [answeredA,setAnsweredA]=useState(0);
 
-      const answerConcept = (opt)=>{ const ok = opt===cq.correct; setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); setTimeout(()=>setCq(makeConceptQ()), ok?350:700); };
-      const answerApply   = (opt)=>{ const ok = opt===aq.correct; setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); setTimeout(()=>setAq(makeApplyQ()), ok?350:700); };
+      const answerConcept = (opt)=>{ const ok = opt===cq.correct; document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again'; setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); setTimeout(()=>setCq(makeConceptQ()), ok?350:700); };
+      const answerApply   = (opt)=>{ const ok = opt===aq.correct; document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again'; setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); setTimeout(()=>setAq(makeApplyQ()), ok?350:700); };
 
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
@@ -1493,15 +1515,36 @@
       };
       const inputRef = useRef(null);
 
+      // Immediate win #5: generalized CSV export across modes
       const exportCSV = () => {
-        const rows = [['string','position','finger','correct','total','accuracy']];
-        STRINGS.forEach(s=>POSITIONS.forEach(p=>FINGERS.forEach(f=>{
-          const k=`${s}:${p}:${f}`; const st=stats[k]||{correct:0,total:0}; const acc=st.total?(st.correct/st.total):0;
-          rows.push([s,p,f,String(st.correct),String(st.total),acc.toFixed(4)]);
-        })));
+        const rows = [['mode','key','correct','total','accuracy']];
+        const packs = [
+          ['speed', stats],
+          ['height', loadJSON(HEIGHT_STATS_KEY, {})],
+          ['locator', loadJSON(LOCATOR_STATS_KEY, {})],
+          ['shift', loadJSON(SHIFT_STATS_KEY, {})],
+          ['harmonics', loadJSON(HARM_STATS_KEY, {})],
+        ];
+        for (const [mode, obj] of packs) {
+          Object.entries(obj).forEach(([k, v]) => {
+            if (v && typeof v === 'object') {
+              // height stats store nested {low/high/natural}
+              if ('low' in v && 'high' in v) {
+                ['low','high','natural'].forEach(h=>{
+                  const c=v[h]?.correct||0, t=v[h]?.total||0, a=t? (c/t).toFixed(4):'0.0000';
+                  rows.push([`${mode}:${h}`, k, c, t, a]);
+                });
+              } else {
+                const c=v.correct||0, t=v.total||0, a=t? (c/t).toFixed(4):'0.0000';
+                rows.push([mode, k, c, t, a]);
+              }
+            }
+          });
+        }
         const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
-        const a=document.createElement('a'); a.href=url; a.download='positions_training_stats.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        const url = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+        const a = Object.assign(document.createElement('a'), {href:url, download:'positions_training_stats.csv'});
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       };
 
       const resetAll = () => { if(!confirm('Reset all fingerboard stats & bests?')) return;
@@ -1511,11 +1554,18 @@
         setStats({}); alert('Stats cleared.'); };
 
       useEffect(()=>{
-        // SW update prompt
+        // Immediate win #7: prompt only when the new worker is ready
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistration().then(reg=>{
             if (!reg) return;
-            reg.addEventListener('updatefound', ()=>{ setUpdateReady(true); });
+            reg.addEventListener('updatefound', ()=>{
+              const nw = reg.installing;
+              nw?.addEventListener('statechange', ()=>{
+                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                  setUpdateReady(true);
+                }
+              });
+            });
           });
           navigator.serviceWorker.addEventListener('controllerchange', ()=>{ /* optional auto-reload */ });
         }
