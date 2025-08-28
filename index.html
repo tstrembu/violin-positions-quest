@@ -390,65 +390,92 @@
     };
 
     const AccuracyHeatmap = ({ stats }) => (
-  <div className="card rounded-xl p-4">
-    <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {STRINGS.map(s => (
-        <div key={s} className="rounded-lg border">
-          <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
-            {s} string
-          </div>
-          <div className="p-2">
-            <div className="grid grid-cols-5 gap-2">
-              {POSITIONS.map(p => (
-                <div key={p} className="rounded-md border">
-                  <div className="text-xs px-2 py-1 border-b">Pos {p}</div>
-                  <div className="grid gap-1 p-2" style={{ gridTemplateColumns:'repeat(5,minmax(0,1fr))' }}>
-                    {FINGERS.map(f => {
-                      const valid = !!validCell(s, p, f);
-                      if (!valid) {
-                        // visually mark impossible cells as N/A (not “unseen”)
-                        return (
-                          <div key={f}
-                            className="rounded p-2 text-center text-xs font-semibold"
-                            style={{ border: '1px dashed rgba(0,0,0,0.25)', background: 'transparent', color: 'var(--ink-500)' }}
-                            title={`${s} Pos ${p} F${f} — N/A`}>
-                            F{f}<br/>—
-                          </div>
-                        );
-                      }
-                      const k = `${s}:${p}:${f}`;
-                      const st = stats[k] || { correct:0, total:0 };
-                      const { bg, fg, lb } = bucketColorFor(st.correct, st.total);
-                      const acc = st.total ? (st.correct / st.total) : 0;
-                      const tip = `${s} Pos ${p} F${f} — ${st.correct}/${st.total} `
-                                + `(${Math.round(acc*100)}%) · LB95 ${Math.round(lb*100)}%`;
-
-                      return (
-                        <div key={f}
-                          className="rounded p-2 text-center text-xs font-semibold"
-                          style={{ background: bg, color: fg }}
-                          title={tip}>
-                          F{f}<br/>{st.total ? `${Math.round(acc*100)}%` : '—'}
-                        </div>
-                      );
-                    })}
-                  </div>
+      <div className="card rounded-xl p-4">
+        <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
+    
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {STRINGS.map(s => (
+            <div key={s} className="rounded-lg border">
+              <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
+                {s} string
+              </div>
+    
+              <div className="p-2">
+                <div className="grid grid-cols-5 gap-2">
+                  {POSITIONS.map(p => (
+                    <div key={p} className="rounded-md border">
+                      <div className="text-xs px-2 py-1 border-b">Pos {p}</div>
+    
+                      {/* 5 finger tiles (F0–F4). We render a dashed placeholder if the cell isn't real */}
+                      <div
+                        className="grid gap-1 p-2"
+                        style={{gridTemplateColumns:'repeat(5, minmax(40px, 1fr))'}}
+                      >
+                        {FINGERS.map(f => {
+                          const isReal = !!validCell(s, p, f);
+                          const k = `${s}:${p}:${f}`;
+                          const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
+                          const style = evidenceStyle(st);
+    
+                          return (
+                            <div
+                              key={f}
+                              className="rounded text-center text-xs font-semibold flex flex-col justify-between"
+                              style={{
+                                background: style.bg,
+                                border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
+                                padding: '6px 4px',
+                                height: 56,
+                                fontVariantNumeric: 'tabular-nums'
+                              }}
+                              title={
+                                isReal
+                                  ? `${s} • Pos ${p} • F${f} — ${st.correct||0}/${st.total||0}  (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
+                                  : 'Not a valid finger/position'
+                              }
+                              aria-label={
+                                isReal
+                                  ? `On ${s} string, position ${p}, finger ${f}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent`
+                                  : 'Invalid cell'
+                              }
+                            >
+                              <div style={{color: isReal ? style.text : '#9ca3af'}}>
+                                F{f}
+                              </div>
+    
+                              <div style={{color: isReal ? style.text : '#9ca3af', marginTop: 2}}>
+                                {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
+                              </div>
+    
+                              {/* Evidence band */}
+                              <div
+                                style={{
+                                  height: 8,
+                                  width: '100%',
+                                  borderRadius: 4,
+                                  background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)',
+                                  marginTop: 6
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
-      ))}
-    </div>
-
-    <p className="text-xs muted mt-2">
-      Legend — Gray: unseen · Red: needs work (LB&lt;65%) · Yellow: developing (65–85%) · Green: strong (≥85%).
-      Bands use the 95% Wilson lower confidence bound; opacity increases with attempts (stability).
-    </p>
-  </div>
-);
-
+    
+        <p className="text-xs muted mt-2">
+          Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
+          · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
+          · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts (stability).
+        </p>
+      </div>
+    );
     const TempoHeatmap = ({ stats, terms }) => (
       <div className="card rounded-xl p-4">
         <div className="text-lg font-semibold mb-2">Tempo Heatmap</div>
@@ -468,6 +495,62 @@
       </div>
     );
 
+        // ---- Evidence-based color + stability ----
+    const wilsonLowerBound = (correct, total, z = 1.96) => {
+      if (!total) return 0;
+      const p = correct / total;
+      const denom = 1 + (z*z)/total;
+      const centre = p + (z*z)/(2*total);
+      const adj = z * Math.sqrt((p*(1-p) + (z*z)/(4*total)) / total);
+      return Math.max(0, (centre - adj) / denom);
+    };
+
+    // Color bands from LB; thresholds chosen for pedagogical clarity
+    const bandFromLB = (lb) => {
+      if (lb < 0.65) return 'red';
+      if (lb < 0.85) return 'yellow';
+      return 'green';
+    };
+
+    // Safari-safe RGBA swatches
+    const SWATCH = {
+      red:    [239, 68, 68],   // tailwind red-500
+      yellow: [245, 158, 11],  // amber-500
+      green:  [16, 185, 129],  // emerald-500
+      gray:   [120,120,120],
+    };
+    
+    const rgba = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+    
+    // Attempts -> opacity curve (n: 0→∞ maps to 0.35→1.0, capped by ~50)
+    const stabilityAlpha = (n) => {
+      if (!n) return 0.18; // faint for unseen placeholder
+      const t = Math.min(1, Math.log10(n + 1) / Math.log10(50)); // 0..1
+      return 0.35 + 0.65 * t; // 0.35..1.0
+    };
+    
+    // Style calculator for a speed-ladder stat tile
+    const evidenceStyle = (st) => {
+      const correct = st?.correct || 0, total = st?.total || 0;
+      if (!total) {
+        return {
+          bandColor: rgba(SWATCH.gray, 0.45),
+          bg: 'rgba(0,0,0,0)', // transparent; we lean on the band + dashed border
+          text: '#4b5563',     // gray-600
+          lb: 0, acc: 0, total
+        };
+      }
+      const lb = wilsonLowerBound(correct, total);
+      const band = bandFromLB(lb);
+      const alpha = stabilityAlpha(total);
+      return {
+        bandColor: rgba(SWATCH[band], alpha),
+        bg: 'transparent',
+        text: '#111827', // ink-900
+        lb, acc: correct/total, total, band
+      };
+    };
+    
     /* =========================================================
        Tempo data
     ========================================================== */
