@@ -84,6 +84,61 @@
     /* A11y live region */
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     *, *::before, *::after { box-sizing: border-box; }
+   
+    /* ---- Fingerboard heatmap layout ---- */
+    :root{
+      --posw: clamp(280px, 92vw, 360px);   /* width of each position card on small screens */
+      --cell: clamp(48px, 9vw, 62px);      /* width/height basis for tiles */
+    }
+    
+    .fb-strip {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 6px;
+      scroll-snap-type: x mandatory;
+    }
+    
+    .fb-pos {
+      flex: 0 0 var(--posw);
+      width: var(--posw);
+      scroll-snap-align: start;
+    }
+    
+    .fb-grid {
+      display: grid;
+      grid-template-columns: repeat(5, var(--cell));
+      gap: 6px;
+    }
+    
+    .fb-tile {
+      height: calc(var(--cell) + 14px);
+      padding: 6px 4px;
+      line-height: 1.05;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: center;
+      border-radius: .5rem;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .fb-band {
+      height: 8px;
+      width: 100%;
+      border-radius: 4px;
+      background: rgba(0,0,0,.08);
+    }
+    
+    /* Promote to grid on wider screens */
+    @media (min-width: 768px){
+      .fb-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); overflow: visible; }
+      .fb-pos   { width: auto; flex: initial; }
+    }
+    @media (min-width: 1280px){
+      .fb-strip { grid-template-columns: repeat(5, minmax(0,1fr)); }
+    }
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -358,29 +413,17 @@ const AccuracyHeatmap = ({ stats }) => (
 
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {STRINGS.map(s => (
-        <div key={s} className="rounded-lg border">
-          <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
+        <div key={s} className="rounded-lg border overflow-hidden">
+          <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)', whiteSpace:'nowrap' }}>
             {s} string
           </div>
 
-          {/* ⬇️ safety net for narrow panes */}
-          <div className="p-2 overflow-x-auto">
-            <div className="
-              grid gap-2
-              grid-flow-col auto-cols-[minmax(320px,1fr)]   /* small: horizontal scroller */
-              md:grid-flow-row md:auto-cols-auto md:grid-cols-3
-              xl:grid-cols-5
-            ">
+          <div className="p-2">
+            {/* Small screens: horizontal strip; md+: CSS elevates this to a grid */}
+            <div className="fb-strip">
               {POSITIONS.map(p => (
-                <div
-                  key={p}
-                  className="fb-pos rounded-md border overflow-hidden"
-                  style={{ minWidth: 320 }} // ensures the inner 5-finger grid never collapses
-                >
-                  <div
-                    className="fb-grid grid gap-1 p-2"
-                    style={{ gridTemplateColumns: 'repeat(5, minmax(52px, 1fr))' }}
-                  >
+                <div key={p} className="fb-pos rounded-md border">
+                  <div className="fb-grid p-2">
                     {FINGERS.map(f => {
                       const isReal = !!validCell(s, p, f);
                       const k = `${s}:${p}:${f}`;
@@ -390,7 +433,7 @@ const AccuracyHeatmap = ({ stats }) => (
                       return (
                         <div
                           key={f}
-                          className="fb-tile rounded text-center text-xs font-semibold flex flex-col justify-between"
+                          className="fb-tile"
                           title={
                             isReal
                               ? `${s} • Pos ${p} • F${f} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
@@ -402,26 +445,18 @@ const AccuracyHeatmap = ({ stats }) => (
                               : 'Invalid cell'
                           }
                           style={{
-                            background: style.bg,
                             border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
-                            padding: '6px 4px',
-                            height: 56,
-                            fontVariantNumeric: 'tabular-nums'
+                            background: 'transparent',
+                            color: isReal ? style.text : '#9ca3af'
                           }}
                         >
-                          <div style={{ color: isReal ? style.text : '#9ca3af' }}>F{f}</div>
-                          <div style={{ color: isReal ? style.text : '#9ca3af', marginTop: 2 }}>
+                          <div style={{ fontWeight:600 }}>F{f}</div>
+                          <div className="text-xs">
                             {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
                           </div>
-                          {/* single evidence band */}
                           <div
-                            style={{
-                              height: 8,
-                              width: '100%',
-                              borderRadius: 4,
-                              background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)',
-                              marginTop: 6
-                            }}
+                            className="fb-band"
+                            style={{ background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)' }}
                           />
                         </div>
                       );
