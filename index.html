@@ -109,10 +109,10 @@
      overflow:hidden;
     }
 
-   /* grid of the 5 fingers inside one position card */
+   /* grid of the 4 fingers inside one position card */
    .fb-grid{
      display:grid;
-     grid-template-columns: repeat(5, minmax(0, 1fr));
+     grid-template-columns: repeat(4, minmax(0, 1fr));
      gap:6px;
     }
 
@@ -216,43 +216,58 @@
     };
     const getRandomItem = (arr) => arr[Math.floor(Math.random()*arr.length)];
 
-    // Immediate win #4: ASCII accidental normalizer for display
+    // ASCII accidental normalizer for display
     const NORM = {'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb',
                   'C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#'};
     const norm = n => NORM[n] || n;
 
+    // Label helpers (standardized wording)
+    const ordinal = n => {
+      const x = Number(n);
+      const suf = (x%10===1 && x%100!==11) ? 'st'
+               : (x%10===2 && x%100!==12) ? 'nd'
+               : (x%10===3 && x%100!==13) ? 'rd' : 'th';
+      return `${x}${suf}`;
+    };
+    const posLabel    = p => `${ordinal(p)} Position`;
+    const fingerLabel = f => `${ordinal(f)} Finger`;
+    const stringLabel = s => `${s} string`;
+    const fullLoc     = (s,p,f,withString=true) =>
+      withString ? `${posLabel(p)}, ${fingerLabel(f)} on the ${stringLabel(s)}`
+                 : `${posLabel(p)}, ${fingerLabel(f)}`;
+
     /* =========================================================
-       Fingerboard Data (Positions 1–5) + Open strings
+       Fingerboard Data (Positions 1–5, no open strings)
     ========================================================== */
     const STRINGS = ['G','D','A','E'];
     const POSITIONS = ['1','2','3','4','5'];
-    // include F0 (open)
-    const FINGERS = ['0','1','2','3','4'];
+    // no open string
+    const FINGERS = ['1','2','3','4'];
 
     const NOTES_DATA = {
       G: {
-        1: { 0: ['G'], 1: ['A♭','A'], 2: ['B♭','B'], 3: ['C','C#'], 4: ['D'] },
+        1: { 1: ['A♭','A'], 2: ['B♭','B'], 3: ['C','C#'], 4: ['D'] },
         2: { 1: ['B♭','B'], 2: ['B','C'], 3: ['C','C#'], 4: ['D','D#'] },
         3: { 1: ['C','C#'], 2: ['C#','D'], 3: ['D','D#'], 4: ['E','F'] },
         4: { 1: ['D','D#'], 2: ['D#','E'], 3: ['E','F'],   4: ['F#','G'] },
         5: { 1: ['E','F'],   2: ['F','F#'], 3: ['F#','G'], 4: ['G#','A'] },
       },
       D: {
-        1: { 0: ['D'], 1: ['E♭','E'], 2: ['F','F#'], 3: ['G','G#'], 4: ['A'] },
+        1: { 1: ['E♭','E'], 2: ['F','F#'], 3: ['G','G#'], 4: ['A'] },
         2: { 1: ['F','F#'], 2: ['F#','G'], 3: ['G','G#'], 4: ['A','A#'] },
         3: { 1: ['G','G#'], 2: ['G#','A'], 3: ['A','A#'], 4: ['B','C'] },
         4: { 1: ['A','A#'], 2: ['A#','B'], 3: ['B','C'],  4: ['C#','D'] },
         5: { 1: ['B','C'],  2: ['C','C#'], 3: ['C#','D'], 4: ['D#','E'] },
       },
       A: {
-        1: { 0: ['A'], 1: ['B♭','B'], 2: ['C','C#'], 3: ['D','D#'], 4: ['E'] },
+        1: { 1: ['B♭','B'], 2: ['C','C#'], 3: ['D','D#'], 4: ['E'] },
         2: { 1: ['C','C#'], 2: ['C#','D'], 3: ['D','D#'], 4: ['E','F'] },
         3: { 1: ['D','D#'], 2: ['D#','E'], 3: ['E','F'],  4: ['F#','G'] },
         4: { 1: ['E','F'],  2: ['F','F#'], 3: ['F#','G'], 4: ['G#','A'] },
         5: { 1: ['F#','G'], 2: ['G','G#'], 3: ['G#','A'], 4: ['A#','B'] },
       },
       E: {
-        1: { 0: ['E'], 1: ['F','F#'], 2: ['G','G#'], 3: ['A','A#'], 4: ['B'] },
+        1: { 1: ['F','F#'], 2: ['G','G#'], 3: ['A','A#'], 4: ['B'] },
         2: { 1: ['G','G#'], 2: ['G#','A'], 3: ['A','A#'], 4: ['B','C'] },
         3: { 1: ['A','A#'], 2: ['A#','B'], 3: ['B','C'],  4: ['C#','D'] },
         4: { 1: ['B','C'],  2: ['C','C#'], 3: ['C#','D'], 4: ['D#','E'] },
@@ -351,7 +366,7 @@
         try { 
           const u = new SpeechSynthesisUtterance(text); 
           u.lang='en-US'; u.rate=1.0; 
-          // Immediate win #8: prevent overlap
+          // prevent overlap
           window.speechSynthesis.cancel();
           setTimeout(()=>window.speechSynthesis.speak(u), 0);
         } catch {}
@@ -402,16 +417,16 @@
        Help text (one-paragraph per card)
     ========================================================== */
     const HELP = {
-      speed: "Speed Ladder: you’ll see a prompt like G, Position 2, Finger 3. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
-      cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is under finger X?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
+      speed: "Speed Ladder: you’ll see a prompt like “G string — 2nd Position, 3rd Finger”. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
+      cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is at a given string/position/finger?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
       bingo: "Positions Bingo: a 5×5 practice board with violin tasks. Mark squares as you complete them. The center is FREE. Press R to reshuffle the board.",
       dice: "Dice of Destiny: press Roll for a focused practice challenge. The dice avoids repeats until the set cycles. Copy your challenge to notes if you like.",
       tempoTrainer: "Tempo Trainer: flashcards for Italian tempo terms with optional speech call-outs. Reveal the meaning, then say the feel out loud.",
       tempoTester: "Tempo Tester: timed multiple choice. Press 1–4 to answer. At the end, review your misses and retry just those items. A heat map tracks per-term accuracy.",
       bielerLab: "Bieler Method Lab: progressive study of Ida Bieler’s approach. First build vocabulary, then test conceptual understanding, then apply ideas to musical scenarios and bow/left-hand technique.",
-      height: "Finger Height Drill: Low vs High fingers. Prompt: note + string/position/finger. Answer Low or High (L/H). Builds intonation patterns across positions.",
-      locator: "Note Locator: Given a pitch (e.g., Bb), pick a valid location (string, position, finger). Reinforces multiple locations for the same note.",
-      shift: "Shift Coach: Stay on one string. Given start note/location and target note, choose the most efficient new position/finger (requires a shift).",
+      height: "Finger Height Drill: Low vs High fingers. Prompt: note + standardized string/position/finger wording. Answer Low or High (L/H) to build intonation patterns.",
+      locator: "Note Locator: Given a pitch (e.g., Bb), pick a valid location (Nth Position, Nth Finger on a given string). Reinforces multiple locations for the same note.",
+      shift: "Shift Coach: Stay on one string. Given start & target notes, choose the most efficient new position/finger (requires a shift).",
       harmonics: "Harmonics Lab: Learn natural harmonic nodes (1/2, 1/3, 1/4) per string with flashcards and quick checks. Great for tone and intonation reference."
     };
     
@@ -453,12 +468,12 @@ const AccuracyHeatmap = ({ stats }) => (
                           className="fb-tile"
                           title={
                             isReal
-                              ? `${s} • Pos ${p} • F${f} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
+                              ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
                               : 'Not a valid finger/position'
                           }
                           aria-label={
                             isReal
-                              ? `On ${s} string, position ${p}, finger ${f}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent`
+                              ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent`
                               : 'Invalid cell'
                           }
                           style={{
@@ -518,7 +533,7 @@ const AccuracyHeatmap = ({ stats }) => (
        Evidence-based approach and color stability for the fingerboard heatmap
        - Wilson 95% lower bound classifies red/yellow/green
        - Opacity scales with attempts (stability)
-    ========================================================= */
+    ========================================================== */
     const wilsonLowerBound = (correct, total, z = 1.96) => {
       if (!total) return 0;
       const p = correct / total;
@@ -690,7 +705,7 @@ const AccuracyHeatmap = ({ stats }) => (
       const lines = [];
       for (const s of STRINGS){
         const arr = by.get(s).sort((a,b)=>Number(a.p)-Number(b.p)||Number(a.f)-Number(b.f));
-        if (arr.length) lines.push(`${s}: ${arr.map(({p,f})=>`Pos ${p} (F${f})`).join(', ')}`);
+        if (arr.length) lines.push(`${s}: ${arr.map(({p,f})=>`${posLabel(p)} (${fingerLabel(f)})`).join(', ')}`);
       }
       return lines.join('  |  ');
     };
@@ -878,7 +893,7 @@ const AccuracyHeatmap = ({ stats }) => (
         const c = getRandomItem(combos);
         const note = getRandomItem(c.valid);
         const label = fingerHeight(note, c.valid); // 'low'|'high'|'natural'
-        speak(`${c.s}, position ${c.p}, finger ${c.f}`);
+        speak(fullLoc(c.s, c.p, c.f));
         setQ({ ...c, note, label }); // label is the correct answer
       };
 
@@ -931,7 +946,7 @@ const AccuracyHeatmap = ({ stats }) => (
             {q && (
               <>
                 <div className="text-center mb-5">
-                  <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> on <b>{q.s}</b>, Pos <b>{q.p}</b>, F<b>{q.f}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
+                  <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> at <b>{fullLoc(q.s, q.p, q.f)}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
                 </div>
                 <div className="flex gap-3 justify-center">
                   <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
@@ -946,7 +961,7 @@ const AccuracyHeatmap = ({ stats }) => (
       );
     };
 
-    /* ===================== NEW: Note Locator (Immediate win #3) ===================== */
+    /* ===================== NEW: Note Locator ===================== */
     const NoteLocator = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [timer,setTimer] = useState(prefs.roundLen || 90);
@@ -956,7 +971,7 @@ const AccuracyHeatmap = ({ stats }) => (
       const beeps = useBeeps(prefs.sound);
       const { speak } = useCallouts(prefs.callouts);
 
-      const labelLoc = o => `${o.s} · Pos ${o.p} · F${o.f}`;
+      const labelLoc = o => `${fullLoc(o.s, o.p, o.f)}`;
 
       const makeQ = () => {
         const note = getRandomItem(ALL_NOTES_UNIQUE);
@@ -1027,7 +1042,7 @@ const AccuracyHeatmap = ({ stats }) => (
       );
     };
 
-    /* ===================== NEW: Shift Coach (Immediate win #2) ===================== */
+    /* ===================== NEW: Shift Coach ===================== */
     const ShiftCoach = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [score,setScore] = useState(0);
@@ -1061,7 +1076,7 @@ const AccuracyHeatmap = ({ stats }) => (
         const start = best.a;
         const correctEnd = best.b;
 
-        // Immediate win #2: only real, valid (but wrong) landings on same string that don't produce the target
+        // Only real, valid (but wrong) landings on same string that don't produce the target
         const pool = allActualCombos()
           .filter(c => c.s === s)
           .filter(c => !(validCell(c.s, c.p, c.f) || []).includes(n2));
@@ -1069,8 +1084,7 @@ const AccuracyHeatmap = ({ stats }) => (
         const opts = [{...correctEnd, ok:true}];
         for (const cand of shuffle(pool)) {
           if (opts.length >= 4) break;
-          // avoid duplicates and avoid F0 as a shifted landing
-          if (cand.f !== '0' && !opts.some(o => o.p===cand.p && o.f===cand.f)) {
+          if (!opts.some(o => o.p===cand.p && o.f===cand.f)) {
             opts.push({...cand, ok:false});
           }
         }
@@ -1100,7 +1114,7 @@ const AccuracyHeatmap = ({ stats }) => (
         setTimeout(makePrompt, ok?350:700);
       };
 
-      const labelLoc = o => `Pos ${o.p} · F${o.f}`;
+      const labelLoc = o => `${fullLoc(q.string, o.p, o.f, false)}`;
 
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
@@ -1111,7 +1125,7 @@ const AccuracyHeatmap = ({ stats }) => (
               <>
                 <div className="rounded-md p-4" style={{background:'rgba(0,0,0,.05)'}}>
                   <div className="font-semibold mb-1">String: <b>{q.string}</b></div>
-                  <div className="text-sm">Start at <b>{norm(q.startNote)}</b> → <span className="muted">({`Pos ${q.start.p}, F${q.start.f}`})</span></div>
+                  <div className="text-sm">Start at <b>{norm(q.startNote)}</b> → <span className="muted">{fullLoc(q.string, q.start.p, q.start.f, false)}</span></div>
                   <div className="text-sm">Target note: <b>{norm(q.targetNote)}</b></div>
                 </div>
                 <div className="text-center text-sm muted mt-2 mb-4">Which <b>position + finger</b> is the best landing spot for the target?</div>
@@ -1287,7 +1301,7 @@ const AccuracyHeatmap = ({ stats }) => (
         const opts = shuffle([correct, ...getRandomDistractors(new Set([correct]),3)]);
         optionsRef.current = opts;
         setQuestion({ ...c, correct, options: opts });
-        speak(`${c.s}, position ${c.p}, finger ${c.f}`);
+        speak(fullLoc(c.s, c.p, c.f));
       };
 
       useEffect(()=>{ newQuestion(); }, []);
@@ -1350,7 +1364,7 @@ const AccuracyHeatmap = ({ stats }) => (
               <>
                 <div className="text-center mb-5">
                   <div className="text-xl font-bold">
-                    What note can you play with <b>F{question.f}</b> on <b>{question.s}</b> in <b>Position {question.p}</b>?
+                    What note can you play at <b>{fullLoc(question.s, question.p, question.f)}</b>?
                   </div>
                   <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
                 </div>
@@ -1383,7 +1397,7 @@ const AccuracyHeatmap = ({ stats }) => (
       const deckA = useMemo(()=>{
         const cards=[]; for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
           const cell = validCell(s,p,f);
-          if (cell) cards.push({q:`What note(s) under F${f} on ${s} in Position ${p}?`, a: cell.map(norm).join(' or ')});
+          if (cell) cards.push({q:`What note(s) at ${fullLoc(s, p, f)}?`, a: cell.map(norm).join(' or ')});
         }
         return cards;
       },[]);
@@ -1422,7 +1436,7 @@ const AccuracyHeatmap = ({ stats }) => (
       const base = [
         "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–5","Sight-read in Pos 2",
         "G-string Pos 1 quiz","C major in Pos 3 aloud","Find 3 ways to play D","E-string Pos 4 quiz","Slur → up-bow staccato",
-        "Name all Cs Pos 1–5","D major in Pos 5 aloud","Echo dynamics on repeat","Open A & D ring check","A-string Pos 3 quiz",
+        "Name all Cs Pos 1–5","D major in Pos 5 aloud","Echo dynamics on repeat","Perfect fifth resonance check (stopped notes)","A-string Pos 3 quiz",
         "List all F#s Pos 1–5","Gigue pickup (up-bow)","Martelé ×8 bars","Map staff lines → fingers","D-string Pos 4 quiz",
         "Contact-point ladders","Slow spiccato ×8 bars","Tempo flashcards ×20","Record 30s and review"
       ];
@@ -1459,7 +1473,7 @@ const AccuracyHeatmap = ({ stats }) => (
       const poolFull = [
         'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–5',
         'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 3 aloud','Find 3 ways to play D','E-string Pos 4 quiz',
-        'Slur → up-bow staccato','Name all Cs Pos 1–5','D major in Pos 5 aloud','Echo dynamics on repeat','Open A & D ring check',
+        'Slur → up-bow staccato','Name all Cs Pos 1–5','D major in Pos 5 aloud','Echo dynamics on repeat','Perfect fifth resonance check (stopped notes)',
         'A-string Pos 3 quiz','List all F#s Pos 1–5','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 4 quiz',
       ];
       const [pool,setPool]=useState(poolFull);
@@ -1635,7 +1649,9 @@ const AccuracyHeatmap = ({ stats }) => (
             </div>
           </div>
 
-          <p className="text-xs muted mt-3">Focus Mode pulls only from your selected subset (falls back to all if deselected). F0 = open string (Pos 1 only).</p>
+          <p className="text-xs muted mt-3">
+            Focus Mode pulls only from your selected subset (falls back to all if deselected).
+          </p>
         </div>
       );
     };
@@ -1680,7 +1696,7 @@ const AccuracyHeatmap = ({ stats }) => (
       };
       const inputRef = useRef(null);
 
-      // Immediate win #5: generalized CSV export across modes
+      // Generalized CSV export across modes
       const exportCSV = () => {
         const rows = [['mode','key','correct','total','accuracy']];
         const packs = [
@@ -1719,7 +1735,7 @@ const AccuracyHeatmap = ({ stats }) => (
         setStats({}); alert('Stats cleared.'); };
 
       useEffect(()=>{
-        // Immediate win #7: prompt only when the new worker is ready
+        // Prompt when the new worker is ready
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistration().then(reg=>{
             if (!reg) return;
