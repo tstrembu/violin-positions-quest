@@ -577,7 +577,7 @@
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {q.options.map((opt,i)=>(
                     <button key={i} className="btn btn-blue" title={`Press ${i+1}`} onClick={()=>handleAnswer(opt)}>
-                      <span className="pill" style="background:rgba(0,0,0,.15)">{i+1}</span>&nbsp; {opt}
+                      <span className="pill" style={{ background: 'rgba(0,0,0,.15)' }}>{i+1}</span>
                     </button>
                   ))}
                 </div>
@@ -727,7 +727,7 @@
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {question.options.map((note, i)=>(
                     <button key={i} className="btn btn-blue" title={`Press ${i+1}`} onClick={()=>handleAnswer(note)}>
-                      <span className="pill" style="background:rgba(0,0,0,.15)">{i+1}</span>&nbsp; {note}
+                      <span className="pill" style={{ background: 'rgba(0,0,0,.15)' }}>{i+1}</span>
                     </button>
                   ))}
                 </div>
@@ -854,7 +854,7 @@
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
             <h2 className="text-2xl font-bold mb-4">Dice of Destiny</h2>
             <button disabled={busy} className="btn btn-green text-xl" onClick={roll}>{busy?'…':'Roll Dice'}</button>
-            <div className="rounded-lg p-4 mt-6" style="background:rgba(0,0,0,.07)">
+            <div className="rounded-lg p-4 mt-6" style={{ background: 'rgba(0,0,0,.07)' }}>
               <div className="text-sm muted">Your Destiny:</div>
               <div className="text-xl font-bold mt-2">{cur || 'Press Roll to begin!'}</div>
             </div>
@@ -1112,7 +1112,7 @@
             <CardButton title="Bieler Method Lab" description="Vocabulary → concepts → applications." onClick={()=>go('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
           </div>
 
-          <div className="mt-6 grid gap-4" style="grid-template-columns:1fr;">
+          <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: '1fr' }}>
             <FiltersPanel prefs={prefs} setPrefs={setPrefs} stats={stats} onResetStats={resetAll} onExportCSV={exportCSV} />
             <AccuracyHeatmap stats={stats} />
           </div>
