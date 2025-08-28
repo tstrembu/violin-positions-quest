@@ -365,14 +365,12 @@
               <div className="p-2">
                 <div className="grid grid-cols-5 gap-2">
                   {POSITIONS.map(p => (
-                    <div key={p} className="rounded-md border">
-                      <div className="text-xs px-2 py-1 border-b">Pos {p}</div>
-    
-                      {/* 5 finger tiles (F0–F4). We render a dashed placeholder if the cell isn't real */}
+                   <div key={p} className="fb-pos rounded-md border overflow-hidden">
                       <div
-                        className="grid gap-1 p-2"
-                        style={{gridTemplateColumns:'repeat(5, minmax(40px, 1fr))'}}
-                      >
+                        className="fb-grid grid gap-1 p-2"
+                        // was: repeat(5, minmax(40px, 1fr))
+                        style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}
+                      >                             
                         {FINGERS.map(f => {
                           const isReal = !!validCell(s, p, f);
                           const k = `${s}:${p}:${f}`;
@@ -382,7 +380,7 @@
                           return (
                             <div
                               key={f}
-                              className="rounded text-center text-xs font-semibold flex flex-col justify-between"
+                              className="fb-tile rounded text-center text-xs font-semibold flex flex-col justify-between"
                               style={{
                                 background: style.bg,
                                 border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
@@ -390,6 +388,7 @@
                                 height: 56,
                                 fontVariantNumeric: 'tabular-nums'
                               }}
+                            >
                               title={
                                 isReal
                                   ? `${s} • Pos ${p} • F${f} — ${st.correct||0}/${st.total||0}  (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
