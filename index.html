@@ -352,86 +352,92 @@
       return `hsla(${hue}, ${sat}%, ${light}%, 1)`;
     };
 
-    const AccuracyHeatmap = ({ stats }) => (
-      <div className="card rounded-xl p-4">
-        <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
-    
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STRINGS.map(s => (
-            <div key={s} className="rounded-lg border">
-              <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
-                {s} string
-              </div>
-    
-              <div className="p-2">
-                <div className="grid grid-cols-5 gap-2">
-                  {POSITIONS.map(p => (
-                   <div key={p} className="fb-pos rounded-md border overflow-hidden min-w-0">
-                      <div
-                        className="fb-grid grid gap-1 p-2"
-                        // was: repeat(5, minmax(40px, 1fr))
-                        style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}
-                      >                             
-                        {FINGERS.map(f => {
-                          const isReal = !!validCell(s, p, f);
-                          const k = `${s}:${p}:${f}`;
-                          const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
-                          const style = evidenceStyle(st);
-    
-                          return (
-                            <div
-                              key={f}
-                              className="fb-tile rounded text-center text-xs font-semibold flex flex-col justify-between"
-                              title={
-                                isReal
-                                  ? `${s} • Pos ${p} • F${f} — ${st.correct||0}/${st.total||0}  (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
-                                  : 'Not a valid finger/position'
-                              }
-                              aria-label={
-                                isReal
-                                  ? `On ${s} string, position ${p}, finger ${f}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent`
-                                  : 'Invalid cell'
-                              }
-                              style={{
-                                background: style.bg,
-                                border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
-                                padding: '6px 4px',
-                                height: 56,
-                                fontVariantNumeric: 'tabular-nums'
-                              }}
-                            >
-                              <div style={{ color: isReal ? style.text : '#9ca3af' }}>F{f}</div>
-                              <div style={{ color: isReal ? style.text : '#9ca3af', marginTop: 2 }}>
-                                {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
-                              </div>
-                              <div
-                                style={{
-                                  height: 8,
-                                  width: '100%',
-                                  borderRadius: 4,
-                                  background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)',
-                                  marginTop: 6
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+const AccuracyHeatmap = ({ stats }) => (
+  <div className="card rounded-xl p-4">
+    <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
+
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {STRINGS.map(s => (
+        <div key={s} className="rounded-lg border">
+          <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)' }}>
+            {s} string
+          </div>
+
+          {/* ⬇️ safety net for narrow panes */}
+          <div className="p-2 overflow-x-auto">
+            {/* responsive positions grid (1–3 cols, 5 on XL) */}
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+              {POSITIONS.map(p => (
+                <div
+                  key={p}
+                  className="fb-pos rounded-md border overflow-hidden"
+                  style={{ minWidth: 260 }} // ensures the inner 5-finger grid never collapses
+                >
+                  <div
+                    className="fb-grid grid gap-1 p-2"
+                    style={{ gridTemplateColumns: 'repeat(5, minmax(48px, 1fr))' }}
+                  >
+                    {FINGERS.map(f => {
+                      const isReal = !!validCell(s, p, f);
+                      const k = `${s}:${p}:${f}`;
+                      const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
+                      const style = evidenceStyle(st);
+
+                      return (
+                        <div
+                          key={f}
+                          className="fb-tile rounded text-center text-xs font-semibold flex flex-col justify-between"
+                          title={
+                            isReal
+                              ? `${s} • Pos ${p} • F${f} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}% ; LB ${st.total?Math.round(style.lb*100):0}%)`
+                              : 'Not a valid finger/position'
+                          }
+                          aria-label={
+                            isReal
+                              ? `On ${s} string, position ${p}, finger ${f}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent`
+                              : 'Invalid cell'
+                          }
+                          style={{
+                            background: style.bg,
+                            border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
+                            padding: '6px 4px',
+                            height: 56,
+                            fontVariantNumeric: 'tabular-nums'
+                          }}
+                        >
+                          <div style={{ color: isReal ? style.text : '#9ca3af' }}>F{f}</div>
+                          <div style={{ color: isReal ? style.text : '#9ca3af', marginTop: 2 }}>
+                            {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
+                          </div>
+                          {/* single evidence band */}
+                          <div
+                            style={{
+                              height: 8,
+                              width: '100%',
+                              borderRadius: 4,
+                              background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)',
+                              marginTop: 6
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-    
-        <p className="text-xs muted mt-2">
-          Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
-          · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
-          · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts (stability).
-        </p>
-      </div>
-    );
+      ))}
+    </div>
+
+    <p className="text-xs muted mt-2">
+      Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
+      · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
+      · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts (stability).
+    </p>
+  </div>
+);
     const TempoHeatmap = ({ stats, terms }) => (
       <div className="card rounded-xl p-4">
         <div className="text-lg font-semibold mb-2">Tempo Heatmap</div>
