@@ -1,5 +1,5 @@
 // sw.js (at /violin-positions-quest/sw.js)
-const CACHE = "vpq-v2"; // bump this to force-update after asset changes
+const CACHE = "vpq-v2"; // ← bump this string
 const APP_SHELL = [
   "./",                 // resolves to /violin-positions-quest/
   "./index.html",
