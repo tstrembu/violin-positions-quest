@@ -32,23 +32,18 @@ const RUNTIME_ALLOWED = new Set([
   "https://fonts.gstatic.com/"
 ]);
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(APP_SHELL))
-  );
-  // Immediately activate the new SW
-  self.skipWaiting();
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+  self.skipWaiting(); // lets the new SW become waiting immediately
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : undefined)));
-    })()
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : undefined)))
+    )
   );
-  // Start controlling any open clients
-  self.clients.claim();
+  self.clients.claim(); // new SW controls open pages after one refresh
 });
 
 self.addEventListener("fetch", (event) => {
