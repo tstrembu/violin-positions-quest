@@ -1,5 +1,5 @@
 // sw.js (at /violin-positions-quest/sw.js)
-const CACHE = "vpq-v9"; // ← bump this string
+const CACHE = "vpq-v9.1"; // ← bump this string
 const ASSETS = [
     "./",                 // resolves to /violin-positions-quest/
   "./index.html",
