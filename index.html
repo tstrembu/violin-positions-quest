@@ -157,6 +157,11 @@
     /* XP bar */
     .xpbar { height:10px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden; }
     .xpbar-fill { height:100%; background:var(--accent); }
+    
+    /* Cross-browser polish (safe for Safari/Chrome/Firefox/Edge) */
+    html, body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    button, [role="button"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    /* Already present: -webkit-overflow-scrolling: touch on scrollers + an aspect-ratio fallback */
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -347,9 +352,17 @@
         return {
           sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
           callouts: true, roundLen: 120, goalEnabled: false, goalTarget: 10,
+          stringOrder: p?.stringOrder || 'score',                // NEW: 'score' or 'player'
           filters: { ...defaultFilters, ...(p?.filters || {}) }, ...(p || {})
         };
-      } catch { return { sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true, callouts:true, roundLen:120, goalEnabled:false, goalTarget:10, filters: defaultFilters }; }
+      } catch {
+        return {
+          sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true,
+          callouts:true, roundLen:120, goalEnabled:false, goalTarget:10,
+          stringOrder:'score',                                    // NEW default
+          filters: defaultFilters
+        };
+      }
     };
     const savePrefs = (obj) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {} };
     const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
@@ -371,6 +384,8 @@
       const ensureCtx = () => {
         if (!enabled) return null;
         if (!ctxRef.current) ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        // Safari/iOS sometimes suspends until a user gesture—resume politely
+        if (ctxRef.current?.state === 'suspended') { ctxRef.current.resume().catch(()=>{}); }
         return ctxRef.current;
       };
       const beep = (freq = 880, dur = 0.08, type = 'sine') => {
@@ -380,18 +395,6 @@
         o.start(); setTimeout(()=>o.stop(), dur*1000);
       };
       return { good: () => beep(1046, 0.09, 'triangle'), bad: () => beep(196, 0.12, 'sawtooth') };
-    };
-    const useCallouts = (enabled) => {
-      const speak = (text) => {
-        if (!enabled || !window.speechSynthesis) return;
-        try {
-          const u = new SpeechSynthesisUtterance(text);
-          u.lang='en-US'; u.rate=1.0;
-          window.speechSynthesis.cancel();
-          setTimeout(()=>window.speechSynthesis.speak(u), 0);
-        } catch {}
-      };
-      return { speak };
     };
 
     /* =========================================================
@@ -553,38 +556,84 @@
     };
 
     /* =========================================================
-       Fingerboard Visual Hint (SVG)
-    ========================================================== */
-    const LANE_Y = {G:70, D:130, A:190, E:250};
+       Fingerboard Visual Hint (SVG) — ordered + cell note label
+       Works in Safari/Chrome/Firefox/Edge
+    ========================================================= */
     const X_FOR_POS = (p)=> 60 + (p-1)*120;
     const FINGER_OFFSET = {1:15, 2:40, 3:65, 4:90};
-    const nodeXY = (s,p,f)=>({ x: X_FOR_POS(p)+FINGER_OFFSET[f], y: LANE_Y[s] });
-
-    const FingerboardHint = ({active}) => (
-      <svg width="100%" height="320" viewBox="0 0 700 320" className="mt-4">
-        {['G','D','A','E'].map(s => (
-          <g key={s}>
-            <text x="10" y={LANE_Y[s]+4} fontSize="12" fill="currentColor">{s}</text>
-            <line x1="50" x2="670" y1={LANE_Y[s]} y2={LANE_Y[s]} stroke="rgba(0,0,0,.2)" />
-            {[1,2,3,4,5].map(p =>
-              [1,2,3,4].map(f => {
-                const {x,y}=nodeXY(s,p,f);
-                const on = active && active.s===s && active.p===p && active.f===f;
-                return <circle key={`${s}:${p}:${f}`} cx={x} cy={y} r={10}
-                  fill={on?'var(--accent)':'rgba(255,255,255,.08)'}
-                  stroke={on?'white':'rgba(0,0,0,.25)'} strokeWidth={on?2:1}
-                  style={on?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}
-                />;
-              })
-            )}
-            {[1,2,3,4,5].map(p=>{
-              const x = X_FOR_POS(p)+52;
-              return <text key={p} x={x} y={LANE_Y[s]-14} fontSize="11" fill="currentColor">{p}</text>;
-            })}
-          </g>
-        ))}
-      </svg>
-    );
+    
+    const FingerboardHint = ({ active, order='score', showCellNotes=true, showGuides=true }) => {
+      // 'score': E–A–D–G (top→bottom) · 'player': G–D–A–E (top→bottom)
+      const rows = order === 'score' ? ['E','A','D','G'] : ['G','D','A','E'];
+      const laneY = rows.reduce((acc, s, i) => (acc[s] = 70 + i*60, acc), {});
+      const topY = laneY[rows[0]], botY = laneY[rows[rows.length-1]];
+      const posLabelY = topY - 26;
+    
+      const nodeXY = (s,p,f)=>({ x: X_FOR_POS(p)+FINGER_OFFSET[f], y: laneY[s] });
+      const isOn = (s,p,f)=> active && active.s===s && active.p===p && active.f===f;
+    
+      const cellNotes = (s,p,f) => {
+        const cell = validCell(s,p,f);
+        if (!cell || cell.length===0) return null;
+        if (cell.length===1) return norm(cell[0]);
+        const first = norm(cell[0]), last = norm(cell[cell.length-1]);
+        return `${first}–${last} (L/H)`;
+      };
+    
+      return (
+        <svg width="100%" height="320" viewBox="0 0 700 320" className="mt-4">
+          {/* Nut / Bridge landmarks */}
+          <text x="50" y={posLabelY-10} fontSize="10" fill="currentColor">Nut</text>
+          <text x="650" y={posLabelY-10} fontSize="10" fill="currentColor" textAnchor="end">Bridge</text>
+    
+          {/* Position labels + dashed guides */}
+          {[1,2,3,4,5].map(p => {
+            const x = X_FOR_POS(p)+52;
+            return (
+              <g key={`pos${p}`}>
+                <text x={x} y={posLabelY} fontSize="12" fill="currentColor">{p}</text>
+                {showGuides && (
+                  <line x1={x-37} x2={x-37} y1={topY-4} y2={botY+4}
+                        stroke="rgba(0,0,0,.25)" strokeDasharray="4,6" />
+                )}
+              </g>
+            );
+          })}
+    
+          {/* String lanes */}
+          {rows.map(s => (
+            <g key={s}>
+              <text x="10" y={laneY[s]+4} fontSize="12" fill="currentColor">
+                {s} {s==='E'?'(high)':s==='G'?'(low)':''}
+              </text>
+              <line x1="50" x2="670" y1={laneY[s]} y2={laneY[s]} stroke="rgba(0,0,0,.28)" />
+              {[1,2,3,4,5].map(p =>
+                [1,2,3,4].map(f => {
+                  const {x,y}=nodeXY(s,p,f);
+                  const on = isOn(s,p,f);
+                  const label = showCellNotes && on ? cellNotes(s,p,f) : null;
+                  return (
+                    <g key={`${s}:${p}:${f}`}>
+                      <circle cx={x} cy={y} r={on?12:10}
+                        fill={on?'var(--accent)':'rgba(255,255,255,.08)'}
+                        stroke={on?'white':'rgba(0,0,0,.28)'} strokeWidth={on?2:1}
+                        style={on?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}
+                      />
+                      {label && (
+                        <text x={x} y={y-18} fontSize="11" fill="currentColor" textAnchor="middle"
+                              style={{fontWeight:600, paintOrder:'stroke', WebkitTextStroke:'4px'}}>
+                          {label}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })
+              )}
+            </g>
+          ))}
+        </svg>
+      );
+    };
 
     /* =========================================================
        Heatmaps
@@ -595,61 +644,64 @@
       return `hsla(${hue}, ${sat}%, ${light}%, 1)`;
     };
 
-    const AccuracyHeatmap = ({ stats }) => (
-      <div className="card rounded-xl p-4">
-        <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STRINGS.map(s => (
-            <div key={s} className="rounded-lg border overflow-hidden">
-              <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)', whiteSpace:'nowrap' }}>
-                {s} string
-              </div>
-              <div className="p-2">
-                <div className="fb-strip">
-                  {POSITIONS.map(p => (
-                    <div key={p} className="fb-pos rounded-md border">
-                      <div className="fb-grid p-2">
-                        {FINGERS.map(f => {
-                          const isReal = !!validCell(s, p, f);
-                          const k = `${s}:${p}:${f}`;
-                          const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
-                          const style = evidenceStyle(st);
-                          return (
-                            <div
-                              key={f}
-                              className="fb-tile"
-                              title={isReal ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}%; LB ${st.total?Math.round(style.lb*100):0}%)` : 'Not a valid finger/position'}
-                              aria-label={isReal ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent` : 'Invalid cell'}
-                              style={{
-                                border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
-                                background: 'transparent',
-                                color: isReal ? style.text : '#9ca3af'
-                              }}
-                            >
-                              <div style={{ fontWeight:600 }}>F{f}</div>
-                              <div className="text-xs">
-                                {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
+    const AccuracyHeatmap = ({ stats, order='score' }) => {
+      const rows = order === 'score' ? ['E','A','D','G'] : ['G','D','A','E'];
+      return (
+        <div className="card rounded-xl p-4">
+          <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {rows.map(s => (
+              <div key={s} className="rounded-lg border overflow-hidden">
+                <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)', whiteSpace:'nowrap' }}>
+                  {s} string
+                </div>
+                <div className="p-2">
+                  <div className="fb-strip">
+                    {POSITIONS.map(p => (
+                      <div key={p} className="fb-pos rounded-md border">
+                        <div className="fb-grid p-2">
+                          {FINGERS.map(f => {
+                            const isReal = !!validCell(s, p, f);
+                            const k = `${s}:${p}:${f}`;
+                            const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
+                            const style = evidenceStyle(st);
+                            return (
+                              <div
+                                key={f}
+                                className="fb-tile"
+                                title={isReal ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}%; LB ${st.total?Math.round(style.lb*100):0}%)` : 'Not a valid finger/position'}
+                                aria-label={isReal ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent` : 'Invalid cell'}
+                                style={{
+                                  border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
+                                  background: 'transparent',
+                                  color: isReal ? style.text : '#9ca3af'
+                                }}
+                              >
+                                <div style={{ fontWeight:600 }}>F{f}</div>
+                                <div className="text-xs">
+                                  {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
+                                </div>
+                                <div className="fb-band" style={{ background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)' }} />
                               </div>
-                              <div className="fb-band" style={{ background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)' }} />
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+    
+          <p className="text-xs muted mt-2">
+            Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
+            · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
+            · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts.
+          </p>
         </div>
-
-        <p className="text-xs muted mt-2">
-          Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
-          · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
-          · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts.
-        </p>
-      </div>
-    );
+      );
+    };
 
     const TempoHeatmap = ({ stats, terms }) => (
       <div className="card rounded-xl p-4">
@@ -1032,7 +1084,11 @@
                 <div className="text-center mb-3">
                   <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> at <b>{fullLoc(q.s, q.p, q.f)}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
                 </div>
-                <FingerboardHint active={{s:q.s, p:q.p, f:q.f}} />
+                <FingerboardHint
+                  active={{s:q.s, p:q.p, f:q.f}}
+                  order={prefs.stringOrder}
+                  showCellNotes
+                />
                 <div className="flex gap-3 justify-center mt-3">
                   <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
                   <button className="btn btn-purple" onClick={()=>answer('high')}>High</button>
@@ -1122,6 +1178,11 @@
     };
 
     /* ===================== NEW: Shift Coach ===================== */
+    <FingerboardHint
+      active={{ s: q.string, p: q.start.p, f: q.start.f }}
+      order={prefs.stringOrder}
+      showCellNotes
+    />
     const ShiftCoach = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [score,setScore] = useState(0);
@@ -1485,7 +1546,11 @@
                   </div>
                   <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
                 </div>
-                <FingerboardHint active={{s:question.s, p:question.p, f:question.f}} />
+                <FingerboardHint
+                  active={{s:question.s, p:question.p, f:question.f}}
+                  order={prefs.stringOrder}
+                  showCellNotes
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {question.options.map((note, i)=>(
                     <button key={i} className={`btn btn-blue ${i===hitIdxRef.current ? 'btn-hit ' + (note===question.correct?'ok':'miss') : ''}`} title={`Press ${i+1}`} onClick={()=>handleAnswer(note,i)}>
@@ -1707,6 +1772,7 @@
     ========================================================== */
     const FiltersPanel = ({ prefs, setPrefs, stats, onResetStats, onExportCSV }) => {
       const f = prefs.filters;
+      const save = (n) => { setPrefs(n); savePrefs(n); };
       const toggle=(group,key)=>{
         setPrefs(p=>{ const next={...p, filters:{...p.filters, [group]:{...p.filters[group],[key]:!p.filters[group][key]}}}; savePrefs(next); return next; });
       };
@@ -1717,24 +1783,43 @@
         <div className="card rounded-xl p-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="text-sm">Round:
-              <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen} onChange={e=>{ const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
+              <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen}
+                      onChange={e=>save({ ...prefs, roundLen:Number(e.target.value) })}>
                 {[30,60,90,120,180].map(x=><option key={x} value={x}>{x}s</option>)}
               </select>
             </div>
-            <div className="flex flex-wrap gap-3 items-center">
-              <label className="text-sm"><input type="checkbox" checked={prefs.adaptive} onChange={e=>{ const n={...prefs, adaptive:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Adaptive</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.coach} onChange={e=>{ const n={...prefs, coach:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Coach</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.coachRetry} onChange={e=>{ const n={...prefs, coachRetry:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Retry after miss</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.sound} onChange={e=>{ const n={...prefs, sound:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Sound</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.confetti} onChange={e=>{ const n={...prefs, confetti:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Confetti</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.callouts} onChange={e=>{ const n={...prefs, callouts:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Call-outs</label>
+    
+            {/* NEW: View selector (string order) */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm">
+                View:&nbsp;
+                <select
+                  className="border rounded p-1 text-sm"
+                  value={prefs.stringOrder}
+                  onChange={e=>save({ ...prefs, stringOrder: e.target.value })}
+                  title="String order for diagrams"
+                >
+                  <option value="score">Score view: E–A–D–G (top→bottom)</option>
+                  <option value="player">Player view: G–D–A–E (top→bottom)</option>
+                </select>
+              </label>
             </div>
+    
+            <div className="flex flex-wrap gap-3 items-center">
+              <label className="text-sm"><input type="checkbox" checked={prefs.adaptive}   onChange={e=>save({ ...prefs, adaptive:e.target.checked })}/> Adaptive</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.coach}      onChange={e=>save({ ...prefs, coach:e.target.checked })}/> Coach</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.coachRetry} onChange={e=>save({ ...prefs, coachRetry:e.target.checked })}/> Retry after miss</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.sound}      onChange={e=>save({ ...prefs, sound:e.target.checked })}/> Sound</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.confetti}   onChange={e=>save({ ...prefs, confetti:e.target.checked })}/> Confetti</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.callouts}   onChange={e=>save({ ...prefs, callouts:e.target.checked })}/> Call-outs</label>
+            </div>
+    
             <div className="flex gap-2">
-              <button className="btn btn-rose" onClick={onResetStats}>Reset All Stats</button>
+              <button className="btn btn-rose"  onClick={onResetStats}>Reset All Stats</button>
               <button className="btn btn-green" onClick={onExportCSV}>Export CSV</button>
             </div>
           </div>
-
+    
           <div className="grid md:grid-cols-3 gap-4 mt-4">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1770,10 +1855,8 @@
               </div>
             </div>
           </div>
-
-          <p className="text-xs muted mt-3">
-            Focus Mode pulls only from your selected subset (falls back to all if deselected).
-          </p>
+    
+          <p className="text-xs muted mt-3">Focus Mode pulls only from your selected subset (falls back to all if deselected).</p>
         </div>
       );
     };
@@ -2058,7 +2141,7 @@
                 onResetStats={resetAll}
                 onExportCSV={exportCSV}
               />
-              <div className="mt-4"><AccuracyHeatmap stats={stats} /></div>
+              <div className="mt-4"><AccuracyHeatmap stats={stats} order={prefs.stringOrder} /></div>
             </div>
             <div className="space-y-4">
               <div className="card rounded-xl p-4">
