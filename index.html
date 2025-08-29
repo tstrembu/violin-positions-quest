@@ -1858,21 +1858,59 @@
       useEffect(()=>{ if (JSON.stringify(unlocked)!==JSON.stringify(cos.unlocked)) save({ ...cos, unlocked }); },[]);
 
       return (
-        <div className="card rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="font-semibold">Player Avatar</div>
-            <div className="avatar-wrap"><AvatarIcon outfit={cos.selected.outfit} trail={cos.selected.trail}/></div>
+        <div className="p-4 mx-auto" style={{ maxWidth: 1100 }}>
+          {/* HEADER: title, version pill, theme toggle, accent select */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl font-extrabold">Violin Positions Quest</div>
+              <span className="pill" style={{ background: 'rgba(0,0,0,.06)' }}>v1</span>
+            </div>
+      
+            <div className="flex items-center gap-3">
+              <button
+                className="btn btn-gray"
+                onClick={() => {
+                  const t = getTheme() === 'dark' ? 'light' : 'dark';
+                  setTheme(t);
+                }}
+              >
+                Toggle Theme
+              </button>
+      
+              <select
+                className="border rounded p-1 text-sm"
+                value={accent}
+                onChange={(e) => setAccent(e.target.value)}
+                aria-label="Theme accent"
+              >
+                <option value="symphony">Symphony</option>
+                <option value="rockstar">Rockstar</option>
+                <option value="fantasy">Fantasy</option>
+                <option value="lofi">Lo-fi</option>
+              </select>
+            </div>
           </div>
-          <div className="text-xs avatar-label mb-2">Customize your look with unlocks from badges.</div>
-          <div className="flex flex-wrap gap-2 items-center">
-            {['classic','rock','fantasy'].map(o=>(
-              <button key={o} disabled={!unlocked.outfits.includes(o)} className={`pill ${cos.selected.outfit===o?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>save({ ...cos, selected:{...cos.selected, outfit:o} })}>{o}</button>
-            ))}
-            <span className="text-xs mx-2 muted">Trail:</span>
-            {['none','aurora'].map(t=>(
-              <button key={t} disabled={!unlocked.trails.includes(t)} className={`pill ${cos.selected.trail===t?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>save({ ...cos, selected:{...cos.selected, trail:t} })}>{t}</button>
-            ))}
+      
+          {/* Your existing two-column layout continues here */}
+          <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+            <div className="card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold">Level {sb.level}</div>
+                <div className="text-sm muted">XP: {sb.xp} / {sb.next}</div>
+              </div>
+      
+              {/* …rest of the left column (grids of <CardButton/>, etc.) … */}
+            </div>
+      
+            {/* …right column content… */}
           </div>
+      
+          {/* …accuracy heatmap, weakest panel, filters, etc… */}
+      
+          {/* Keep your modal; it uses the same help state declared above */}
+          <Modal open={!!help} onClose={() => setHelp(null)} title="How it works">
+            <div className="whitespace-pre-wrap">{help ? HELP[help] : ''}</div>
+          </Modal>
         </div>
       );
     };
