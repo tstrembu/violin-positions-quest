@@ -363,10 +363,10 @@
     const CANON = buildCanonical();
     
     // Helper: set of allowed spellings for a cell (testing mode can drop extensions)
-    const allowedFor = (p,f,s,{includeExtensions=false, preferFlats=false}={}) => {
-      const c = CANON[p]?.[f]?.[s]; if (!c) return [];
-      const vals = [c.low, c.base, c.high, includeExtensions?c.extHigh:null, includeExtensions?c.extLow:null]
-        .filter(Boolean);
+    const allowedFor = (s,p,f,{includeExtensions=false, preferFlats=false}={}) => {
+      const c = CANON[s]?.[p]?.[f];
+      if (!c) return [];
+      const vals = [c.low, c.base, c.high, includeExtensions?c.extHigh:null, includeExtensions?c.extLow:null].filter(Boolean);
       return preferFlats ? vals.map(toFlat) : vals;
     };
     
@@ -682,6 +682,7 @@
        Fingerboard Visual Hint (SVG) — ordered + cell note label
        Works in Safari/Chrome/Firefox/Edge
     ========================================================= */
+    // FingerboardHint (final)
     const X_FOR_POS = (p)=> 60 + (p-1)*120;
     const FINGER_OFFSET = {1:15, 2:40, 3:65, 4:90};
     
@@ -696,10 +697,10 @@
       const isOn = (s,p,f)=> active && active.s===s && active.p===p && active.f===f;
     
       // Labeling policy:
-      //  - 'none'   → show nothing (use for tests)
+      //  - 'none'   → nothing (use for tests)
       //  - 'range'  → "F–F#" (no L/H wording) — canonical visual
       //  - 'lh'     → "F–F# (L/H)" — only in the Height drill
-      //  - 'canon'  → show the canonical *base* note (blue-dot) for that cell
+      //  - 'canon'  → canonical base note for that cell
       const cellLabel = (s,p,f) => {
         if (labelMode === 'none') return null;
         const cell = validCell(s,p,f);
@@ -715,7 +716,6 @@
           const first = norm(cell[0]), last = norm(cell[cell.length-1]);
           return labelMode === 'lh' ? `${first}–${last} (L/H)` : `${first}–${last}`;
         }
-    
         return null;
       };
     
@@ -773,26 +773,6 @@
         </svg>
       );
     };
-    
-      return (
-        <svg width="100%" height="320" viewBox="0 0 700 320" className="mt-4">
-          {/* Nut / Bridge landmarks */}
-          <text x="50" y={posLabelY-10} fontSize="10" fill="currentColor">Nut</text>
-          <text x="650" y={posLabelY-10} fontSize="10" fill="currentColor" textAnchor="end">Bridge</text>
-    
-          {/* Position labels + dashed guides */}
-          {[1,2,3,4,5].map(p => {
-            const x = X_FOR_POS(p)+52;
-            return (
-              <g key={`pos${p}`}>
-                <text x={x} y={posLabelY} fontSize="12" fill="currentColor">{p}</text>
-                {showGuides && (
-                  <line x1={x-37} x2={x-37} y1={topY-4} y2={botY+4}
-                        stroke="rgba(0,0,0,.25)" strokeDasharray="4,6" />
-                )}
-              </g>
-            );
-          })}
     
           {/* String lanes */}
           {rows.map(s => (
