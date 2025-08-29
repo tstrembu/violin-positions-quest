@@ -1016,6 +1016,11 @@
         else { beeps.bad(); setTimeout(pick, 700); }
       };
 
+      useEffect(()=>{
+        const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k==='l') answer('low'); if(k==='h') answer('high'); if(k==='escape') onBack(); };
+        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
+      }, [q, timer]);
+
       return (
         <div className="relative p-4 min-h-screen flex flex-col items-center">
           <ConfettiBurst seed={confettiSeed} />
@@ -1460,7 +1465,7 @@
       };
 
       useEffect(()=>{
-        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const raw=optionsRef.current?.[idx]; if(raw) handleAnswer(raw, idx); } };
+        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const raw=optionsRef.current?.[idx]; if(raw) handleAnswer(raw, idx); } if(k==='escape') onBack(); };
         window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
       }, [finished, question]);
 
@@ -1520,7 +1525,7 @@
       const deck = mode==='A'?deckA:deckB;
       const next=()=>{ setShow(false); setI((i+1)%deck.length); };
       const prev=()=>{ setShow(false); setI((i-1+deck.length)%deck.length); };
-      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); }, [i,show]);
+      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='escape') onBack(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); }, [i,show]);
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
@@ -1595,6 +1600,7 @@
       const [busy,setBusy]=useState(false);
       const [history,setHistory]=useState([]);
       const roll=()=>{ setBusy(true); setCur('…'); setTimeout(()=>{ const p = pool.length ? pool : poolFull; const pick = getRandomItem(p); setCur(pick); setHistory(h=>[pick,...h].slice(0,6)); setPool(p.filter(x=>x!==pick)); setBusy(false); }, 560); };
+      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key.toLowerCase()==='r') roll(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[]);
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
@@ -1640,6 +1646,8 @@
 
       const answerConcept = (opt)=>{ const ok = opt===cq.correct; document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again'; setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); setTimeout(()=>setCq(makeConceptQ()), ok?350:700); };
       const answerApply   = (opt)=>{ const ok = opt===aq.correct; document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again'; setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); setTimeout(()=>setAq(makeApplyQ()), ok?350:700); };
+
+      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key==='ArrowRight'||e.key.toLowerCase()==='n') next(); if(e.key==='ArrowLeft'||e.key.toLowerCase()==='p') prev(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[]);
 
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
@@ -2036,88 +2044,124 @@
             <CardButton title="Flashcards Mode" description="Two decks: direct hits + note→locations." onClick={()=>go('cards')} onHelp={()=>setHelpKey('cards')} />
             <CardButton title="Positions Bingo" description="Fill a line with focused tasks." onClick={()=>go('bingo')} onHelp={()=>setHelpKey('bingo')} />
             <CardButton title="Dice of Destiny" description="Roll for a practice challenge." onClick={()=>go('dice')} onHelp={()=>setHelpKey('dice')} />
-            <CardButton title="Tempo Trainer" description="Italian→English flashcards with call-outs." onClick={()=>go('tempoTrainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
-            <CardButton title="Tempo Tester" description="Timed MCQ with heatmap + review misses." onClick={()=>go('tempoTester')} onHelp={()=>setHelpKey('tempoTester')} />
-            <CardButton title="Bieler Method Lab" description="Vocabulary → concepts → applications." onClick={()=>go('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
+            <CardButton title="Tempo Trainer" description="Italian terms flashcards with call-outs." onClick={()=>go('tempoTrainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
+            <CardButton title="Tempo Tester" description="Timed MCQ + review misses + heatmap." onClick={()=>go('tempoTester')} onHelp={()=>setHelpKey('tempoTester')} />
+            <CardButton title="Bieler Method Lab" description="Vocabulary, concepts, and application." onClick={()=>go('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
           </div>
 
-          <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: '1fr' }}>
-            <FiltersPanel prefs={prefs} setPrefs={setPrefs} stats={stats} onResetStats={resetAll} onExportCSV={exportCSV} />
-            <WeakestThreePanel stats={stats} onDrill={goDrill} />
-            <AccuracyHeatmap stats={stats} />
-            <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid lg:grid-cols-3 gap-4 mt-6">
+            <div className="lg:col-span-2">
+              <FiltersPanel
+                prefs={prefs}
+                setPrefs={setPrefs}
+                stats={stats}
+                onResetStats={resetAll}
+                onExportCSV={exportCSV}
+              />
+              <div className="mt-4"><AccuracyHeatmap stats={stats} /></div>
+            </div>
+            <div className="space-y-4">
               <div className="card rounded-xl p-4">
-                <div className="font-semibold mb-2">Speed Ladder — Accuracy Trend</div>
+                <div className="text-lg font-semibold mb-2">Recent Accuracy</div>
+                <div className="text-xs muted mb-1">Speed Ladder (last 20)</div>
                 <Spark points={speedPoints}/>
-              </div>
-              <div className="card rounded-xl p-4">
-                <div className="font-semibold mb-2">Tempo Tester — Accuracy Trend</div>
+                <div className="text-xs muted mt-2">Tempo Tester (last 20)</div>
                 <Spark points={tempoPoints}/>
               </div>
+              <WeakestThreePanel stats={stats} onDrill={goDrill}/>
+              <BadgesPanel/>
+              <AvatarCustomizer/>
             </div>
-            <AvatarCustomizer />
-            <BadgesPanel />
           </div>
 
           <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How to play">
-            {helpKey ? HELP[helpKey] : ''}
+            {HELP[helpKey] || 'Select a mode to begin.'}
           </Modal>
 
-          <Toast open={updateReady} text="An update is ready. Refresh to get the latest." action="Refresh" onAction={()=>location.reload()} />
+          <Toast open={updateReady} text="An update is ready." action="Reload" onAction={()=>location.reload()} />
         </div>
       );
     };
 
     /* =========================================================
-       App
+       Error Boundary (runtime guard)
+    ========================================================== */
+    class ErrorBoundary extends React.Component {
+      constructor(props){ super(props); this.state = { hasError:false, err:'' }; }
+      static getDerivedStateFromError(err){ return { hasError:true, err: String(err) }; }
+      componentDidCatch(err, info){ console.error(err, info); }
+      render(){
+        if (this.state.hasError){
+          return (
+            <div className="p-6">
+              <div className="card rounded-xl p-6">
+                <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+                <p className="muted text-sm mb-3">{this.state.err}</p>
+                <button className="btn btn-purple" onClick={()=>location.reload()}>Reload App</button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    /* =========================================================
+       Root App (routing + state)
     ========================================================== */
     const App = () => {
-      const [view,setView]=useState('dashboard');
-      const [prefs,setPrefs]=useState(loadPrefs());
-      const [stats,setStats]=useState(loadStats());
+      const [route, setRoute] = useState(() => (location.hash.replace('#','') || 'home'));
+      const [prefs, setPrefs] = useState(loadPrefs());
+      const [stats, setStats] = useState(loadStats());
 
-      useEffect(()=>savePrefs(prefs),[prefs]);
-      useEffect(()=>saveStats(stats),[stats]);
+      // Hash routing + deep-link
+      const go = (r) => { setRoute(r); location.hash = r; };
+      const onBack = () => go('home');
 
-      const go = (v)=>setView(v);
-
-      // iOS audio/TTS unlock on first gesture
       useEffect(()=>{
-        const unlock=()=>{ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx&&ctx.state==='suspended') ctx.resume(); }catch{} if(window.speechSynthesis){ try{ window.speechSynthesis.cancel(); }catch{} } window.removeEventListener('touchend',unlock); window.removeEventListener('click',unlock); };
-        window.addEventListener('touchend',unlock,{once:true}); window.addEventListener('click',unlock,{once:true});
+        const onHash=()=> setRoute(location.hash.replace('#','') || 'home');
+        window.addEventListener('hashchange', onHash);
+        return ()=>window.removeEventListener('hashchange', onHash);
       },[]);
 
-      return (
-        <div style={{minHeight:'100vh'}}>
-          {view==='dashboard'   && <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />}
-          {view==='speed'       && <SpeedLadderGame prefs={prefs} stats={stats} setStats={setStats} onBack={()=>setView('dashboard')} />}
-          {view==='height'      && <HeightDrill prefs={prefs} onBack={()=>setView('dashboard')} />}
-          {view==='locator'     && <NoteLocator prefs={prefs} onBack={()=>setView('dashboard')} />}
-          {view==='shift'       && <ShiftCoach prefs={prefs} onBack={()=>setView('dashboard')} />}
-          {view==='harmonics'   && <HarmonicsLab prefs={prefs} onBack={()=>setView('dashboard')} />}
-          {view==='cards'       && <Flashcards onBack={()=>setView('dashboard')} />}
-          {view==='bingo'       && <BingoBoard onBack={()=>setView('dashboard')} />}
-          {view==='dice'        && <DiceOfDestinyGame onBack={()=>setView('dashboard')} />}
-          {view==='tempoTrainer'&& <TempoTrainer prefs={prefs} onBack={()=>setView('dashboard')} />}
-          {view==='tempoTester' && <TempoTester prefs={prefs} onBack={()=>setView('dashboard')} />}
-          {view==='bielerLab'   && <BielerLab onBack={()=>setView('dashboard')} />}
-        </div>
-      );
+      // Persist prefs/stats on change
+      useEffect(()=>{ savePrefs(prefs); }, [prefs]);
+      useEffect(()=>{ saveStats(stats); }, [stats]);
+
+      // Global keyboard: Esc to go home
+      useEffect(()=>{
+        const onKey=(e)=>{ if(e.key==='Escape' && route!=='home') onBack(); };
+        window.addEventListener('keydown', onKey);
+        return ()=>window.removeEventListener('keydown', onKey);
+      }, [route]);
+
+      // Optional: register service worker (if present in repo)
+      useEffect(()=>{
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/violin-positions-quest/sw.js').catch(()=>{});
+        }
+      },[]);
+
+      // Route table
+      if (route==='speed')        return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} />;
+      if (route==='cards')        return <Flashcards onBack={onBack} />;
+      if (route==='bingo')        return <BingoBoard onBack={onBack} />;
+      if (route==='dice')         return <DiceOfDestinyGame onBack={onBack} />;
+      if (route==='tempoTrainer') return <TempoTrainer onBack={onBack} prefs={prefs} />;
+      if (route==='tempoTester')  return <TempoTester onBack={onBack} prefs={prefs} />;
+      if (route==='bielerLab')    return <BielerLab onBack={onBack} />;
+      if (route==='height')       return <HeightDrill onBack={onBack} prefs={prefs} />;
+      if (route==='locator')      return <NoteLocator onBack={onBack} prefs={prefs} />;
+      if (route==='shift')        return <ShiftCoach onBack={onBack} prefs={prefs} />;
+      if (route==='harmonics')    return <HarmonicsLab onBack={onBack} prefs={prefs} />;
+
+      // Default: Dashboard
+      return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
     };
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-
-  <!-- Service worker registration (explicit GitHub Pages scope) -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/violin-positions-quest/sw.js", { scope: "/violin-positions-quest/" })
-          .catch(()=>{});
-      });
-    }
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <ErrorBoundary><App/></ErrorBoundary>
+    );
   </script>
 </body>
 </html>
