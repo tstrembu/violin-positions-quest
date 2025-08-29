@@ -1179,19 +1179,13 @@
 
     /* ===================== NEW: Shift Coach ===================== */
     const ShiftCoach = ({ onBack, prefs }) => {
-      <FingerboardHint
-        active={{ s: q.string, p: q.start.p, f: q.start.f }}
-        order={prefs.stringOrder}
-        showCellNotes
-      />
-    const ShiftCoach = ({ onBack, prefs }) => {
-      const [q,setQ] = useState(null);
-      const [score,setScore] = useState(0);
-      const [answered,setAnswered] = useState(0);
-      const [timer,setTimer] = useState(prefs.roundLen || 90);
-      const [stats, setStats] = useState(loadJSON(SHIFT_STATS_KEY, {}));
+      const [q,setQ] = React.useState(null);
+      const [score,setScore] = React.useState(0);
+      const [answered,setAnswered] = React.useState(0);
+      const [timer,setTimer] = React.useState(prefs.roundLen || 90);
+      const [stats, setStats] = React.useState(loadJSON(SHIFT_STATS_KEY, {}));
       const beeps = useBeeps(prefs.sound);
-
+    
       const locationsForNoteOnString = (note, s) => allLocationsForNote(note).filter(l => l.s === s);
       const samePosExists = (A, B) => A.some(a => B.some(b => a.p===b.p));
       const pathCost = (a, b) => Math.abs(Number(a.p) - Number(b.p));
@@ -1203,7 +1197,7 @@
         }
         return best;
       };
-
+    
       const makePrompt = () => {
         const s = getRandomItem(STRINGS);
         const n1 = getRandomItem(ALL_NOTES_UNIQUE);
@@ -1215,7 +1209,9 @@
         const best = bestPair(A,B);
         const start = best.a;
         const correctEnd = best.b;
-        const pool = allActualCombos().filter(c => c.s === s).filter(c => !(validCell(c.s, c.p, c.f) || []).includes(n2));
+        const pool = allActualCombos()
+          .filter(c => c.s === s)
+          .filter(c => !(validCell(c.s, c.p, c.f) || []).includes(n2));
         const opts = [{...correctEnd, ok:true}];
         for (const cand of shuffle(pool)) {
           if (opts.length >= 4) break;
@@ -1223,19 +1219,19 @@
         }
         setQ({ string:s, startNote:n1, targetNote:n2, start, opts: shuffle(opts) });
       };
-
-      useEffect(()=>{ makePrompt(); },[]);
-      useEffect(()=>{
+    
+      React.useEffect(()=>{ makePrompt(); },[]);
+      React.useEffect(()=>{
         const id = setInterval(()=>setTimer(t => t<=1 ? 0 : t-1), 1000);
         return ()=>clearInterval(id);
       },[]);
-
+    
       const bump = (key, ok) => {
         const st = stats[key] || { correct:0, total:0 };
         const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
         setStats(next); saveJSON(SHIFT_STATS_KEY, next);
       };
-
+    
       const answer = (o) => {
         const ok = !!o.ok;
         const key = `${q.string}:${q.startNote}->${q.targetNote}`;
@@ -1246,22 +1242,36 @@
         if (ok) setScore(s=>s+1);
         setTimeout(makePrompt, ok?350:700);
       };
-
+    
       const labelLoc = o => `${fullLoc(q.string, o.p, o.f, false)}`;
-
+    
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:860}}>
             <h2 className="text-2xl font-bold mb-2">Shift Coach</h2>
-            <div className="muted text-sm mb-4">Stay on one string. Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+            <div className="muted text-sm mb-4">
+              Stay on one string. Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}
+            </div>
             {q && (
               <>
                 <div className="rounded-md p-4" style={{background:'rgba(0,0,0,.05)'}} aria-live="polite">
                   <div className="font-semibold mb-1">String: <b>{q.string}</b></div>
-                  <div className="text-sm">Start at <b>{norm(q.startNote)}</b> → <span className="muted">{fullLoc(q.string, q.start.p, q.start.f, false)}</span></div>
+                  <div className="text-sm">
+                    Start at <b>{norm(q.startNote)}</b> → <span className="muted">{fullLoc(q.string, q.start.p, q.start.f, false)}</span>
+                  </div>
                   <div className="text-sm">Target note: <b>{norm(q.targetNote)}</b></div>
                 </div>
-                <div className="text-center text-sm muted mt-2 mb-4">Which <b>position + finger</b> is the best landing spot for the target?</div>
+    
+                {/* Visual hint for the current start location */}
+                <FingerboardHint
+                  active={{ s: q.string, p: q.start.p, f: q.start.f }}
+                  order={prefs.stringOrder}
+                  showCellNotes
+                />
+    
+                <div className="text-center text-sm muted mt-2 mb-4">
+                  Which <b>position + finger</b> is the best landing spot for the target?
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {q.opts.map((o,i)=>(
                     <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
