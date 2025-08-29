@@ -697,9 +697,9 @@
       const isOn = (s,p,f)=> active && active.s===s && active.p===p && active.f===f;
     
       // Labeling policy:
-      //  - 'none'   → nothing (use for tests)
-      //  - 'range'  → "F–F#" (no L/H wording) — canonical visual
-      //  - 'lh'     → "F–F# (L/H)" — only in the Height drill
+      //  - 'none'   → nothing
+      //  - 'range'  → "F–F#"
+      //  - 'lh'     → "F–F# (L/H)"
       //  - 'canon'  → canonical base note for that cell
       const cellLabel = (s,p,f) => {
         if (labelMode === 'none') return null;
@@ -751,41 +751,6 @@
                   const {x,y}=nodeXY(s,p,f);
                   const on = isOn(s,p,f);
                   const label = on ? cellLabel(s,p,f) : null;
-                  return (
-                    <g key={`${s}:${p}:${f}`}>
-                      <circle cx={x} cy={y} r={on?12:10}
-                        fill={on?'var(--accent)':'rgba(255,255,255,.08)'}
-                        stroke={on?'white':'rgba(0,0,0,.28)'} strokeWidth={on?2:1}
-                        style={on?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}
-                      />
-                      {label && (
-                        <text x={x} y={y-18} fontSize="11" fill="currentColor" textAnchor="middle"
-                              style={{fontWeight:600, paintOrder:'stroke', WebkitTextStroke:'4px'}}>
-                          {label}
-                        </text>
-                      )}
-                    </g>
-                  );
-                })
-              )}
-            </g>
-          ))}
-        </svg>
-      );
-    };
-    
-          {/* String lanes */}
-          {rows.map(s => (
-            <g key={s}>
-              <text x="10" y={laneY[s]+4} fontSize="12" fill="currentColor">
-                {s} {s==='E'?'(high)':s==='G'?'(low)':''}
-              </text>
-              <line x1="50" x2="670" y1={laneY[s]} y2={laneY[s]} stroke="rgba(0,0,0,.28)" />
-              {[1,2,3,4,5].map(p =>
-                [1,2,3,4].map(f => {
-                  const {x,y}=nodeXY(s,p,f);
-                  const on = isOn(s,p,f);
-                  const label = showCellNotes && on ? cellNotes(s,p,f) : null;
                   return (
                     <g key={`${s}:${p}:${f}`}>
                       <circle cx={x} cy={y} r={on?12:10}
@@ -1279,10 +1244,10 @@
                   <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> at <b>{fullLoc(q.s, q.p, q.f)}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
                 </div>
                 <FingerboardHint
-                    active={{s:question.s, p:question.p, f:question.f}}
-                    order={prefs.stringOrder}
-                    labelMode="none"
-                  />
+                  active={{ s: q.s, p: q.p, f: q.f }}
+                  order={prefs.stringOrder}
+                  labelMode="lh"   // or "none" if you prefer no text
+                />
                 <div className="flex gap-3 justify-center mt-3">
                   <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
                   <button className="btn btn-purple" onClick={()=>answer('high')}>High</button>
