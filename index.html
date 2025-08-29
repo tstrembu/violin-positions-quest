@@ -1967,7 +1967,7 @@
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="text-2xl font-extrabold">Violin Positions Quest</div>
-              <span className="pill" style="background:rgba(0,0,0,.06)">v1</span>
+              <span className="pill" style={{ background: 'rgba(0,0,0,.06)' }}>v1</span>
             </div>
             <div className="flex items-center gap-3">
               <button className="btn btn-gray" onClick={()=>{ const t=getTheme()==='dark'?'light':'dark'; setTheme(t); }}>Toggle Theme</button>
@@ -1988,22 +1988,73 @@
               </div>
               <div className="xpbar"><div className="xpbar-fill" style={{width: `${Math.min(100, (sb.xp/sb.next)*100)}%`}}/></div>
               <div className="grid-cards mt-4">
-                <CardButton title="Speed Ladder" description="Timed note ID across positions/fingers (adaptive + SM-2)" onClick={()=>go('speed')} onHelp={()=>setHelp('speed')} />
-                <CardButton title="Flashcards" description="Two decks: locations→notes, notes→locations" onClick={()=>go('flashcards')} onHelp={()=>setHelp('cards')} />
-                <CardButton title="Tempo Trainer" description="Italian terms flashcards (with call-outs)" onClick={()=>go('tempoTrainer')} onHelp={()=>setHelp('tempoTrainer')} />
-                <CardButton title="Tempo Tester" description="Multiple choice with review of misses" onClick={()=>go('tempoTester')} onHelp={()=>setHelp('tempoTester')} />
-                <CardButton title="Bieler Lab" description="Vocabulary, concept checks, and applications" onClick={()=>go('bielerLab')} onHelp={()=>setHelp('bielerLab')} />
-                <CardButton title="Finger Height Drill" description="Low/High classification for intonation patterns" onClick={()=>go('height')} onHelp={()=>setHelp('height')} />
-                <CardButton title="Note Locator" description="Pick valid position+finger for a target note" onClick={()=>go('locator')} onHelp={()=>setHelp('locator')} />
-                <CardButton title="Shift Coach" description="Best landing spot on same string (requires shift)" onClick={()=>go('shift')} onHelp={()=>setHelp('shift')} />
+                <CardButton
+                  title="Speed Ladder"
+                  description="Timed note ID across positions/fingers (adaptive + SM-2)"
+                  onClick={() => go('speed')}
+                  onHelp={() => setHelp('speed')}
+                />
+                <CardButton
+                  title="Flashcards"
+                  description="Two decks: locations→notes, notes→locations"
+                  onClick={() => go('flashcards')}
+                  onHelp={() => setHelp('cards')}
+                />
+                <CardButton
+                  title="Tempo Trainer"
+                  description="Italian terms flashcards (with call-outs)"
+                  onClick={() => go('tempoTrainer')}
+                  onHelp={() => setHelp('tempoTrainer')}
+                />
+                <CardButton
+                  title="Tempo Tester"
+                  description="Multiple choice with review of misses"
+                  onClick={() => go('tempoTester')}
+                  onHelp={() => setHelp('tempoTester')}
+                />
+                <CardButton
+                  title="Bieler Lab"
+                  description="Vocabulary, concept checks, and applications"
+                  onClick={() => go('bielerLab')}
+                  onHelp={() => setHelp('bielerLab')}
+                />
+                <CardButton
+                  title="Finger Height Drill"
+                  description="Low/High classification for intonation patterns"
+                  onClick={() => go('height')}
+                  onHelp={() => setHelp('height')}
+                />
+                <CardButton
+                  title="Note Locator"
+                  description="Pick valid position+finger for a target note"
+                  onClick={() => go('locator')}
+                  onHelp={() => setHelp('locator')}
+                />
+                <CardButton
+                  title="Shift Coach"
+                  description="Best landing spot on same string (requires shift)"
+                  onClick={() => go('shift')}
+                  onHelp={() => setHelp('shift')}
+                />
                 <CardButton
                   title="Harmonics Lab"
                   description="Natural nodes per string (flash + quiz)"
                   onClick={() => go('harmonics')}
                   onHelp={() => setHelp('harmonics')}
-                />go('harmonics')} onHelp={()=>setHelp('harmonics')} />
-                <CardButton title="Positions Bingo" description="Practice board mini-challenges" onClick={()=>go('bingo')} onHelp={()=>setHelp('bingo')} />
-                <CardButton title="Dice of Destiny" description="Randomized challenge picker (no repeats)" onClick={()=>go('dice')} onHelp={()=>setHelp('dice')} />
+                />
+                <CardButton
+                  title="Positions Bingo"
+                  description="Practice board mini-challenges"
+                  onClick={() => go('bingo')}
+                  onHelp={() => setHelp('bingo')}
+                />
+                <CardButton
+                  title="Dice of Destiny"
+                  description="Randomized challenge picker (no repeats)"
+                  onClick={() => go('dice')}
+                  onHelp={() => setHelp('dice')}
+                />
+              </div> {/* closes .grid-cards */}
               </div>
             </div>
 
