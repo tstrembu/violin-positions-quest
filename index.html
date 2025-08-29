@@ -1996,7 +1996,12 @@
                 <CardButton title="Finger Height Drill" description="Low/High classification for intonation patterns" onClick={()=>go('height')} onHelp={()=>setHelp('height')} />
                 <CardButton title="Note Locator" description="Pick valid position+finger for a target note" onClick={()=>go('locator')} onHelp={()=>setHelp('locator')} />
                 <CardButton title="Shift Coach" description="Best landing spot on same string (requires shift)" onClick={()=>go('shift')} onHelp={()=>setHelp('shift')} />
-                <CardButton title="Harmonics Lab" description="Natural nodes per string (flash + quiz)" onClick={()=>go('harmonics')} onHelp={()=>setHelp('harmonics')} />
+                <CardButton
+                  title="Harmonics Lab"
+                  description="Natural nodes per string (flash + quiz)"
+                  onClick={() => go('harmonics')}
+                  onHelp={() => setHelp('harmonics')}
+                />go('harmonics')} onHelp={()=>setHelp('harmonics')} />
                 <CardButton title="Positions Bingo" description="Practice board mini-challenges" onClick={()=>go('bingo')} onHelp={()=>setHelp('bingo')} />
                 <CardButton title="Dice of Destiny" description="Randomized challenge picker (no repeats)" onClick={()=>go('dice')} onHelp={()=>setHelp('dice')} />
               </div>
