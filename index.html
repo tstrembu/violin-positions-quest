@@ -297,6 +297,87 @@
       },
     };
 
+    /* =========================================================
+       Canonical teacher map (blue dots + allowed L/H variants)
+       - Baseline is defined on the A string, then transposed.
+       - Conventions:
+           1: allow Low-1 (no High-1)
+           2: allow Low-2 and High-2
+           3: allow High-3 (no Low-3 in closed hand)
+           4: allow Low-4; High-4 = extension (optional)
+    ========================================================= */
+    
+    // Simple pitch helpers (12-TET; prefer sharps by default)
+    const SEMI = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const FLAT = { 'A#':'Bb','C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab' };
+    const toFlat = n => FLAT[n] || n;
+    const idx = n => SEMI.indexOf(n.replace('Bb','A#').replace('Db','C#').replace('Eb','D#').replace('Gb','F#').replace('Ab','G#'));
+    const up = (note, s) => SEMI[(idx(note) + ((s%12)+12)%12) % 12];
+    
+    // Where each string sits relative to A (in semitones)
+    const REL = { A:0, E:7, D:5* -1, G:(7+5)* -1 }; // E=+7, D=-5, G=-12
+    
+    // Baseline on A string (blue dots) for positions 1–5
+    // 1st pos: 1=B, 2=C#, 3=D, 4=E    (then shift the whole hand upward)
+    const A_BASE = {
+      1:{ 1:'B', 2:'C#', 3:'D', 4:'E' },
+      2:{ 1:'C#',2:'D',  3:'E', 4:'F#' },
+      3:{ 1:'D', 2:'E',  3:'F#',4:'G' },
+      4:{ 1:'E', 2:'F#', 3:'G', 4:'A' },
+      5:{ 1:'F#',2:'G',  3:'A', 4:'B' },
+    };
+    
+    // Allowed deltas relative to baseline per finger
+    // (null means “don’t allow that variant in closed hand”.)
+    const VAR = {
+      1: { low:-1, base:0, high:null,    extHigh:null, extLow:null },
+      2: { low:-1, base:0, high:+1,      extHigh:null, extLow:null },
+      3: { low:null, base:0, high:+1,    extHigh:null, extLow:null },
+      4: { low:-1,  base:0, high:null,   extHigh:+2,   extLow:null }, // high-4 is an extension (F on A1)
+    };
+    
+    // Build the full canonical map for all strings & positions.
+    const buildCanonical = () => {
+      const out = { G:{}, D:{}, A:{}, E:{} };
+      const strings = ['G','D','A','E'];
+      for (const s of strings){
+        const shift = REL[s];
+        for (const p of [1,2,3,4,5]){
+          out[s][p] = {};
+          for (const f of [1,2,3,4]){
+            const baseOnA = A_BASE[p][f];                  // e.g., 'D'
+            const baseHere = up(baseOnA, shift);           // transpose to s
+            const v = VAR[f];
+            const cell = { base: baseHere };
+            if (v.low      != null) cell.low      = up(baseHere, v.low);
+            if (v.high     != null) cell.high     = up(baseHere, v.high);
+            if (v.extHigh  != null) cell.extHigh  = up(baseHere, v.extHigh);
+            if (v.extLow   != null) cell.extLow   = up(baseHere, v.extLow);
+            out[s][p][f] = cell;
+          }
+        }
+      }
+      return out;
+    };
+    const CANON = buildCanonical();
+    
+    // Helper: set of allowed spellings for a cell (testing mode can drop extensions)
+    const allowedFor = (s,p,f,{includeExtensions=false, preferFlats=false}={}) => {
+      const c = CANON[s]?.[p]?.[f]; if (!c) return [];
+      const vals = [c.low, c.base, c.high, includeExtensions?c.extHigh:null, includeExtensions?c.extLow:null]
+        .filter(Boolean);
+      return preferFlats ? vals.map(toFlat) : vals;
+    };
+    
+    // Helper: role label (low/base/high/ext) for a given note in a cell
+    const roleOf = (s,p,f,note) => {
+      const n = note; const c = CANON[s]?.[p]?.[f]; if (!c) return 'natural';
+      if (n===c.base) return 'base';
+      if (n===c.low)  return 'low';
+      if (n===c.high) return 'high';
+      if (n===c.extHigh || n===c.extLow) return 'extension';
+      return 'outside';
+    };
     // Low/High helper
     const fingerHeight = (note, options) => {
       if (!Array.isArray(options)) return 'natural';
@@ -1094,7 +1175,7 @@
       const pick = () => {
         const c = getRandomItem(combos);
         const note = getRandomItem(c.valid);
-        const label = fingerHeight(note, c.valid);
+        const label = roleOf(q.s, q.p, q.f, q.note); // 'low' | 'base' | 'high' | 'extension' | 'outside'
         speak(fullLoc(c.s, c.p, c.f));
         setQ({ ...c, note, label });
       };
@@ -1511,8 +1592,8 @@
       };
 
       const newQuestion = (preset=null) => {
-        const c = preset || weightedPick();
-        const correct = c.preferredNote ? c.preferredNote : getRandomItem(c.valid);
+        const canonNotes = allowedFor(c.s, c.p, c.f, { includeExtensions:false }); // tests: no ext
+        const correct = getRandomItem(canonNotes);
         const opts = shuffle([correct, ...getRandomDistractors(correct, 3)]);
         optionsRef.current = opts;
         setMicroHint('');
