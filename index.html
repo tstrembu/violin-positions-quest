@@ -315,7 +315,8 @@
     const up = (note, s) => SEMI[(idx(note) + ((s%12)+12)%12) % 12];
     
     // Where each string sits relative to A (in semitones)
-    const REL = { A:0, E:7, D:5* -1, G:(7+5)* -1 }; // E=+7, D=-5, G=-12
+    // Semitone offset from A: E = +7, D = -7, G = -14
+    const REL = { A: 0, E: +7, D: -7, G: -14 };
     
     // Baseline on A string (blue dots) for positions 1–5
     // 1st pos: 1=B, 2=C#, 3=D, 4=E    (then shift the whole hand upward)
@@ -362,8 +363,8 @@
     const CANON = buildCanonical();
     
     // Helper: set of allowed spellings for a cell (testing mode can drop extensions)
-    const allowedFor = (s,p,f,{includeExtensions=false, preferFlats=false}={}) => {
-      const c = CANON[s]?.[p]?.[f]; if (!c) return [];
+    const allowedFor = (p,f,s,{includeExtensions=false, preferFlats=false}={}) => {
+      const c = CANON[p]?.[f]?.[s]; if (!c) return [];
       const vals = [c.low, c.base, c.high, includeExtensions?c.extHigh:null, includeExtensions?c.extLow:null]
         .filter(Boolean);
       return preferFlats ? vals.map(toFlat) : vals;
@@ -1172,10 +1173,14 @@
       const { speak } = useCallouts(prefs.callouts);
     
       const combos = useMemo(()=> allActualCombos().filter(c => c.valid.length >= 2),[]);
+      // Choose only the extremes in the cell so the question is always Low/High
       const pick = () => {
         const c = getRandomItem(combos);
-        const note = getRandomItem(c.valid);
-        const label = roleOf(q.s, q.p, q.f, q.note); // 'low' | 'base' | 'high' | 'extension' | 'outside'
+        const lowNote  = c.valid[0];                          // convention: first is “low”
+        const highNote = c.valid[c.valid.length - 1];         // last is “high”
+        const flip = Math.random() < 0.5;
+        const note  = flip ? lowNote : highNote;
+        const label = flip ? 'low' : 'high';
         speak(fullLoc(c.s, c.p, c.f));
         setQ({ ...c, note, label });
       };
@@ -1591,13 +1596,31 @@
         return entries[entries.length-1].combo;
       };
 
-      const newQuestion = (preset=null) => {
-        const canonNotes = allowedFor(c.s, c.p, c.f, { includeExtensions:false }); // tests: no ext
+      const newQuestion = () => {
+        const c = weightedPick();  // pick the next (possibly SM-2 due) combo
+        const canonNotes = allowedFor(c.s, c.p, c.f, { includeExtensions: false });
+        // Dev-only: verify NOTES_DATA matches the canonical allowed notes
+        const auditCanonAgainstNotesData = () => {
+          const problems = [];
+          for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
+            const cell = NOTES_DATA[s]?.[p]?.[f] || [];
+            const allow = new Set(allowedFor(s,p,f,{includeExtensions:true}).map(norm));
+            for (const n of cell) if (!allow.has(norm(n))) problems.push({ s,p,f,n });
+          }
+          if (problems.length) console.table(problems);
+          else console.log('Canonical audit: all good ✅');
+        };
         const correct = getRandomItem(canonNotes);
         const opts = shuffle([correct, ...getRandomDistractors(correct, 3)]);
         optionsRef.current = opts;
         setMicroHint('');
-        setQuestion({ ...c, correct, options: opts, ts: performance.now(), sm2Key: c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}` });
+        setQuestion({
+          ...c,
+          correct,
+          options: opts,
+          ts: performance.now(),
+          sm2Key: `${c.s}:${c.p}:${c.f}:${norm(correct)}`
+        });
         speak(fullLoc(c.s, c.p, c.f));
       };
     
