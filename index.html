@@ -237,6 +237,13 @@
                  : `${posLabel(p)}, ${fingerLabel(f)}`;
 
     /* =========================================================
+       Core enums (MUST be defined before use)
+    ========================================================= */
+    const STRINGS   = ['G','D','A','E'];
+    const POSITIONS = [1,2,3,4,5];
+    const FINGERS   = [1,2,3,4];
+
+    /* =========================================================
        Fingerboard Data (Positions 1–5, no open strings)
        – Uses flats for “lower” options where the charts do
        – Arrays are always [lower, higher] when two notes exist
