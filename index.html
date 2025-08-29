@@ -92,58 +92,24 @@
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     *, *::before, *::after { box-sizing: border-box; }
 
-    /* ---- Fingerboard heatmap layout (fixed overlap) ---- */
-    :root{
-      --posw: clamp(160px, 45%, 220px);
-    }
+    /* ---- Fingerboard accuracy heatmap layout ---- */
+    :root{ --posw: clamp(160px, 45%, 220px); }
     .fb-strip{
-      display:flex;
-      gap:12px;
-      overflow-x:auto;
-      -webkit-overflow-scrolling:touch;
-      padding-bottom:6px;
-      scroll-snap-type:x mandatory;
+      display:flex; gap:12px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      padding-bottom:6px; scroll-snap-type:x mandatory;
     }
-    .fb-pos{
-      flex: 0 0 var(--posw);
-      min-width: var(--posw);
-      scroll-snap-align: start;
-      overflow:hidden;
-    }
-    .fb-grid{
-      display:grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap:6px;
-    }
+    .fb-pos{ flex: 0 0 var(--posw); min-width: var(--posw); scroll-snap-align: start; overflow:hidden; }
+    .fb-grid{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:6px; }
     .fb-tile{
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      line-height: 1.1;
-      aspect-ratio: 1 / 1.15;
-      padding: 6px 4px;
-      min-width: 0;
+      position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; line-height: 1.1; aspect-ratio: 1 / 1.15; padding: 6px 4px; min-width: 0;
     }
-    .fb-band{
-      position: absolute;
-      left: 6px; right: 6px; bottom: 6px;
-      height: 10px; border-radius: 6px;
-    }
+    .fb-band{ position: absolute; left: 6px; right: 6px; bottom: 6px; height: 10px; border-radius: 6px; }
     @media (min-width: 1024px){
-      .fb-strip{
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-        overflow: visible;
-      }
+      .fb-strip{ display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; overflow: visible; }
       .fb-pos{ flex: initial; min-width: 0; }
     }
-    @supports not (aspect-ratio: 1){
-      .fb-tile { height: 72px; }
-    }
+    @supports not (aspect-ratio: 1){ .fb-tile { height: 72px; } }
     @media (min-width: 768px) and (max-width: 1023px){
       .fb-strip{ flex-wrap: wrap; }
       .fb-pos{ flex: 1 1 calc(50% - 12px); min-width: 0; }
@@ -157,6 +123,29 @@
     /* XP bar */
     .xpbar { height:10px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden; }
     .xpbar-fill { height:100%; background:var(--accent); }
+
+    /* === FingerboardDiagram + Staff === */
+    .fb-diagram {
+      display: grid; grid-template-columns: 1fr minmax(260px, 360px); gap: 16px; align-items: start;
+    }
+    @media (max-width: 820px) { .fb-diagram { grid-template-columns: 1fr; } }
+    .fb-board { position: relative; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.08); overflow: hidden; }
+    .fb-strings { display: grid; grid-template-rows: repeat(4, 56px); align-items: stretch; padding: 16px 14px 18px; }
+    .fb-string-row { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; }
+    .fb-pos-band { position: absolute; top: 0; bottom: 0; width: calc(20% - 6px); border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, transparent); pointer-events: none; }
+    .fb-pos-label { position: absolute; top: 6px; left: 10px; font-size: 11px; font-weight: 700; color: var(--ink-600); }
+    .fb-string-label { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-weight: 700; font-size: 12px; color: var(--ink-600); opacity: .9; pointer-events: none; }
+    .fb-cell { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; align-items: center; justify-content: center; }
+    .fb-mark { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 40px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.10); background: rgba(0,0,0,0.02); font-weight: 700; user-select: none; outline: none; }
+    .fb-mark:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+    .fb-mark.dim    { opacity: .35; }
+    .fb-mark.active { background: var(--accent); color: #fff; border-color: transparent; }
+    .fb-mark.note   { font-size: 11px; font-weight: 600; color: var(--ink-700); }
+    .fb-foot { margin-top: 8px; font-size: 11px; color: var(--ink-600); }
+    .staff-card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.08); padding: 12px; }
+    .staff-svg text { fill: currentColor; }
+    .staff-label { font-size: 12px; color: var(--ink-600); }
+    @media (prefers-contrast: more) { .fb-mark { border-color: currentColor; } .fb-pos-label { color: var(--ink-800); } }
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -536,226 +525,134 @@
     );
 
     /* =========================================================
-       Help text (one-paragraph per card)
+       FingerboardDiagram + Staff (accessible, ARIA)
     ========================================================== */
-    const HELP = {
-      speed: "Speed Ladder: you’ll see a prompt like “G string — 2nd Position, 3rd Finger”. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
-      cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is at a given string/position/finger?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
-      bingo: "Positions Bingo: a 5×5 practice board with violin tasks. Mark squares as you complete them. The center is FREE. Press R to reshuffle the board.",
-      dice: "Dice of Destiny: press Roll for a focused practice challenge. The dice avoids repeats until the set cycles. Copy your challenge to notes if you like.",
-      tempoTrainer: "Tempo Trainer: flashcards for Italian tempo terms with optional speech call-outs. Reveal the meaning, then say the feel out loud.",
-      tempoTester: "Tempo Tester: timed multiple choice. Press 1–4 to answer. At the end, review your misses and retry just those items. A heat map tracks per-term accuracy.",
-      bielerLab: "Bieler Method Lab: progressive study of Ida Bieler’s approach. First build vocabulary, then test conceptual understanding, then apply ideas to musical scenarios and bow/left-hand technique.",
-      height: "Finger Height Drill: Low vs High fingers. Prompt: note + standardized string/position/finger wording. Answer Low or High (L/H) to build intonation patterns.",
-      locator: "Note Locator: Given a pitch (e.g., Bb), pick a valid location (Nth Position, Nth Finger on a given string). Reinforces multiple locations for the same note.",
-      shift: "Shift Coach: Stay on one string. Given start & target notes, choose the most efficient new position/finger (requires a shift).",
-      harmonics: "Harmonics Lab: Learn natural harmonic nodes (1/2, 1/3, 1/4) per string with flashcards and quick checks. Great for tone and intonation reference."
+
+    const PC = { C:0, 'C#':1, Db:1, D:2, 'D#':3, Eb:3, E:4, Fb:4, 'E#':5, F:5, 'F#':6, Gb:6, G:7, 'G#':8, Ab:8, A:9, 'A#':10, Bb:10, B:11, Cb:11, 'B#':0 };
+    const LETTER_IDX = { C:0, D:1, E:2, F:3, G:4, A:5, B:6 };
+    const OPEN_MIDI_MAP = { G:55, D:62, A:69, E:76 }; // G3,D4,A4,E5
+    const RANGE = { G:[55,71], D:[62,79], A:[69,88], E:[76,96] }; // practical
+
+    const parseNote = (n) => { const v = norm(n); return { letter: v[0], acc: v.slice(1) }; };
+    const toMidi = (note, octave) => { const p = PC[note]; if (p==null) return null; return 12 * (octave + 1) + p; };
+    const chooseMidiForString = (note, s) => {
+      const [lo, hi] = RANGE[s]; let best = null;
+      for (let oct = 2; oct <= 7; oct++) {
+        const m = toMidi(note, oct); if (m==null) continue;
+        if (m >= lo && m <= hi) { const mid = (lo + hi) / 2; const score = Math.abs(m - mid); if (!best || score < best.score) best = { midi: m, score }; }
+      }
+      if (!best) { let candidate = toMidi(note, 4); if (candidate==null) return null; if (candidate<lo) candidate=lo; if (candidate>hi) candidate=hi; best={midi:candidate, score:0}; }
+      return best.midi;
+    };
+    const staffPosition = (spelled, octave, { step=10 }={}) => {
+      const baselineIndex = 2; // E4 bottom line index offset
+      const C4_INDEX = 0;
+      const spelledLetter = spelled[0];
+      const diatonicIndex = 7 * (octave - 4) + LETTER_IDX[spelledLetter];
+      const staffSlotIndex = diatonicIndex + (baselineIndex - 2);
+      const y = (4 - staffSlotIndex) * (step / 2);
+      const ledgers = [];
+      const topSlot = 8, bottomSlot = 0;
+      const needAbove = Math.max(0, Math.ceil((staffSlotIndex - topSlot) / 2));
+      const needBelow = Math.max(0, Math.ceil((bottomSlot - staffSlotIndex) / 2));
+      if (needAbove) for (let i=1;i<=needAbove;i++){const ledgerSlot=topSlot + i*2; const ly=(4 - ledgerSlot) * (step / 2); ledgers.push(ly);}
+      if (needBelow) for (let i=1;i<=needBelow;i++){const ledgerSlot=bottomSlot - i*2; const ly=(4 - ledgerSlot) * (step / 2); ledgers.push(ly);}
+      return { y, ledgers };
     };
 
-/* =========================================================
-   FingerboardDiagram: training/testing + position bands + staff
-   Dependencies: STRINGS, POSITIONS, FINGERS, NOTES_DATA, norm(),
-                 posLabel(), fingerLabel(), stringLabel()
-   ========================================================= */
+    const StaffNote = ({ s, note, width=320, height=120, label }) => {
+      const spelled = norm(note);
+      const midi = chooseMidiForString(spelled, s);
+      const octave = Math.floor(midi / 12) - 1;
+      const pad = 16, w = width - pad*2, h = height - pad*2;
+      const step = 10, y0 = (h/2) - 2*step;
+      const { y, ledgers } = staffPosition(spelled, octave, { step });
+      const noteY = y0 + y;
+      const cx = pad + w * 0.58; const rx = 9, ry = 6;
 
-const STRING_ORDER = ['E','A','D','G']; // top → bottom (high → low)
-const LANE_Y_MAP = { E:70, A:130, D:190, G:250 };
-const POS_X = p => 60 + (p-1)*120;
-const FINGER_OFFSET = {1:15, 2:40, 3:65, 4:90};
-
-const cellNotes = (s,p,f) => {
-  const cell = NOTES_DATA?.[s]?.[p]?.[f];
-  return Array.isArray(cell) ? cell : null;
-};
-
-const FingerMarker = ({ x, y, finger, active=false, showDigit=true, label=null, dim=false, aria }) => {
-  const fill = active ? 'var(--accent)' : (dim ? 'rgba(255,255,255,.08)' : 'white');
-  const stroke = active ? 'white' : 'rgba(0,0,0,.25)';
-  return (
-    <g aria-label={aria}>
-      <circle cx={x} cy={y} r="12" fill={fill} stroke={stroke} strokeWidth={active?2:1}
-        style={active?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}/>
-      {showDigit && (
-        <text x={x} y={y+4} textAnchor="middle" fontSize="12" fontWeight="700" fill={active?'white':'#111827'}>
-          {finger}
-        </text>
-      )}
-      {label && (
-        <text x={x} y={y-18} textAnchor="middle" fontSize="10" fill="currentColor">{label}</text>
-      )}
-    </g>
-  );
-};
-
-/* ---------- Staff rendering (compact, with ledger lines) ---------- */
-
-const pcMap = {C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11};
-const OPEN_MIDI = { G:55, D:62, A:69, E:76 }; // G3,D4,A4,E5
-
-const midiFrom = (stringName, noteText) => {
-  const t = norm(noteText); // normalize ASCII accidentals
-  const pc = pcMap[t] ?? pcMap[t.replace('♭','b').replace('♯','#')];
-  if (pc==null) return null;
-  let m = OPEN_MIDI[stringName];
-  // Find the nearest pitch at/above open that matches the pitch class
-  for (let i=0;i<36;i++){ if ((m+i)%12===pc) return m+i; }
-  return null;
-};
-
-// Staff math: E4 (midi 64) is line 1 (bottom line). Each diatonic step = 0.5 staff-space.
-const NAT_LETTER = ['C','C','D','D','E','F','F','G','G','A','A','B']; // by pc
-const staffYFromMidi = (m, {yMid=100, step=5}={}) => {
-  if (m==null) return {y:yMid, ledger:[]};
-  const pc = m%12, letter = NAT_LETTER[pc];
-  const octave = Math.floor(m/12)-1; // MIDI C4=60
-  const letterIndex = ({C:0,D:1,E:2,F:3,G:4,A:5,B:6})[letter];
-  const n = octave*7 + letterIndex;
-  const nE4 = 4*7 + 2; // E4
-  const diatonicSteps = n - nE4;
-  const y = yMid - diatonicSteps*step; // step=5px per half-space
-  // ledger lines every ±5, ±6, ±7 ... diatonic steps beyond the staff
-  const needLedger = Math.abs(diatonicSteps) > 4;
-  const ledger = [];
-  if (needLedger){
-    const topStep = 4, botStep = -4;
-    const dir = diatonicSteps>0 ? 1 : -1;
-    for (let s = (diatonicSteps>0?5:-5); Math.abs(s) <= Math.abs(diatonicSteps); s+=dir*2){
-      ledger.push(yMid - s*step);
-    }
-  }
-  return { y, ledger };
-};
-
-const StaffNote = ({ s, note }) => {
-  // Compute approximate MIDI (enharmonic choice uses NAT_LETTER for vertical placement)
-  const m = midiFrom(s, note);
-  const staffTop = 50, staffGap = 10;
-  const lines = [0,1,2,3,4].map(i => staffTop + i*staffGap);
-  const {y, ledger} = staffYFromMidi(m, { yMid: staffTop + 4*staffGap/2 + staffGap }); // center roughly
-  return (
-    <svg width="220" height="120" viewBox="0 0 220 120" aria-label={`Staff showing ${note}`}>
-      {/* five lines */}
-      {lines.map((ly,i)=><line key={i} x1="20" x2="200" y1={ly} y2={ly} stroke="currentColor" strokeWidth="1" />)}
-      {/* clef placeholder */}
-      <text x="26" y={staffTop+staffGap*3.2} fontSize="22" fill="currentColor">𝄞</text>
-      {/* notehead */}
-      <ellipse cx="140" cy={y} rx="8" ry="6" fill="currentColor" />
-      {/* stem (simple up or down by register) */}
-      <line x1="148" x2="148" y1={y} y2={y-28} stroke="currentColor" strokeWidth="2" />
-      {/* ledger lines */}
-      {ledger.map((ly, i)=><line key={'L'+i} x1="126" x2="162" y1={ly} y2={ly} stroke="currentColor" strokeWidth="1" />)}
-      {/* caption */}
-      <text x="20" y="110" fontSize="11" fill="currentColor">{s} string • {note}</text>
-    </svg>
-  );
-};
-
-/* ---------- The main diagram component ---------- */
-
-const FingerboardDiagram = ({
-  position=1,               // which position to show fully
-  mode='train',             // 'train' | 'test'
-  active=null,              // {s,p,f,note} note optional; if absent, uses cell low/high
-  showStaff=true
-}) => {
-  const posList = POSITIONS; // 1..5
-  const strings = STRING_ORDER; // E,A,D,G top→bottom
-  const xBand = (p) => ({ x: POS_X(p)-10, w: 110 }); // background band width
-  const activeKey = active ? `${active.s}:${active.p}:${active.f}` : null;
-
-  return (
-    <div className="grid md:grid-cols-[minmax(0,1fr)_240px] gap-4 items-start">
-      <svg width="100%" height="340" viewBox="0 0 700 340" className="rounded-lg border">
-        {/* position bands */}
-        {posList.map(p=>{
-          const {x,w} = xBand(p);
-          const on = p===position;
-          return (
-            <g key={'band'+p}>
-              <rect x={x} y="40" width={w} height="260" fill={on?'rgba(109,40,217,0.08)':'rgba(0,0,0,0.03)'} />
-              <text x={x+w/2} y="30" textAnchor="middle" fontSize="12" fill="currentColor">{posLabel(p)}</text>
-            </g>
-          );
-        })}
-
-        {/* strings and markers (only the chosen position fully) */}
-        {strings.map(s=>{
-          const y = LANE_Y_MAP[s];
-          return (
-            <g key={s}>
-              <text x="10" y={y+4} fontSize="12" fill="currentColor">{s}</text>
-              <line x1="50" x2="670" y1={y} y2={y} stroke="rgba(0,0,0,.25)" />
-              {FINGERS.map(f=>{
-                const p = position;
-                const notes = cellNotes(s,p,f);
-                if (!notes) return null;
-                const x = POS_X(p) + FINGER_OFFSET[f];
-                const isActive = active && s===active.s && p===active.p && f===active.f;
-                const trainLabel = mode==='train' ? notes.map(n=>norm(n)).join('/') : null;
-                const dim = mode==='test' && !isActive;
-                return (
-                  <FingerMarker
-                    key={`${s}:${p}:${f}`}
-                    x={x} y={y} finger={f}
-                    active={isActive}
-                    showDigit={true}
-                    label={trainLabel}
-                    dim={dim}
-                    aria={`${stringLabel(s)}, ${posLabel(p)}, ${fingerLabel(f)}${trainLabel?`, notes ${trainLabel}`:''}`}
-                  />
-                );
-              })}
-            </g>
-          );
-        })}
-      </svg>
-
-      {showStaff && active && active.note && (
-        <div className="card rounded-xl p-3">
-          <div className="text-sm font-semibold mb-1">On the staff</div>
-          <StaffNote s={active.s} note={norm(active.note)} />
-          <div className="text-xs muted mt-1">
-            Finger: <b>{active.f}</b> • {posLabel(active.p)} • {stringLabel(active.s)}
+      return (
+        <div className="staff-card" aria-label={`Staff: ${spelled} on ${s} string (octave ${octave})`}>
+          <svg className="staff-svg" width="100%" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Treble staff showing ${spelled}`}>
+            {[0,1,2,3,4].map(i => { const y = y0 + i*step; return <line key={i} x1={pad} x2={width-pad} y1={y} y2={y} stroke="currentColor" strokeWidth="1" />; })}
+            <text x={pad+4} y={y0 + step*3} fontSize="12">𝄞</text>
+            {ledgers.map((ly,i) => (<line key={'L'+i} x1={cx - 16} x2={cx + 16} y1={ly} y2={ly} stroke="currentColor" strokeWidth="1" />))}
+            <ellipse cx={cx} cy={noteY} rx={rx} ry={ry} fill="currentColor" />
+          </svg>
+          <div className="staff-label">
+            {label || `Target: ${spelled}  •  String: ${s}  •  Octave≈${octave}`}
           </div>
         </div>
-      )}
-    </div>
-  );
-};
-  
-    /* =========================================================
-       Fingerboard Visual Hint (SVG)
-    ========================================================== */
-    const LANE_Y = {G:70, D:130, A:190, E:250};
-    const X_FOR_POS = (p)=> 60 + (p-1)*120;
-    const FINGER_OFFSET = {1:15, 2:40, 3:65, 4:90};
-    const nodeXY = (s,p,f)=>({ x: X_FOR_POS(p)+FINGER_OFFSET[f], y: LANE_Y[s] });
+      );
+    };
 
-    const FingerboardHint = ({active}) => (
-      <svg width="100%" height="320" viewBox="0 0 700 320" className="mt-4">
-        {['G','D','A','E'].map(s => (
-          <g key={s}>
-            <text x="10" y={LANE_Y[s]+4} fontSize="12" fill="currentColor">{s}</text>
-            <line x1="50" x2="670" y1={LANE_Y[s]} y2={LANE_Y[s]} stroke="rgba(0,0,0,.2)" />
-            {[1,2,3,4,5].map(p =>
-              [1,2,3,4].map(f => {
-                const {x,y}=nodeXY(s,p,f);
-                const on = active && active.s===s && active.p===p && active.f===f;
-                return <circle key={`${s}:${p}:${f}`} cx={x} cy={y} r={10}
-                  fill={on?'var(--accent)':'rgba(255,255,255,.08)'}
-                  stroke={on?'white':'rgba(0,0,0,.25)'} strokeWidth={on?2:1}
-                  style={on?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}
-                />;
-              })
-            )}
-            {[1,2,3,4,5].map(p=>{
-              const x = X_FOR_POS(p)+52;
-              return <text key={p} x={x} y={LANE_Y[s]-14} fontSize="11" fill="currentColor">{p}</text>;
-            })}
-          </g>
-        ))}
-      </svg>
-    );
+    const validCell = (s,p,f) => Array.isArray(NOTES_DATA[s]?.[p]?.[f]) ? NOTES_DATA[s][p][f] : null;
+
+    const FingerboardDiagram = ({
+      position=1,
+      mode='train',              // 'train' | 'test'
+      active=null,               // { s, p, f, note? }
+      showStaff=true,
+      showStringLabels=true,
+      staffTitle
+    }) => {
+      const p = Number(position) || 1;
+      const isTrain = mode === 'train';
+      const actKey = active ? `${active.s}:${active.p}:${active.f}` : null;
+      const strings = ['E','A','D','G']; // top→bottom
+      return (
+        <div className="fb-diagram">
+          <div className="fb-board" role="group" aria-label={`Fingerboard view — ${posLabel(p)} — ${isTrain?'Training':'Testing'} mode`}>
+            <div className="fb-strings" aria-hidden={false}>
+              {[1,2,3,4,5].map(i => (
+                <div key={`band-${i}`} className="fb-pos-band" style={{ left: `calc(${(i-1)*20}% + 14px)` }} aria-hidden />
+              ))}
+              <div className="fb-pos-label" aria-hidden>Pos {p}</div>
+
+              {strings.map((s) => (
+                <div key={s} className="fb-string-row" aria-label={`${s} string, ${posLabel(p)}`}>
+                  {showStringLabels && <div className="fb-string-label">{s}</div>}
+                  {POSITIONS.map(col => {
+                    const isThisPos = col === p;
+                    return (
+                      <div key={`${s}:${col}`} aria-hidden={!isThisPos} className="fb-cell" style={{ opacity: isThisPos ? 1 : 0.15 }}>
+                        {FINGERS.map(f => {
+                          const notes = validCell(s, col, f);
+                          if (!notes) return <div key={`${s}:${col}:${f}`} />;
+                          const k = `${s}:${col}:${f}`;
+                          const isActiveCell = (k === actKey);
+                          const label = isTrain
+                            ? notes.map(norm).join('/')
+                            : (isActiveCell ? (active?.note ? norm(active.note) : notes.map(n=>norm(n))[0]) : '');
+                          const aria = `${s} string, ${posLabel(col)}, ${fingerLabel(f)}${label ? `, notes ${label}` : ''}`;
+                          return (
+                            <div key={k} className={`fb-mark ${isActiveCell ? 'active' : (isTrain ? '' : 'dim')}`} tabIndex={0}
+                                 role="button" aria-label={aria} title={`${s} • ${posLabel(col)} • ${fingerLabel(f)}`}>
+                              <div style={{ position:'absolute', top: 4, left: 6, fontSize: 10, opacity: .85 }}>{f}</div>
+                              {label && <div className="fb-mark note">{label}</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+            <div className="fb-foot" aria-hidden>
+              Orientation: E (top) → G (bottom). {isTrain ? 'Training view shows finger + notes.' : 'Testing view dims context and highlights the target.'}
+            </div>
+          </div>
+
+          {showStaff && active?.s && active?.note && (
+            <StaffNote
+              s={active.s}
+              note={active.note}
+              label={staffTitle || `Target: ${norm(active.note)}  •  ${fullLoc(active.s, active.p, active.f)}`}
+            />
+          )}
+        </div>
+      );
+    };
 
     /* =========================================================
        Heatmaps
@@ -928,9 +825,8 @@ const FingerboardDiagram = ({
     };
 
     /* =========================================================
-       Shared helpers for fingerboard
+       Fingerboard helpers
     ========================================================== */
-    const validCell = (s,p,f) => Array.isArray(NOTES_DATA[s]?.[p]?.[f]) ? NOTES_DATA[s][p][f] : null;
     const allActualCombos = () => {
       const arr = [];
       for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
@@ -959,10 +855,8 @@ const FingerboardDiagram = ({
     };
 
     /* =========================================================
-       Games
+       Tempo Trainer (flashcards)
     ========================================================== */
-
-    // Tempo Trainer (flashcards)
     const TempoTrainer = ({ onBack, prefs }) => {
       const [i, setI] = useState(0);
       const [show, setShow] = useState(false);
@@ -998,7 +892,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    // Tempo Tester (MCQ + XP + session log)
+    /* =========================================================
+       Tempo Tester (MCQ + XP + session log)
+    ========================================================== */
     const TempoTester = ({ onBack, prefs }) => {
       const [best, setBest] = useState(loadTempoBest());
       const [stats, setStats] = useState(loadTempoStats());
@@ -1141,7 +1037,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    /* ===================== NEW: Finger Height Drill ===================== */
+    /* =========================================================
+       NEW: Finger Height Drill (uses FingerboardDiagram)
+    ========================================================== */
     const HeightDrill = ({ onBack, prefs }) => {
       const [q, setQ] = useState(null);
       const [score, setScore] = useState(0);
@@ -1203,7 +1101,12 @@ const FingerboardDiagram = ({
                 <div className="text-center mb-3">
                   <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> at <b>{fullLoc(q.s, q.p, q.f)}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
                 </div>
-                <FingerboardHint active={{s:q.s, p:q.p, f:q.f}} />
+                <FingerboardDiagram
+                  position={q.p}
+                  mode="test"
+                  active={{ s:q.s, p:q.p, f:q.f, note:q.note }}
+                  showStaff={true}
+                />
                 <div className="flex gap-3 justify-center mt-3">
                   <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
                   <button className="btn btn-purple" onClick={()=>answer('high')}>High</button>
@@ -1217,7 +1120,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    /* ===================== NEW: Note Locator ===================== */
+    /* =========================================================
+       NEW: Note Locator
+    ========================================================== */
     const NoteLocator = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [timer,setTimer] = useState(prefs.roundLen || 90);
@@ -1292,7 +1197,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    /* ===================== NEW: Shift Coach ===================== */
+    /* =========================================================
+       NEW: Shift Coach
+    ========================================================== */
     const ShiftCoach = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [score,setScore] = useState(0);
@@ -1386,7 +1293,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    /* ===================== NEW: Harmonics Lab ===================== */
+    /* =========================================================
+       NEW: Harmonics Lab
+    ========================================================== */
     const HarmonicsLab = ({ onBack, prefs }) => {
       const [mode, setMode] = useState('flash'); // flash | quiz
       const [i, setI] = useState(0);
@@ -1493,7 +1402,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    // Speed Ladder (fingerboard) + SM-2 + XP + hint + fingerboard SVG
+    /* =========================================================
+       Speed Ladder (uses FingerboardDiagram, SM-2, XP)
+    ========================================================== */
     const SpeedLadderGame = ({ onBack, prefs, stats, setStats }) => {
       const allCombos = useMemo(()=>allActualCombos(), []);
       const beeps = useBeeps(prefs.sound);
@@ -1512,8 +1423,7 @@ const FingerboardDiagram = ({
       const hitIdxRef = useRef(-1);
       const [microHint, setMicroHint] = useState('');
 
-      // SM-2: include some due items
-      const dueKeys = sm2DueKeys(); // ['G:2:3:C#', ...]
+      const dueKeys = sm2DueKeys();
       const dueCombos = useMemo(()=>{
         const map = new Map(allCombos.map(c=>[`${c.s}:${c.p}:${c.f}`, c]));
         const arr = [];
@@ -1546,7 +1456,6 @@ const FingerboardDiagram = ({
           const idx = entries.findIndex(e=> e.combo.s===miss.s && e.combo.p===miss.p && e.combo.f===miss.f);
           if (idx>=0) entries[idx].weight*=2.2;
         }
-        // Interleave SM-2 due ~40% when available
         if (dueCombos.length && Math.random()<0.4) return getRandomItem(dueCombos);
         const sum = entries.reduce((a,e)=>a+e.weight,0)||1; let r = Math.random()*sum;
         for (const e of entries){ if((r-=e.weight)<=0) return e.combo; }
@@ -1571,7 +1480,6 @@ const FingerboardDiagram = ({
             clearInterval(id); setFinished(true);
             const bs = Math.max(bestScore, score); const bk = Math.max(bestStreak, streak);
             setBestScore(bs); setBestStreak(bk); saveBest({ bestScore:bs, bestStreak:bk });
-            // log session
             const log = loadJSON(SESSIONLOG_KEY, []);
             log.push({ mode:'speed', date: nowISO(), correct: score, total: answered });
             saveJSON(SESSIONLOG_KEY, log);
@@ -1603,13 +1511,11 @@ const FingerboardDiagram = ({
         setAnswered(a=>a+1);
         hitIdxRef.current = idx;
 
-        // micro hint when wrong
         if (!ok) {
           const label = fingerHeight(question.correct, question.valid);
           setMicroHint(`${norm(question.correct)} = ${label==='natural'?'natural':label} ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
         } else setMicroHint('');
 
-        // SM-2
         const speedMs = performance.now() - (question.ts||performance.now());
         const quality = ok ? (speedMs<2000?5:4) : 2;
         sm2Update(question.sm2Key, quality);
@@ -1656,7 +1562,12 @@ const FingerboardDiagram = ({
                   </div>
                   <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
                 </div>
-                <FingerboardHint active={{s:question.s, p:question.p, f:question.f}} />
+                <FingerboardDiagram
+                  position={question.p}
+                  mode="test"
+                  active={{ s:question.s, p:question.p, f:question.f, note:question.correct }}
+                  showStaff={true}
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {question.options.map((note, i)=>(
                     <button key={i} className={`btn btn-blue ${i===hitIdxRef.current ? 'btn-hit ' + (note===question.correct?'ok':'miss') : ''}`} title={`Press ${i+1}`} onClick={()=>handleAnswer(note,i)}>
@@ -1679,7 +1590,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    // Flashcards (fingerboard)
+    /* =========================================================
+       Flashcards (fingerboard)
+    ========================================================== */
     const Flashcards = ({ onBack }) => {
       const [mode, setMode] = useState('A');
       const [i, setI] = useState(0);
@@ -1721,7 +1634,9 @@ const FingerboardDiagram = ({
       );
     };
 
-    // Bingo
+    /* =========================================================
+       Bingo
+    ========================================================== */
     const BingoBoard = ({ onBack }) => {
       const base = [
         "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–5","Sight-read in Pos 2",
@@ -1752,39 +1667,6 @@ const FingerboardDiagram = ({
                 </button>
               ))}
             </div>
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    // Dice
-    const DiceOfDestinyGame = ({ onBack }) => {
-      const poolFull = [
-        'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–5',
-        'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 3 aloud','Find 3 ways to play D','E-string Pos 4 quiz',
-        'Slur → up-bow staccato','Name all Cs Pos 1–5','D major in Pos 5 aloud','Echo dynamics on repeat','Perfect fifth resonance check (stopped notes)',
-        'A-string Pos 3 quiz','List all F#s Pos 1–5','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 4 quiz',
-      ];
-      const [pool,setPool]=useState(poolFull);
-      const [cur,setCur]=useState('');
-      const [busy,setBusy]=useState(false);
-      const [history,setHistory]=useState([]);
-      const roll=()=>{ setBusy(true); setCur('…'); setTimeout(()=>{ const p = pool.length ? pool : poolFull; const pick = getRandomItem(p); setCur(pick); setHistory(h=>[pick,...h].slice(0,6)); setPool(p.filter(x=>x!==pick)); setBusy(false); }, 560); };
-      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key.toLowerCase()==='r') roll(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[]);
-      return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
-            <h2 className="text-2xl font-bold mb-4">Dice of Destiny</h2>
-            <button disabled={busy} className="btn btn-green text-xl" onClick={roll}>{busy?'…':'Roll Dice'}</button>
-            <div className="rounded-lg p-4 mt-6" style={{ background: 'rgba(0,0,0,.07)' }}>
-              <div className="text-sm muted">Your Destiny:</div>
-              <div className="text-xl font-bold mt-2">{cur || 'Press Roll to begin!'}</div>
-            </div>
-            {!!history.length && <div className="mt-4">
-              <div className="font-semibold text-sm mb-1">Recent rolls</div>
-              <ul className="text-sm">{history.map((h,i)=><li key={i}>• {h}</li>)}</ul>
-            </div>}
           </div>
           <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
@@ -1950,7 +1832,7 @@ const FingerboardDiagram = ({
     };
 
     /* =========================================================
-       Dashboard extras: XP header, Avatar, Weakest 3, Sparkline, Badges
+       Dashboard extras: Avatar, Weakest 3, Sparkline, Badges
     ========================================================== */
     const AvatarIcon = ({ outfit='classic', trail='none' }) => {
       const outfitFill = outfit==='rock' ? '#ef4444' : outfit==='fantasy' ? '#22d3ee' : '#6d28d9';
@@ -1968,7 +1850,6 @@ const FingerboardDiagram = ({
       const [cos, setCos] = useState(loadJSON(COSMETICS_KEY, { selected:{ outfit:'classic', trail:'none' }, unlocked:{ outfits:['classic'], trails:['none'] } }));
       const save = (nx)=>{ setCos(nx); saveJSON(COSMETICS_KEY, nx); };
       const unlockBag = loadBadges();
-      // unlockables from badges
       const unlocked = { ...cos.unlocked };
       if (unlockBag.earned['first-100'] && !unlocked.outfits.includes('rock')) unlocked.outfits.push('rock');
       if (unlockBag.earned['d-string-ace'] && !unlocked.outfits.includes('fantasy')) unlocked.outfits.push('fantasy');
@@ -2036,303 +1917,181 @@ const FingerboardDiagram = ({
           <div className="flex flex-wrap gap-2">
             {BADGES.map(b=>{
               const on = !!earned[b.slug];
-              return <span key={b.slug} className="badge" style={{opacity: on?1:0.35}} title={on?`Earned ${new Date(earned[b.slug]).toLocaleDateString()}`:'Not yet'}>{b.name}</span>;
+              return (
+                <span
+                  key={b.slug}
+                  className="badge"
+                  style={{opacity: on?1:0.35}}
+                  title={on ? `Earned ${new Date(earned[b.slug]).toLocaleDateString()}` : 'Not yet earned'}
+                >
+                  {b.name}
+                </span>
+              );
             })}
           </div>
         </div>
       );
     };
 
-    const ScoreHeader = () => {
-      const sb = loadScoreboard();
-      const lvl = sb.level||1; const next = sb.next||nextLevelXP(lvl);
-      const curIn = sb.xp - nextLevelXP(lvl-1);
-      const need = next - nextLevelXP(lvl-1);
-      const pct = Math.max(0, Math.min(100, Math.round(100 * (curIn/need))));
-      const st = loadStreak();
-      const accentName = getAccent();
-      return (
-        <div className="card rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold">Level {lvl}</div>
-              <div className="xpbar mt-1"><div className="xpbar-fill" style={{width:`${pct}%`}}/></div>
-              <div className="text-xs muted mt-1">{sb.xp} XP · {pct}% to next</div>
-            </div>
-            <div className="text-right">
-              <div className="avatar-wrap justify-end">
-                <AvatarIcon outfit={loadJSON(COSMETICS_KEY, {selected:{outfit:'classic',trail:'none'}}).selected.outfit}
-                            trail={loadJSON(COSMETICS_KEY, {selected:{outfit:'classic',trail:'none'}}).selected.trail}/>
-              </div>
-              <div className="text-xs muted">Best streak: {st.best||0}</div>
-              <div className="text-xs muted">Theme: {accentName}</div>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
     /* =========================================================
-       Dashboard
+       Dashboard + App shell
     ========================================================== */
     const Dashboard = ({ go, prefs, setPrefs, stats, setStats }) => {
-      const [helpKey,setHelpKey]=useState(null);
-      const [theme, setThemeState] = useState(getTheme());
-      const [updateReady,setUpdateReady]=useState(false);
-      const [accent, setAccent] = useState(getAccent());
-
-      // Backup & Restore
-      const backup = () => {
-        const payload = {
-          [PREFS_KEY]: JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'),
-          [STATS_KEY]: JSON.parse(localStorage.getItem(STATS_KEY) || 'null'),
-          [BEST_KEY]: JSON.parse(localStorage.getItem(BEST_KEY) || 'null'),
-          [TEMPO_STATS_KEY]: JSON.parse(localStorage.getItem(TEMPO_STATS_KEY) || 'null'),
-          [TEMPO_BEST_KEY]: JSON.parse(localStorage.getItem(TEMPO_BEST_KEY) || 'null'),
-          [SEYBOLD_KEY]: JSON.parse(localStorage.getItem(SEYBOLD_KEY) || 'null'),
-          [SCORE_KEY]: JSON.parse(localStorage.getItem(SCORE_KEY) || 'null'),
-          [BADGES_KEY]: JSON.parse(localStorage.getItem(BADGES_KEY) || 'null'),
-          [PRESETS_KEY]: JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null'),
-          [SESSIONLOG_KEY]: JSON.parse(localStorage.getItem(SESSIONLOG_KEY) || 'null'),
-          [HEIGHT_STATS_KEY]: JSON.parse(localStorage.getItem(HEIGHT_STATS_KEY) || 'null'),
-          [LOCATOR_STATS_KEY]: JSON.parse(localStorage.getItem(LOCATOR_STATS_KEY) || 'null'),
-          [SHIFT_STATS_KEY]: JSON.parse(localStorage.getItem(SHIFT_STATS_KEY) || 'null'),
-          [HARM_STATS_KEY]: JSON.parse(localStorage.getItem(HARM_STATS_KEY) || 'null'),
-          [COSMETICS_KEY]: JSON.parse(localStorage.getItem(COSMETICS_KEY) || 'null'),
-          [SM2_KEY]: JSON.parse(localStorage.getItem(SM2_KEY) || 'null'),
-          [THEME_ACCENT_KEY]: localStorage.getItem(THEME_ACCENT_KEY) || null
-        };
-        const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href=url; a.download='vpq_backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      };
-      const restore = async (file) => {
-        try {
-          const txt = await file.text();
-          const obj = JSON.parse(txt);
-          Object.entries(obj).forEach(([k,v])=>{ if (v!==undefined && v!==null) localStorage.setItem(k, typeof v==='string'? v : JSON.stringify(v)); });
-          alert('Backup restored. The page will now reload to apply it.'); location.reload();
-        } catch(e){ alert('Import failed: ' + e.message); }
-      };
-      const inputRef = useRef(null);
-
-      const exportCSV = () => {
-        const rows = [['mode','key','correct','total','accuracy']];
-        const packs = [
-          ['speed', stats],
-          ['height', loadJSON(HEIGHT_STATS_KEY, {})],
-          ['locator', loadJSON(LOCATOR_STATS_KEY, {})],
-          ['shift', loadJSON(SHIFT_STATS_KEY, {})],
-          ['harmonics', loadJSON(HARM_STATS_KEY, {})],
-        ];
-        for (const [mode, obj] of packs) {
-          Object.entries(obj).forEach(([k, v]) => {
-            if (v && typeof v === 'object') {
-              if ('low' in v && 'high' in v) {
-                ['low','high','natural'].forEach(h=>{
-                  const c=v[h]?.correct||0, t=v[h]?.total||0, a=t? (c/t).toFixed(4):'0.0000';
-                  rows.push([`${mode}:${h}`, k, c, t, a]);
-                });
-              } else {
-                const c=v.correct||0, t=v.total||0, a=t? (c/t).toFixed(4):'0.0000';
-                rows.push([mode, k, c, t, a]);
-              }
-            }
-          });
-        }
-        const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-        const url = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-        const a = Object.assign(document.createElement('a'), {href:url, download:'positions_training_stats.csv'});
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      };
-
-      const resetAll = () => { if(!confirm('Reset all fingerboard stats & bests?')) return;
-        localStorage.removeItem(BEST_KEY); localStorage.removeItem(STATS_KEY);
-        localStorage.removeItem(HEIGHT_STATS_KEY); localStorage.removeItem(LOCATOR_STATS_KEY);
-        localStorage.removeItem(SHIFT_STATS_KEY); localStorage.removeItem(HARM_STATS_KEY);
-        setStats({}); alert('Stats cleared.'); };
-
-      useEffect(()=>{
-        checkAwardBadges();
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistration().then(reg=>{
-            if (!reg) return;
-            reg.addEventListener('updatefound', ()=>{
-              const nw = reg.installing;
-              nw?.addEventListener('statechange', ()=>{
-                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                  setUpdateReady(true);
-                }
-              });
-            });
-          });
-        }
-      },[]);
-
-      const toggleTheme = () => { const next = theme==='light'?'dark':'light'; setTheme(next); setThemeState(next); };
-      const changeAccent = (name) => { applyAccent(name); setAccent(name); };
-
-      const goDrill = (s,p,f) => {
-        const next = {...prefs};
-        next.filters = { strings:Object.fromEntries(STRINGS.map(x=>[x, x===s])), positions:Object.fromEntries(POSITIONS.map(x=>[x, x===p])), fingers:Object.fromEntries(FINGERS.map(x=>[x, x===f])) };
-        setPrefs(next); savePrefs(next);
-        go('speed');
-      };
-
+      const best = loadBest();
+      const sb = loadScoreboard();
       const sessions = loadJSON(SESSIONLOG_KEY, []);
-      const speedPoints = sessions.filter(s=>s.mode==='speed').slice(-20).map(s=> (s.total? s.correct/s.total : 0.0));
-      const tempoPoints = sessions.filter(s=>s.mode==='tempo').slice(-20).map(s=> (s.total? s.correct/s.total : 0.0));
+      const speedPoints = sessions.filter(s=>s.mode==='speed').map(s=>s.correct).slice(-20);
+
+      const drillCell = (s,p,f) => go('speed', { preset:{ s, p, f } });
+
+      const resetAllStats = () => {
+        saveStats({}); saveTempoStats({}); saveJSON(HEIGHT_STATS_KEY, {}); saveJSON(LOCATOR_STATS_KEY, {}); saveJSON(SHIFT_STATS_KEY, {}); saveJSON(HARM_STATS_KEY, {});
+        setStats({});
+        checkAwardBadges();
+      };
+      const exportCSV = () => {
+        const st = loadStats();
+        const rows = [['key','correct','total']];
+        Object.entries(st).forEach(([k,v])=>rows.push([k, v.correct||0, v.total||0]));
+        const csv = rows.map(r=>r.join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'vpq_stats.csv'; a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const [help, setHelp] = useState(null);
 
       return (
-        <div className="p-4">
-          <header className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold">Violin Positions Quest</div>
-              <div className="muted text-sm">Your daily mission to master the fingerboard—and beyond.</div>
+        <div className="p-4 mx-auto" style={{maxWidth:1100}}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl font-extrabold">Violin Positions Quest</div>
+              <span className="pill" style="background:rgba(0,0,0,.06)">v1</span>
             </div>
-            <div className="flex items-center gap-2">
-              <select className="border rounded p-2 text-sm" value={accent} onChange={e=>changeAccent(e.target.value)} title="Theme accent">
-                <option value="symphony">Symphony Hall</option>
+            <div className="flex items-center gap-3">
+              <button className="btn btn-gray" onClick={()=>{ const t=getTheme()==='dark'?'light':'dark'; setTheme(t); }}>Toggle Theme</button>
+              <select className="border rounded p-1 text-sm" value={getAccent()} onChange={(e)=>applyAccent(e.target.value)}>
+                <option value="symphony">Symphony</option>
                 <option value="rockstar">Rockstar</option>
-                <option value="fantasy">Fantasy Quest</option>
-                <option value="lofi">Lo-fi Studio</option>
+                <option value="fantasy">Fantasy</option>
+                <option value="lofi">Lo-fi</option>
               </select>
-              <button className="btn btn-gray" onClick={toggleTheme}>{theme==='dark'?'Light':'Dark'} Mode</button>
-              <button className="btn btn-green" onClick={backup}>Backup</button>
-              <button className="btn btn-blue" onClick={()=>inputRef.current?.click()}>Restore</button>
-              <input ref={inputRef} type="file" accept="application/json" hidden onChange={e=>e.target.files[0] && restore(e.target.files[0])}/>
             </div>
-          </header>
-
-          <ScoreHeader />
-
-          <div className="grid-cards">
-            <CardButton title="Speed Ladder" description="Adaptive fingerboard quiz (Pos 1–5). Coach + retries." onClick={()=>go('speed')} onHelp={()=>setHelpKey('speed')} />
-            <CardButton title="Finger Height Drill" description="Low vs High fingers for intonation." onClick={()=>go('height')} onHelp={()=>setHelpKey('height')} />
-            <CardButton title="Note Locator" description="Pick a valid string/position/finger for a pitch." onClick={()=>go('locator')} onHelp={()=>setHelpKey('locator')} />
-            <CardButton title="Shift Coach" description="Choose efficient shifts on one string." onClick={()=>go('shift')} onHelp={()=>setHelpKey('shift')} />
-            <CardButton title="Harmonics Lab" description="Natural nodes (1/2, 1/3, 1/4) per string." onClick={()=>go('harmonics')} onHelp={()=>setHelpKey('harmonics')} />
-            <CardButton title="Flashcards Mode" description="Two decks: direct hits + note→locations." onClick={()=>go('cards')} onHelp={()=>setHelpKey('cards')} />
-            <CardButton title="Positions Bingo" description="Fill a line with focused tasks." onClick={()=>go('bingo')} onHelp={()=>setHelpKey('bingo')} />
-            <CardButton title="Dice of Destiny" description="Roll for a practice challenge." onClick={()=>go('dice')} onHelp={()=>setHelpKey('dice')} />
-            <CardButton title="Tempo Trainer" description="Italian terms flashcards with call-outs." onClick={()=>go('tempoTrainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
-            <CardButton title="Tempo Tester" description="Timed MCQ + review misses + heatmap." onClick={()=>go('tempoTester')} onHelp={()=>setHelpKey('tempoTester')} />
-            <CardButton title="Bieler Method Lab" description="Vocabulary, concepts, and application." onClick={()=>go('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-4 mt-6">
-            <div className="lg:col-span-2">
-              <FiltersPanel
-                prefs={prefs}
-                setPrefs={setPrefs}
-                stats={stats}
-                onResetStats={resetAll}
-                onExportCSV={exportCSV}
-              />
-              <div className="mt-4"><AccuracyHeatmap stats={stats} /></div>
-            </div>
-            <div className="space-y-4">
-              <div className="card rounded-xl p-4">
-                <div className="text-lg font-semibold mb-2">Recent Accuracy</div>
-                <div className="text-xs muted mb-1">Speed Ladder (last 20)</div>
-                <Spark points={speedPoints}/>
-                <div className="text-xs muted mt-2">Tempo Tester (last 20)</div>
-                <Spark points={tempoPoints}/>
+          <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+            <div className="card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold">Level {sb.level}</div>
+                <div className="text-sm muted">XP: {sb.xp} / {sb.next}</div>
               </div>
-              <WeakestThreePanel stats={stats} onDrill={goDrill}/>
-              <BadgesPanel/>
-              <AvatarCustomizer/>
+              <div className="xpbar"><div className="xpbar-fill" style={{width: `${Math.min(100, (sb.xp/sb.next)*100)}%`}}/></div>
+              <div className="grid-cards mt-4">
+                <CardButton title="Speed Ladder" description="Timed note ID across positions/fingers (adaptive + SM-2)" onClick={()=>go('speed')} onHelp={()=>setHelp('speed')} />
+                <CardButton title="Flashcards" description="Two decks: locations→notes, notes→locations" onClick={()=>go('flashcards')} onHelp={()=>setHelp('cards')} />
+                <CardButton title="Tempo Trainer" description="Italian terms flashcards (with call-outs)" onClick={()=>go('tempoTrainer')} onHelp={()=>setHelp('tempoTrainer')} />
+                <CardButton title="Tempo Tester" description="Multiple choice with review of misses" onClick={()=>go('tempoTester')} onHelp={()=>setHelp('tempoTester')} />
+                <CardButton title="Bieler Lab" description="Vocabulary, concept checks, and applications" onClick={()=>go('bielerLab')} onHelp={()=>setHelp('bielerLab')} />
+                <CardButton title="Finger Height Drill" description="Low/High classification for intonation patterns" onClick={()=>go('height')} onHelp={()=>setHelp('height')} />
+                <CardButton title="Note Locator" description="Pick valid position+finger for a target note" onClick={()=>go('locator')} onHelp={()=>setHelp('locator')} />
+                <CardButton title="Shift Coach" description="Best landing spot on same string (requires shift)" onClick={()=>go('shift')} onHelp={()=>setHelp('shift')} />
+                <CardButton title="Harmonics Lab" description="Natural nodes per string (flash + quiz)" onClick={()=>go('harmonics')} onHelp={()=>setHelp('harmonics')} />
+                <CardButton title="Positions Bingo" description="Practice board mini-challenges" onClick={()=>go('bingo')} onHelp={()=>setHelp('bingo')} />
+                <CardButton title="Dice of Destiny" description="Randomized challenge picker (no repeats)" onClick={()=>go('dice')} onHelp={()=>setHelp('dice')} />
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <AvatarCustomizer />
+              <div className="card rounded-xl p-4">
+                <div className="text-lg font-semibold mb-2">Recent Speed Scores</div>
+                <Spark points={speedPoints} />
+              </div>
+              <BadgesPanel />
             </div>
           </div>
 
-          <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How to play">
-            {HELP[helpKey] || 'Select a mode to begin.'}
-          </Modal>
+          <div className="grid gap-4 mt-4 md:grid-cols-[2fr_1fr]">
+            <AccuracyHeatmap stats={stats} />
+            <WeakestThreePanel stats={stats} onDrill={drillCell} />
+          </div>
 
-          <Toast open={updateReady} text="An update is ready." action="Reload" onAction={()=>location.reload()} />
+          <div className="mt-4">
+            <FiltersPanel prefs={prefs} setPrefs={setPrefs} stats={stats} onResetStats={resetAllStats} onExportCSV={exportCSV}/>
+          </div>
+
+          <Modal open={!!help} onClose={()=>setHelp(null)} title="How it works">
+            <div className="whitespace-pre-wrap">{help ? HELP[help] : ''}</div>
+          </Modal>
         </div>
       );
     };
 
-    /* =========================================================
-       Error Boundary (runtime guard)
-    ========================================================== */
-    class ErrorBoundary extends React.Component {
-      constructor(props){ super(props); this.state = { hasError:false, err:'' }; }
-      static getDerivedStateFromError(err){ return { hasError:true, err: String(err) }; }
-      componentDidCatch(err, info){ console.error(err, info); }
-      render(){
-        if (this.state.hasError){
-          return (
-            <div className="p-6">
-              <div className="card rounded-xl p-6">
-                <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-                <p className="muted text-sm mb-3">{this.state.err}</p>
-                <button className="btn btn-purple" onClick={()=>location.reload()}>Reload App</button>
-              </div>
-            </div>
-          );
-        }
-        return this.props.children;
-      }
-    }
-
-    /* =========================================================
-       Root App (routing + state)
-    ========================================================== */
     const App = () => {
-      const [route, setRoute] = useState(() => (location.hash.replace('#','') || 'home'));
       const [prefs, setPrefs] = useState(loadPrefs());
       const [stats, setStats] = useState(loadStats());
+      const [screen, setScreen] = useState({ name:'home', args:null });
 
-      // Hash routing + deep-link
-      const go = (r) => { setRoute(r); location.hash = r; };
-      const onBack = () => go('home');
+      const go = (name, args=null) => setScreen({ name, args });
 
-      useEffect(()=>{
-        const onHash=()=> setRoute(location.hash.replace('#','') || 'home');
-        window.addEventListener('hashchange', onHash);
-        return ()=>window.removeEventListener('hashchange', onHash);
-      },[]);
+      // Preset bridge: Speed Ladder can accept a preset cell to focus immediately
+      const Speed = (props) => {
+        const [localStats, setLocalStats] = [stats, setStats];
+        return <SpeedLadderGame {...props} prefs={prefs} stats={localStats} setStats={setLocalStats} />;
+      };
 
-      // Persist prefs/stats on change
-      useEffect(()=>{ savePrefs(prefs); }, [prefs]);
-      useEffect(()=>{ saveStats(stats); }, [stats]);
-
-      // Global keyboard: Esc to go home
-      useEffect(()=>{
-        const onKey=(e)=>{ if(e.key==='Escape' && route!=='home') onBack(); };
-        window.addEventListener('keydown', onKey);
-        return ()=>window.removeEventListener('keydown', onKey);
-      }, [route]);
-
-      // Optional: register service worker (if present in repo)
-      useEffect(()=>{
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/violin-positions-quest/sw.js').catch(()=>{});
-        }
-      },[]);
-
-      // Route table
-      if (route==='speed')        return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} />;
-      if (route==='cards')        return <Flashcards onBack={onBack} />;
-      if (route==='bingo')        return <BingoBoard onBack={onBack} />;
-      if (route==='dice')         return <DiceOfDestinyGame onBack={onBack} />;
-      if (route==='tempoTrainer') return <TempoTrainer onBack={onBack} prefs={prefs} />;
-      if (route==='tempoTester')  return <TempoTester onBack={onBack} prefs={prefs} />;
-      if (route==='bielerLab')    return <BielerLab onBack={onBack} />;
-      if (route==='height')       return <HeightDrill onBack={onBack} prefs={prefs} />;
-      if (route==='locator')      return <NoteLocator onBack={onBack} prefs={prefs} />;
-      if (route==='shift')        return <ShiftCoach onBack={onBack} prefs={prefs} />;
-      if (route==='harmonics')    return <HarmonicsLab onBack={onBack} prefs={prefs} />;
-
-      // Default: Dashboard
-      return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
+      return (
+        <>
+          {screen.name==='home' && <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />}
+          {screen.name==='speed' && <Speed onBack={()=>go('home')} />}
+          {screen.name==='flashcards' && <Flashcards onBack={()=>go('home')} />}
+          {screen.name==='tempoTrainer' && <TempoTrainer onBack={()=>go('home')} prefs={prefs} />}
+          {screen.name==='tempoTester' && <TempoTester onBack={()=>go('home')} prefs={prefs} />}
+          {screen.name==='bielerLab' && <BielerLab onBack={()=>go('home')} />}
+          {screen.name==='height' && <HeightDrill onBack={()=>go('home')} prefs={prefs} />}
+          {screen.name==='locator' && <NoteLocator onBack={()=>go('home')} prefs={prefs} />}
+          {screen.name==='shift' && <ShiftCoach onBack={()=>go('home')} prefs={prefs} />}
+          {screen.name==='harmonics' && <HarmonicsLab onBack={()=>go('home')} prefs={prefs} />}
+          {screen.name==='bingo' && <BingoBoard onBack={()=>go('home')} />}
+          {screen.name==='dice' && <DiceOfDestinyGame onBack={()=>go('home')} />}
+        </>
+      );
     };
 
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <ErrorBoundary><App/></ErrorBoundary>
-    );
+    const DiceOfDestinyGame = ({ onBack }) => {
+      const poolFull = [
+        'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–5',
+        'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 3 aloud','Find 3 ways to play D','E-string Pos 4 quiz',
+        'Slur → up-bow staccato','Name all Cs Pos 1–5','D major in Pos 5 aloud','Echo dynamics on repeat','Perfect fifth resonance check (stopped notes)',
+        'A-string Pos 3 quiz','List all F#s Pos 1–5','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 4 quiz',
+      ];
+      const [pool,setPool]=useState(poolFull);
+      const [cur,setCur]=useState('');
+      const [busy,setBusy]=useState(false);
+      const [history,setHistory]=useState([]);
+      const roll=()=>{ setBusy(true); setCur('…'); setTimeout(()=>{ const p = pool.length ? pool : poolFull; const pick = getRandomItem(p); setCur(pick); setHistory(h=>[pick,...h].slice(0,6)); setPool(p.filter(x=>x!==pick)); setBusy(false); }, 560); };
+      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key.toLowerCase()==='r') roll(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[]);
+      return (
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
+            <h2 className="text-2xl font-bold mb-4">Dice of Destiny</h2>
+            <button disabled={busy} className="btn btn-green text-xl" onClick={roll}>{busy?'…':'Roll Dice'}</button>
+            <div className="rounded-lg p-4 mt-6" style={{ background: 'rgba(0,0,0,.07)' }}>
+              <div className="text-sm muted">Your Destiny:</div>
+              <div className="text-xl font-bold mt-2">{cur || 'Press Roll to begin!'}</div>
+            </div>
+            {!!history.length && <div className="mt-4">
+              <div className="font-semibold text-sm mb-1">Recent rolls</div>
+              <ul className="text-sm">{history.map((h,i)=><li key={i}>• {h}</li>)}</ul>
+            </div>}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
