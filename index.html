@@ -1178,7 +1178,8 @@
     };
 
     /* ===================== NEW: Shift Coach ===================== */
-    <FingerboardHint
+    const ShiftCoach = ({ onBack, prefs }) => {
+      <FingerboardHint
       active={{ s: q.string, p: q.start.p, f: q.start.f }}
       order={prefs.stringOrder}
       showCellNotes
