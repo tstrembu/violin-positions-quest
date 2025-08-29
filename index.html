@@ -300,11 +300,19 @@
       return [...set];
     })();
 
-    const getRandomDistractors = (excludeSet, count=3) => {
-      const pool = ALL_NOTES_UNIQUE.filter(n => !excludeSet.has(n));
-      const picks = new Set();
-      while (picks.size < Math.min(count, pool.length)) picks.add(pool[Math.floor(Math.random()*pool.length)]);
-      return [...picks];
+    // Distractors that avoid enharmonic duplicates (e.g., Eb vs D#)
+    const getRandomDistractors = (correct, count = 3) => {
+      const target = norm(correct);                   // normalized ASCII (Ab, C#...)
+      const pool = ALL_NOTES_UNIQUE.filter(n => norm(n) !== target);
+    
+      const picks = [];
+      const seen = new Set([target]);
+      while (picks.length < Math.min(count, pool.length)) {
+        const n = getRandomItem(pool);
+        const k = norm(n);
+        if (!seen.has(k)) { seen.add(k); picks.push(n); }
+      }
+      return picks;
     };
 
     /* =========================================================
@@ -1294,8 +1302,9 @@ const AccuracyHeatmap = ({ stats }) => (
 
       const newQuestion = (preset=null) => {
         const c = preset || weightedPick();
+        // inside newQuestion():
         const correct = getRandomItem(c.valid);
-        const opts = shuffle([correct, ...getRandomDistractors(new Set([correct]),3)]);
+        const opts = shuffle([correct, ...getRandomDistractors(correct, 3)]);
         optionsRef.current = opts;
         setQuestion({ ...c, correct, options: opts });
         speak(fullLoc(c.s, c.p, c.f));
@@ -1334,8 +1343,9 @@ const AccuracyHeatmap = ({ stats }) => (
             if (prefs.coach && prefs.coachRetry){
               const miss=lastMissRef.current;
               if(miss){
+                // inside the coach-retry branch after a miss:
                 const c = getRandomItem(miss.valid);
-                const opts = shuffle([c, ...getRandomDistractors(new Set([c]),3)]);
+                const opts = shuffle([c, ...getRandomDistractors(c, 3)]);
                 optionsRef.current=opts; setQuestion({ ...miss, correct:c, options:opts }); return;
               }
             }
