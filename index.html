@@ -379,6 +379,47 @@
     /* =========================================================
        Audio & call-outs
     ========================================================== */
+    /* =========================================================
+   Speech call-outs (safe no-op if disabled or unsupported)
+    ========================================================= */
+    const useCallouts = (enabled) => {
+      const synthRef = React.useRef(null);
+      const unlockedRef = React.useRef(false);
+    
+      // Feature detect once
+      React.useEffect(() => {
+        synthRef.current = (typeof window !== 'undefined' && 'speechSynthesis' in window)
+          ? window.speechSynthesis
+          : null;
+      }, []);
+    
+      // iOS/Safari often require a user gesture before audio/tts can play
+      React.useEffect(() => {
+        const unlock = () => { unlockedRef.current = true; };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        return () => {
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('keydown', unlock);
+        };
+      }, []);
+    
+      const speak = (text) => {
+        if (!enabled || !synthRef.current || !unlockedRef.current || !text) return;
+        try {
+          const u = new SpeechSynthesisUtterance(String(text));
+          // pick an English-ish voice if available
+          const voices = synthRef.current.getVoices?.() || [];
+          const v = voices.find(v => /en/i.test(v.lang)) || voices[0];
+          if (v) u.voice = v;
+          u.rate = 1.0; u.pitch = 1.0;
+          synthRef.current.cancel(); // stop any previous utterance
+          synthRef.current.speak(u);
+        } catch { /* no-op */ }
+      };
+    
+      return { speak };
+    };
     const useBeeps = (enabled) => {
       const ctxRef = useRef(null);
       const ensureCtx = () => {
@@ -844,6 +885,47 @@
     ========================================================== */
 
     // Tempo Trainer (flashcards)
+    /* =========================================================
+   Speech call-outs (safe no-op if disabled or unsupported)
+    ========================================================== */
+    const useCallouts = (enabled) => {
+      const synthRef = useRef(null);
+      const unlockedRef = useRef(false);
+    
+      // Feature detect once
+      useEffect(() => {
+        synthRef.current =
+          (typeof window !== 'undefined' && 'speechSynthesis' in window)
+            ? window.speechSynthesis
+            : null;
+      }, []);
+    
+      // iOS/Safari often require a user gesture before audio/tts can play
+      useEffect(() => {
+        const unlock = () => { unlockedRef.current = true; };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        return () => {
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('keydown', unlock);
+        };
+      }, []);
+    
+      const speak = (text) => {
+        if (!enabled || !synthRef.current || !unlockedRef.current || !text) return;
+        try {
+          const u = new SpeechSynthesisUtterance(String(text));
+          const voices = synthRef.current.getVoices?.() || [];
+          const v = voices.find(v => /en/i.test(v.lang)) || voices[0];
+          if (v) u.voice = v;
+          u.rate = 1.0; u.pitch = 1.0;
+          synthRef.current.cancel();
+          synthRef.current.speak(u);
+        } catch { /* no-op */ }
+      };
+    
+      return { speak };
+    };
     const TempoTrainer = ({ onBack, prefs }) => {
       const [i, setI] = useState(0);
       const [show, setShow] = useState(false);
@@ -880,6 +962,47 @@
     };
 
     // Tempo Tester (MCQ + XP + session log)
+    /* =========================================================
+   Speech call-outs (safe no-op if disabled or unsupported)
+    ========================================================== */
+    const useCallouts = (enabled) => {
+      const synthRef = useRef(null);
+      const unlockedRef = useRef(false);
+    
+      // Feature detect once
+      useEffect(() => {
+        synthRef.current =
+          (typeof window !== 'undefined' && 'speechSynthesis' in window)
+            ? window.speechSynthesis
+            : null;
+      }, []);
+    
+      // iOS/Safari often require a user gesture before audio/tts can play
+      useEffect(() => {
+        const unlock = () => { unlockedRef.current = true; };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        return () => {
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('keydown', unlock);
+        };
+      }, []);
+    
+      const speak = (text) => {
+        if (!enabled || !synthRef.current || !unlockedRef.current || !text) return;
+        try {
+          const u = new SpeechSynthesisUtterance(String(text));
+          const voices = synthRef.current.getVoices?.() || [];
+          const v = voices.find(v => /en/i.test(v.lang)) || voices[0];
+          if (v) u.voice = v;
+          u.rate = 1.0; u.pitch = 1.0;
+          synthRef.current.cancel();
+          synthRef.current.speak(u);
+        } catch { /* no-op */ }
+      };
+    
+      return { speak };
+    };
     const TempoTester = ({ onBack, prefs }) => {
       const [best, setBest] = useState(loadTempoBest());
       const [stats, setStats] = useState(loadTempoStats());
@@ -1023,6 +1146,47 @@
     };
 
     /* ===================== NEW: Finger Height Drill ===================== */
+    /* =========================================================
+   Speech call-outs (safe no-op if disabled or unsupported)
+    ========================================================== */
+    const useCallouts = (enabled) => {
+      const synthRef = useRef(null);
+      const unlockedRef = useRef(false);
+    
+      // Feature detect once
+      useEffect(() => {
+        synthRef.current =
+          (typeof window !== 'undefined' && 'speechSynthesis' in window)
+            ? window.speechSynthesis
+            : null;
+      }, []);
+    
+      // iOS/Safari often require a user gesture before audio/tts can play
+      useEffect(() => {
+        const unlock = () => { unlockedRef.current = true; };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        return () => {
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('keydown', unlock);
+        };
+      }, []);
+    
+      const speak = (text) => {
+        if (!enabled || !synthRef.current || !unlockedRef.current || !text) return;
+        try {
+          const u = new SpeechSynthesisUtterance(String(text));
+          const voices = synthRef.current.getVoices?.() || [];
+          const v = voices.find(v => /en/i.test(v.lang)) || voices[0];
+          if (v) u.voice = v;
+          u.rate = 1.0; u.pitch = 1.0;
+          synthRef.current.cancel();
+          synthRef.current.speak(u);
+        } catch { /* no-op */ }
+      };
+    
+      return { speak };
+    };
     const HeightDrill = ({ onBack, prefs }) => {
       const [q, setQ] = useState(null);
       const [score, setScore] = useState(0);
@@ -1103,6 +1267,47 @@
     };
 
     /* ===================== NEW: Note Locator ===================== */
+    /* =========================================================
+   Speech call-outs (safe no-op if disabled or unsupported)
+    ========================================================== */
+    const useCallouts = (enabled) => {
+      const synthRef = useRef(null);
+      const unlockedRef = useRef(false);
+    
+      // Feature detect once
+      useEffect(() => {
+        synthRef.current =
+          (typeof window !== 'undefined' && 'speechSynthesis' in window)
+            ? window.speechSynthesis
+            : null;
+      }, []);
+    
+      // iOS/Safari often require a user gesture before audio/tts can play
+      useEffect(() => {
+        const unlock = () => { unlockedRef.current = true; };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        return () => {
+          window.removeEventListener('pointerdown', unlock);
+          window.removeEventListener('keydown', unlock);
+        };
+      }, []);
+    
+      const speak = (text) => {
+        if (!enabled || !synthRef.current || !unlockedRef.current || !text) return;
+        try {
+          const u = new SpeechSynthesisUtterance(String(text));
+          const voices = synthRef.current.getVoices?.() || [];
+          const v = voices.find(v => /en/i.test(v.lang)) || voices[0];
+          if (v) u.voice = v;
+          u.rate = 1.0; u.pitch = 1.0;
+          synthRef.current.cancel();
+          synthRef.current.speak(u);
+        } catch { /* no-op */ }
+      };
+    
+      return { speak };
+    };
     const NoteLocator = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [timer,setTimer] = useState(prefs.roundLen || 90);
