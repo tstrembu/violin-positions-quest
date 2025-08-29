@@ -882,75 +882,55 @@
 
     /* =========================================================
        Games
-    ========================================================== */
-
-    // Tempo Trainer (flashcards)
-    /* =========================================================
-   Speech call-outs (safe no-op if disabled or unsupported)
-    ========================================================== */
-    const useCallouts = (enabled) => {
-      const synthRef = useRef(null);
-      const unlockedRef = useRef(false);
+    ========================================================= */
     
-      // Feature detect once
-      useEffect(() => {
-        synthRef.current =
-          (typeof window !== 'undefined' && 'speechSynthesis' in window)
-            ? window.speechSynthesis
-            : null;
-      }, []);
-    
-      // iOS/Safari often require a user gesture before audio/tts can play
-      useEffect(() => {
-        const unlock = () => { unlockedRef.current = true; };
-        window.addEventListener('pointerdown', unlock, { once: true });
-        window.addEventListener('keydown', unlock, { once: true });
-        return () => {
-          window.removeEventListener('pointerdown', unlock);
-          window.removeEventListener('keydown', unlock);
-        };
-      }, []);
-    
-      const speak = (text) => {
-        if (!enabled || !synthRef.current || !unlockedRef.current || !text) return;
-        try {
-          const u = new SpeechSynthesisUtterance(String(text));
-          const voices = synthRef.current.getVoices?.() || [];
-          const v = voices.find(v => /en/i.test(v.lang)) || voices[0];
-          if (v) u.voice = v;
-          u.rate = 1.0; u.pitch = 1.0;
-          synthRef.current.cancel();
-          synthRef.current.speak(u);
-        } catch { /* no-op */ }
-      };
-    
-      return { speak };
+    // Tempo Tester (multiple choice) — stub for now
+    const TempoTester = ({ onBack, prefs }) => {
+      const { speak } = useCallouts(prefs.callouts);
+      return null; // or implement the tester UI here
     };
+    
+    // Tempo Trainer (flashcards)
     const TempoTrainer = ({ onBack, prefs }) => {
       const [i, setI] = useState(0);
       const [show, setShow] = useState(false);
       const { speak } = useCallouts(prefs.callouts);
-      useEffect(()=>{ speak(TEMPOS[i].it); }, [i]);
-      const next = () => { setShow(false); setI((i+1)%TEMPOS.length); };
-      const prev = () => { setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
-      useEffect(()=>{
-        const onKey = (e)=>{ const k = e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='arrowright'||k==='n') next(); if(k==='arrowleft'||k==='p') prev(); };
-        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [i, show]);
+    
+      useEffect(() => { speak(TEMPOS[i].it); }, [i, speak]);
+    
+      const next = () => { setShow(false); setI((i + 1) % TEMPOS.length); };
+      const prev = () => { setShow(false); setI((i - 1 + TEMPOS.length) % TEMPOS.length); };
+    
+      useEffect(() => {
+        const onKey = (e) => {
+          const k = e.key.toLowerCase();
+          if (k === ' ') { e.preventDefault(); setShow(true); }
+          if (k === 'arrowright' || k === 'n') next();
+          if (k === 'arrowleft'  || k === 'p') prev();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [i, show]); // fine for this simple case
+    
       const card = TEMPOS[i];
+    
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
             <h2 className="text-2xl font-bold mb-4">Tempo Trainer (Flashcards)</h2>
             <div className="rounded-xl border-2 p-6 text-center">
               <div className="text-xl font-bold">{card.it}</div>
-              {show ? <div className="mt-2">
-                <div className="text-green-700 font-semibold">{card.en}</div>
-                <div className="text-xs muted mt-1">Say the feel out loud, then tap Next.</div>
-              </div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
+              {show ? (
+                <div className="mt-2">
+                  <div className="text-green-700 font-semibold">{card.en}</div>
+                  <div className="text-xs muted mt-1">Say the feel out loud, then tap Next.</div>
+                </div>
+              ) : (
+                <div className="muted italic">Press Space or tap “Reveal”.</div>
+              )}
             </div>
             <div className="flex gap-2 mt-6 justify-center">
-              <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
+              <button className="btn btn-blue" onClick={() => setShow(true)}>Reveal</button>
               <button className="btn btn-gray" onClick={prev}>Previous</button>
               <button className="btn btn-purple" onClick={next}>Next</button>
             </div>
