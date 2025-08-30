@@ -2052,55 +2052,97 @@ Is this correct?
        Dashboard extras: XP header, Avatar, Weakest 3, Sparkline, Badges
     ========================================================== */
     const AvatarIcon = ({ outfit='classic', trail='none' }) => {
-      const outfitFill = outfit==='rock' ? '#ef4444' : outfit==='fantasy' ? '#22d3ee' : '#6d28d9';
+      const outfitFill =
+        outfit==='rock' ? '#ef4444' :
+        outfit==='fantasy' ? '#22d3ee' :
+        '#6d28d9';
       return (
         <svg className="avatar" viewBox="0 0 64 64">
           <rect x="0" y="0" width="64" height="64" rx="12" fill="rgba(0,0,0,0.04)" />
           <circle cx="32" cy="22" r="10" fill="#fed7aa"/>
           <rect x="16" y="34" width="32" height="18" rx="9" fill={outfitFill} />
-          {trail==='aurora' && <circle cx="32" cy="54" r="4" fill="var(--accent)"><animate attributeName="r" values="4;6;4" dur="1.6s" repeatCount="indefinite"/></circle>}
+          {trail==='aurora' && (
+            <circle cx="32" cy="54" r="4" fill="var(--accent)">
+              <animate attributeName="r" values="4;6;4" dur="1.6s" repeatCount="indefinite" />
+            </circle>
+          )}
         </svg>
       );
     };
-
+    
     const AvatarCustomizer = () => {
-      const [cos, setCos] = useState(loadJSON(COSMETICS_KEY, { selected:{ outfit:'classic', trail:'none' }, unlocked:{ outfits:['classic'], trails:['none'] } }));
-      const save = (nx)=>{ setCos(nx); saveJSON(COSMETICS_KEY, nx); };
+      const [cos, setCos] = useState(
+        loadJSON(COSMETICS_KEY, {
+          selected: { outfit:'classic', trail:'none' },
+          unlocked: { outfits:['classic'], trails:['none'] }
+        })
+      );
+      const save = (nx) => { setCos(nx); saveJSON(COSMETICS_KEY, nx); };
+    
       const unlockBag = loadBadges();
-      // unlockables from badges
-      const unlocked = { ...cos.unlocked };
-      if (unlockBag.earned['first-100'] && !unlocked.outfits.includes('rock')) unlocked.outfits.push('rock');
-      if (unlockBag.earned['d-string-ace'] && !unlocked.outfits.includes('fantasy')) unlocked.outfits.push('fantasy');
-      if (unlockBag.earned['perfect-20'] && !unlocked.trails.includes('aurora')) unlocked.trails.push('aurora');
-
-      useEffect(()=>{ if (JSON.stringify(unlocked)!==JSON.stringify(cos.unlocked)) save({ ...cos, unlocked }); },[]);
-
+    
+      // build a safe, fresh unlocked object (no mutation)
+      const computeUnlocked = () => {
+        const u = {
+          outfits: [...(cos.unlocked?.outfits || ['classic'])],
+          trails:  [...(cos.unlocked?.trails  || ['none'])]
+        };
+        if (unlockBag.earned['first-100']   && !u.outfits.includes('rock'))     u.outfits.push('rock');
+        if (unlockBag.earned['d-string-ace']&& !u.outfits.includes('fantasy'))  u.outfits.push('fantasy');
+        if (unlockBag.earned['perfect-20']  && !u.trails.includes('aurora'))    u.trails.push('aurora');
+        return u;
+      };
+    
+      // react when badges (or current unlocked) change
+      useEffect(() => {
+        const nextUnlocked = computeUnlocked();
+        if (JSON.stringify(nextUnlocked) !== JSON.stringify(cos.unlocked)) {
+          save({ ...cos, unlocked: nextUnlocked });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [JSON.stringify(unlockBag.earned), JSON.stringify(cos.unlocked)]);
+    
       return (
         <div className="card rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="font-semibold">Player Avatar</div>
-            <div className="avatar-wrap"><AvatarIcon outfit={cos.selected.outfit} trail={cos.selected.trail}/></div>
+            <div className="avatar-wrap">
+              <AvatarIcon outfit={cos.selected.outfit} trail={cos.selected.trail} />
+            </div>
           </div>
-          <div className="text-xs avatar-label mb-2">Customize your look with unlocks from badges.</div>
+    
+          <div className="text-xs avatar-label mb-2">
+            Customize your look with unlocks from badges.
+          </div>
+    
           <div className="flex flex-wrap gap-2 items-center">
-            {['classic','rock','fantasy'].map(o=>(
-              <button key={o} disabled={!unlocked.outfits.includes(o)} className={`pill ${cos.selected.outfit===o?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>save({ ...cos, selected:{...cos.selected, outfit:o} })}>{o}</button>
+            {['classic','rock','fantasy'].map(o => (
+              <button
+                key={o}
+                disabled={!cos.unlocked.outfits.includes(o)}
+                className={`pill ${cos.selected.outfit===o ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+                onClick={() => save({ ...cos, selected: { ...cos.selected, outfit:o } })}
+              >
+                {o}
+              </button>
             ))}
+    
             <span className="text-xs mx-2 muted">Trail:</span>
-        {['none','aurora'].map(t=>(
-          <button
-            key={t}
-            disabled={!unlocked.trails.includes(t)}
-            className={`pill ${cos.selected.trail===t?'bg-purple-600 text-white':'bg-gray-200'}`}
-            onClick={()=>save({ ...cos, selected:{...cos.selected, trail:t} })}
-          >
-            {t}
-          </button>
-        ))}
-                  </div>
-                </div>
-              );
-            };
+    
+            {['none','aurora'].map(t => (
+              <button
+                key={t}
+                disabled={!cos.unlocked.trails.includes(t)}
+                className={`pill ${cos.selected.trail===t ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+                onClick={() => save({ ...cos, selected: { ...cos.selected, trail:t } })}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    };
 
     const Spark = ({points}) => {
       if (!points || !points.length) return <div className="muted text-xs">No sessions yet.</div>;
