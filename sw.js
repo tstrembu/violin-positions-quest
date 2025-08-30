@@ -1,7 +1,7 @@
 // sw.js  — place at /violin-positions-quest/sw.js
 
 // Bump this on each deploy to invalidate the old cache.
-const CACHE = 'vpq-v9.9.7';
+const CACHE = 'vpq-v9.9.8';
 
 // Build absolute URLs for the app shell based on this SW's scope.
 // This avoids subtle path issues on GitHub Pages (subdirectory hosting).
