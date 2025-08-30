@@ -154,17 +154,9 @@
     .avatar-wrap { display:flex; align-items:center; gap:10px; }
     .avatar-label { font-size:12px; color:var(--ink-600); }
 
-    /* Add this tiny style so locked options read correctly */
-    .pill:disabled { opacity:.5; cursor:not-allowed; }
-
     /* XP bar */
     .xpbar { height:10px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden; }
     .xpbar-fill { height:100%; background:var(--accent); }
-    
-    /* Cross-browser polish (safe for Safari/Chrome/Firefox/Edge) */
-    html, body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-    button, [role="button"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-    /* Already present: -webkit-overflow-scrolling: touch on scrollers + an aspect-ratio fallback */
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -184,7 +176,7 @@
   <div id="sr" aria-live="polite" class="sr-only"></div>
 
   <!-- App -->
-  <script type="text/babel" data-presets="env,react">
+  <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
     /* =========================================================
@@ -300,88 +292,6 @@
       },
     };
 
-    /* =========================================================
-       Canonical teacher map (blue dots + allowed L/H variants)
-       - Baseline is defined on the A string, then transposed.
-       - Conventions:
-           1: allow Low-1 (no High-1)
-           2: allow Low-2 and High-2
-           3: allow High-3 (no Low-3 in closed hand)
-           4: allow Low-4; High-4 = extension (optional)
-    ========================================================= */
-    
-    // Simple pitch helpers (12-TET; prefer sharps by default)
-    const SEMI = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-    const FLAT = { 'A#':'Bb','C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab' };
-    const toFlat = n => FLAT[n] || n;
-    const idx = n => SEMI.indexOf(n.replace('Bb','A#').replace('Db','C#').replace('Eb','D#').replace('Gb','F#').replace('Ab','G#'));
-    const up = (note, s) => SEMI[(idx(note) + ((s%12)+12)%12) % 12];
-    
-    // Where each string sits relative to A (in semitones)
-    // Semitone offset from A: E = +7, D = -7, G = -14
-    const REL = { A: 0, E: +7, D: -7, G: -14 };
-    
-    // Baseline on A string (blue dots) for positions 1–5
-    // 1st pos: 1=B, 2=C#, 3=D, 4=E    (then shift the whole hand upward)
-    const A_BASE = {
-      1:{ 1:'B', 2:'C#', 3:'D', 4:'E' },
-      2:{ 1:'C#',2:'D',  3:'E', 4:'F#' },
-      3:{ 1:'D', 2:'E',  3:'F#',4:'G' },
-      4:{ 1:'E', 2:'F#', 3:'G', 4:'A' },
-      5:{ 1:'F#',2:'G',  3:'A', 4:'B' },
-    };
-    
-    // Allowed deltas relative to baseline per finger
-    // (null means “don’t allow that variant in closed hand”.)
-    const VAR = {
-      1: { low:-1, base:0, high:null,    extHigh:null, extLow:null },
-      2: { low:-1, base:0, high:+1,      extHigh:null, extLow:null },
-      3: { low:null, base:0, high:+1,    extHigh:null, extLow:null },
-      4: { low:-1,  base:0, high:null,   extHigh:+2,   extLow:null }, // high-4 is an extension (F on A1)
-    };
-    
-    // Build the full canonical map for all strings & positions.
-    const buildCanonical = () => {
-      const out = { G:{}, D:{}, A:{}, E:{} };
-      const strings = ['G','D','A','E'];
-      for (const s of strings){
-        const shift = REL[s];
-        for (const p of [1,2,3,4,5]){
-          out[s][p] = {};
-          for (const f of [1,2,3,4]){
-            const baseOnA = A_BASE[p][f];                  // e.g., 'D'
-            const baseHere = up(baseOnA, shift);           // transpose to s
-            const v = VAR[f];
-            const cell = { base: baseHere };
-            if (v.low      != null) cell.low      = up(baseHere, v.low);
-            if (v.high     != null) cell.high     = up(baseHere, v.high);
-            if (v.extHigh  != null) cell.extHigh  = up(baseHere, v.extHigh);
-            if (v.extLow   != null) cell.extLow   = up(baseHere, v.extLow);
-            out[s][p][f] = cell;
-          }
-        }
-      }
-      return out;
-    };
-    const CANON = buildCanonical();
-    
-    // Helper: set of allowed spellings for a cell (testing mode can drop extensions)
-    const allowedFor = (s,p,f,{includeExtensions=false, preferFlats=false}={}) => {
-      const c = CANON[s]?.[p]?.[f];
-      if (!c) return [];
-      const vals = [c.low, c.base, c.high, includeExtensions?c.extHigh:null, includeExtensions?c.extLow:null].filter(Boolean);
-      return preferFlats ? vals.map(toFlat) : vals;
-    };
-    
-    // Helper: role label (low/base/high/ext) for a given note in a cell
-    const roleOf = (s,p,f,note) => {
-      const n = note; const c = CANON[s]?.[p]?.[f]; if (!c) return 'natural';
-      if (n===c.base) return 'base';
-      if (n===c.low)  return 'low';
-      if (n===c.high) return 'high';
-      if (n===c.extHigh || n===c.extLow) return 'extension';
-      return 'outside';
-    };
     // Low/High helper
     const fingerHeight = (note, options) => {
       if (!Array.isArray(options)) return 'natural';
@@ -437,17 +347,9 @@
         return {
           sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
           callouts: true, roundLen: 120, goalEnabled: false, goalTarget: 10,
-          stringOrder: p?.stringOrder || 'score',                // NEW: 'score' or 'player'
           filters: { ...defaultFilters, ...(p?.filters || {}) }, ...(p || {})
         };
-      } catch {
-        return {
-          sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true,
-          callouts:true, roundLen:120, goalEnabled:false, goalTarget:10,
-          stringOrder:'score',                                    // NEW default
-          filters: defaultFilters
-        };
-      }
+      } catch { return { sound:true, confetti:true, adaptive:true, coach:true, coachRetry:true, callouts:true, roundLen:120, goalEnabled:false, goalTarget:10, filters: defaultFilters }; }
     };
     const savePrefs = (obj) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {} };
     const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
@@ -464,54 +366,11 @@
     /* =========================================================
        Audio & call-outs
     ========================================================== */
-    /* =========================================================
-   Speech call-outs (safe no-op if disabled or unsupported)
-    ========================================================= */
-    const useCallouts = (enabled) => {
-      const synthRef = React.useRef(null);
-      const unlockedRef = React.useRef(false);
-    
-      // Feature detect once
-      React.useEffect(() => {
-        synthRef.current = (typeof window !== 'undefined' && 'speechSynthesis' in window)
-          ? window.speechSynthesis
-          : null;
-      }, []);
-    
-      // iOS/Safari often require a user gesture before audio/tts can play
-      React.useEffect(() => {
-        const unlock = () => { unlockedRef.current = true; };
-        window.addEventListener('pointerdown', unlock, { once: true });
-        window.addEventListener('keydown', unlock, { once: true });
-        return () => {
-          window.removeEventListener('pointerdown', unlock);
-          window.removeEventListener('keydown', unlock);
-        };
-      }, []);
-    
-      const speak = (text) => {
-        if (!enabled || !synthRef.current || !unlockedRef.current || !text) return;
-        try {
-          const u = new SpeechSynthesisUtterance(String(text));
-          // pick an English-ish voice if available
-          const voices = synthRef.current.getVoices?.() || [];
-          const v = voices.find(v => /en/i.test(v.lang)) || voices[0];
-          if (v) u.voice = v;
-          u.rate = 1.0; u.pitch = 1.0;
-          synthRef.current.cancel(); // stop any previous utterance
-          synthRef.current.speak(u);
-        } catch { /* no-op */ }
-      };
-    
-      return { speak };
-    };
     const useBeeps = (enabled) => {
       const ctxRef = useRef(null);
       const ensureCtx = () => {
         if (!enabled) return null;
         if (!ctxRef.current) ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        // Safari/iOS sometimes suspends until a user gesture—resume politely
-        if (ctxRef.current?.state === 'suspended') { ctxRef.current.resume().catch(()=>{}); }
         return ctxRef.current;
       };
       const beep = (freq = 880, dur = 0.08, type = 'sine') => {
@@ -521,6 +380,18 @@
         o.start(); setTimeout(()=>o.stop(), dur*1000);
       };
       return { good: () => beep(1046, 0.09, 'triangle'), bad: () => beep(196, 0.12, 'sawtooth') };
+    };
+    const useCallouts = (enabled) => {
+      const speak = (text) => {
+        if (!enabled || !window.speechSynthesis) return;
+        try {
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang='en-US'; u.rate=1.0;
+          window.speechSynthesis.cancel();
+          setTimeout(()=>window.speechSynthesis.speak(u), 0);
+        } catch {}
+      };
+      return { speak };
     };
 
     /* =========================================================
@@ -682,100 +553,38 @@
     };
 
     /* =========================================================
-       Fingerboard Visual Hint (SVG) — ordered + cell note label
-       Works in Safari/Chrome/Firefox/Edge
-    ========================================================= */
-    // FingerboardHint (final)
+       Fingerboard Visual Hint (SVG)
+    ========================================================== */
+    const LANE_Y = {G:70, D:130, A:190, E:250};
     const X_FOR_POS = (p)=> 60 + (p-1)*120;
     const FINGER_OFFSET = {1:15, 2:40, 3:65, 4:90};
-    
-    const FingerboardHint = ({ active, order='score', labelMode='none', showGuides=true }) => {
-      // 'score': E–A–D–G (top→bottom) · 'player': G–D–A–E (top→bottom)
-      const rows = order === 'score' ? ['E','A','D','G'] : ['G','D','A','E'];
-      const laneY = rows.reduce((acc, s, i) => (acc[s] = 70 + i*60, acc), {});
-      const topY = laneY[rows[0]], botY = laneY[rows[rows.length-1]];
-      const posLabelY = topY - 26;
-    
-      const nodeXY = (s,p,f)=>({ x: X_FOR_POS(p)+FINGER_OFFSET[f], y: laneY[s] });
-      const isOn = (s,p,f)=> active && active.s===s && active.p===p && active.f===f;
-    
-      // Labeling policy:
-      //  - 'none'   → nothing
-      //  - 'range'  → "F–F#"
-      //  - 'lh'     → "F–F# (L/H)"
-      //  - 'canon'  → canonical base note for that cell
-      const cellLabel = (s,p,f) => {
-        if (labelMode === 'none') return null;
-        const cell = validCell(s,p,f);
-        if (!cell || !cell.length) return null;
-    
-        if (labelMode === 'canon') {
-          const base = CANON[s]?.[p]?.[f]?.base;
-          return base ? norm(base) : null;
-        }
-    
-        if (labelMode === 'range' || labelMode === 'lh') {
-          if (cell.length === 1) return norm(cell[0]);
-          const first = norm(cell[0]), last = norm(cell[cell.length-1]);
-          return labelMode === 'lh' ? `${first}–${last} (L/H)` : `${first}–${last}`;
-        }
-        return null;
-      };
-    
-      return (
-        <svg width="100%" height="320" viewBox="0 0 700 320" className="mt-4">
-          {/* Nut / Bridge landmarks */}
-          <text x="50" y={posLabelY-10} fontSize="10" fill="currentColor">Nut</text>
-          <text x="650" y={posLabelY-10} fontSize="10" fill="currentColor" textAnchor="end">Bridge</text>
-    
-          {/* Position labels + dashed guides */}
-          {[1,2,3,4,5].map(p => {
-            const x = X_FOR_POS(p)+52;
-            return (
-              <g key={`pos${p}`}>
-                <text x={x} y={posLabelY} fontSize="12" fill="currentColor">{p}</text>
-                {showGuides && (
-                  <line x1={x-37} x2={x-37} y1={posLabelY+16} y2={botY+4}
-                        stroke="rgba(0,0,0,.25)" strokeDasharray="4,6" />
-                )}
-              </g>
-            );
-          })}
-    
-          {/* String lanes */}
-          {rows.map(s => (
-            <g key={s}>
-              <text x="10" y={laneY[s]+4} fontSize="12" fill="currentColor">
-                {s} {s==='E'?'(high)':s==='G'?'(low)':''}
-              </text>
-              <line x1="50" x2="670" y1={laneY[s]} y2={laneY[s]} stroke="rgba(0,0,0,.28)" />
-              {[1,2,3,4,5].map(p =>
-                [1,2,3,4].map(f => {
-                  const {x,y}=nodeXY(s,p,f);
-                  const on = isOn(s,p,f);
-                  const label = on ? cellLabel(s,p,f) : null;
-                  return (
-                    <g key={`${s}:${p}:${f}`}>
-                      <circle cx={x} cy={y} r={on?12:10}
-                        fill={on?'var(--accent)':'rgba(255,255,255,.08)'}
-                        stroke={on?'white':'rgba(0,0,0,.28)'} strokeWidth={on?2:1}
-                        style={on?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}
-                      />
-                      {label && (
-                        <text x={x} y={y-18} fontSize="11" fill="currentColor" textAnchor="middle"
-                              style={{fontWeight:600, paintOrder:'stroke', WebkitTextStroke:'4px'}}>
-                          {label}
-                        </text>
-                      )}
-                    </g>
-                  );
-                })
-              )}
-            </g>
-          ))}
-        </svg>
-      );
-    };
+    const nodeXY = (s,p,f)=>({ x: X_FOR_POS(p)+FINGER_OFFSET[f], y: LANE_Y[s] });
+
+    const FingerboardHint = ({active}) => (
+      <svg width="100%" height="320" viewBox="0 0 700 320" className="mt-4">
+        {['G','D','A','E'].map(s => (
+          <g key={s}>
+            <text x="10" y={LANE_Y[s]+4} fontSize="12" fill="currentColor">{s}</text>
+            <line x1="50" x2="670" y1={LANE_Y[s]} y2={LANE_Y[s]} stroke="rgba(0,0,0,.2)" />
+            {[1,2,3,4,5].map(p =>
+              [1,2,3,4].map(f => {
+                const {x,y}=nodeXY(s,p,f);
+                const on = active && active.s===s && active.p===p && active.f===f;
+                return <circle key={`${s}:${p}:${f}`} cx={x} cy={y} r={10}
+                  fill={on?'var(--accent)':'rgba(255,255,255,.08)'}
+                  stroke={on?'white':'rgba(0,0,0,.25)'} strokeWidth={on?2:1}
+                  style={on?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}
+                />;
+              })
+            )}
+            {[1,2,3,4,5].map(p=>{
+              const x = X_FOR_POS(p)+52;
+              return <text key={p} x={x} y={LANE_Y[s]-14} fontSize="11" fill="currentColor">{p}</text>;
+            })}
+          </g>
+        ))}
+      </svg>
+    );
 
     /* =========================================================
        Heatmaps
@@ -786,64 +595,61 @@
       return `hsla(${hue}, ${sat}%, ${light}%, 1)`;
     };
 
-    const AccuracyHeatmap = ({ stats, order='score' }) => {
-      const rows = order === 'score' ? ['E','A','D','G'] : ['G','D','A','E'];
-      return (
-        <div className="card rounded-xl p-4">
-          <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {rows.map(s => (
-              <div key={s} className="rounded-lg border overflow-hidden">
-                <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)', whiteSpace:'nowrap' }}>
-                  {s} string
-                </div>
-                <div className="p-2">
-                  <div className="fb-strip">
-                    {POSITIONS.map(p => (
-                      <div key={p} className="fb-pos rounded-md border">
-                        <div className="fb-grid p-2">
-                          {FINGERS.map(f => {
-                            const isReal = !!validCell(s, p, f);
-                            const k = `${s}:${p}:${f}`;
-                            const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
-                            const style = evidenceStyle(st);
-                            return (
-                              <div
-                                key={f}
-                                className="fb-tile"
-                                title={isReal ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}%; LB ${st.total?Math.round(style.lb*100):0}%)` : 'Not a valid finger/position'}
-                                aria-label={isReal ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent` : 'Invalid cell'}
-                                style={{
-                                  border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
-                                  background: 'transparent',
-                                  color: isReal ? style.text : '#9ca3af'
-                                }}
-                              >
-                                <div style={{ fontWeight:600 }}>F{f}</div>
-                                <div className="text-xs">
-                                  {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
-                                </div>
-                                <div className="fb-band" style={{ background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)' }} />
+    const AccuracyHeatmap = ({ stats }) => (
+      <div className="card rounded-xl p-4">
+        <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {STRINGS.map(s => (
+            <div key={s} className="rounded-lg border overflow-hidden">
+              <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)', whiteSpace:'nowrap' }}>
+                {s} string
+              </div>
+              <div className="p-2">
+                <div className="fb-strip">
+                  {POSITIONS.map(p => (
+                    <div key={p} className="fb-pos rounded-md border">
+                      <div className="fb-grid p-2">
+                        {FINGERS.map(f => {
+                          const isReal = !!validCell(s, p, f);
+                          const k = `${s}:${p}:${f}`;
+                          const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
+                          const style = evidenceStyle(st);
+                          return (
+                            <div
+                              key={f}
+                              className="fb-tile"
+                              title={isReal ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}%; LB ${st.total?Math.round(style.lb*100):0}%)` : 'Not a valid finger/position'}
+                              aria-label={isReal ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent` : 'Invalid cell'}
+                              style={{
+                                border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
+                                background: 'transparent',
+                                color: isReal ? style.text : '#9ca3af'
+                              }}
+                            >
+                              <div style={{ fontWeight:600 }}>F{f}</div>
+                              <div className="text-xs">
+                                {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
                               </div>
-                            );
-                          })}
-                        </div>
+                              <div className="fb-band" style={{ background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)' }} />
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-    
-          <p className="text-xs muted mt-2">
-            Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
-            · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
-            · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts.
-          </p>
+            </div>
+          ))}
         </div>
-      );
-    };
+
+        <p className="text-xs muted mt-2">
+          Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
+          · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
+          · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts.
+        </p>
+      </div>
+    );
 
     const TempoHeatmap = ({ stats, terms }) => (
       <div className="card rounded-xl p-4">
@@ -983,50 +789,34 @@
 
     /* =========================================================
        Games
-    ========================================================= */
-    
-    /* ---------- Tempo Trainer (flashcards) ---------- */
+    ========================================================== */
+
+    // Tempo Trainer (flashcards)
     const TempoTrainer = ({ onBack, prefs }) => {
       const [i, setI] = useState(0);
       const [show, setShow] = useState(false);
       const { speak } = useCallouts(prefs.callouts);
-    
-      useEffect(() => { speak(TEMPOS[i].it); }, [i, speak]);
-    
-      const next = () => { setShow(false); setI(x => (x + 1) % TEMPOS.length); };
-      const prev = () => { setShow(false); setI(x => (x - 1 + TEMPOS.length) % TEMPOS.length); };
-    
-      useEffect(() => {
-        const onKey = (e) => {
-          const k = e.key.toLowerCase();
-          if (k === ' ') { e.preventDefault(); setShow(true); }
-          if (k === 'arrowright' || k === 'n') next();
-          if (k === 'arrowleft'  || k === 'p') prev();
-          if (k === 'escape') onBack();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [onBack]);
-    
+      useEffect(()=>{ speak(TEMPOS[i].it); }, [i]);
+      const next = () => { setShow(false); setI((i+1)%TEMPOS.length); };
+      const prev = () => { setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
+      useEffect(()=>{
+        const onKey = (e)=>{ const k = e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='arrowright'||k==='n') next(); if(k==='arrowleft'||k==='p') prev(); };
+        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
+      }, [i, show]);
       const card = TEMPOS[i];
-    
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
             <h2 className="text-2xl font-bold mb-4">Tempo Trainer (Flashcards)</h2>
             <div className="rounded-xl border-2 p-6 text-center">
               <div className="text-xl font-bold">{card.it}</div>
-              {show ? (
-                <div className="mt-2">
-                  <div className="text-green-700 font-semibold">{card.en}</div>
-                  <div className="text-xs muted mt-1">Say the feel out loud, then tap Next.</div>
-                </div>
-              ) : (
-                <div className="muted italic">Press Space or tap “Reveal”.</div>
-              )}
+              {show ? <div className="mt-2">
+                <div className="text-green-700 font-semibold">{card.en}</div>
+                <div className="text-xs muted mt-1">Say the feel out loud, then tap Next.</div>
+              </div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
             </div>
             <div className="flex gap-2 mt-6 justify-center">
-              <button className="btn btn-blue" onClick={() => setShow(true)}>Reveal</button>
+              <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
               <button className="btn btn-gray" onClick={prev}>Previous</button>
               <button className="btn btn-purple" onClick={next}>Next</button>
             </div>
@@ -1036,8 +826,8 @@
         </div>
       );
     };
-    
-    /* ---------- Tempo Tester (MCQ + heatmap + XP) ---------- */
+
+    // Tempo Tester (MCQ + XP + session log)
     const TempoTester = ({ onBack, prefs }) => {
       const [best, setBest] = useState(loadTempoBest());
       const [stats, setStats] = useState(loadTempoStats());
@@ -1053,7 +843,7 @@
       const beeps = useBeeps(prefs.sound);
       const optionsRef = useRef([]);
       const hitIdxRef = useRef(-1);
-    
+
       const pickQ = (forced=null) => {
         const correct = forced || getRandomItem(TEMPOS);
         const distractors = shuffle(TEMPOS.filter(t=>t.it!==correct.it)).slice(0,3);
@@ -1062,13 +852,13 @@
         optionsRef.current = options;
         speak(correct.it);
       };
-    
+
       const pushSession = (mode, correct, total) => {
         const log = loadJSON(SESSIONLOG_KEY, []);
         log.push({ mode, date: nowISO(), correct, total });
         saveJSON(SESSIONLOG_KEY, log);
       };
-    
+
       useEffect(()=>{ setTimer(prefs.roundLen || 60); }, [prefs.roundLen]);
       useEffect(()=>{ pickQ(); },[]);
       useEffect(()=>{
@@ -1084,14 +874,14 @@
           return t-1;
         }), 1000);
         return ()=>clearInterval(id);
-      }, [finished, score, streak, best, answered]);
-    
+      }, [finished, score, streak, best]);
+
       const bump = (it, ok) => {
         const st = stats[it] || { correct:0, total:0 };
         const next = { ...stats, [it]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
         setStats(next); saveTempoStats(next);
       };
-    
+
       const addXP = (ok) => {
         if (!ok) return;
         const sb = loadScoreboard();
@@ -1100,7 +890,7 @@
         const level = levelForXP(xp), next = nextLevelXP(level);
         saveScoreboard({ xp, level, next });
       };
-    
+
       const handleAnswer = (choice, idx) => {
         if (finished || !q) return;
         const ok = (choice === q.correct);
@@ -1113,30 +903,30 @@
         else { beeps.bad(); setStreak(0); setTimeout(()=>pickQ(), 760); }
         setTimeout(()=>{ hitIdxRef.current = -1; }, 280);
       };
-    
+
       useEffect(()=>{
-        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const ch=optionsRef.current?.[idx]; if(ch) handleAnswer(ch, idx); } if(k==='escape') onBack(); };
+        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const ch=optionsRef.current?.[idx]; if(ch) handleAnswer(ch, idx); } };
         window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [finished, q, onBack]);
-    
+      }, [finished, q]);
+
       const endReviewList = useMemo(()=>{
         const misses = [...events].filter(e=>!e.ok).reverse();
         const unique = []; const seen = new Set();
         for (const m of misses){ if(!seen.has(m.it)){ unique.push(m); seen.add(m.it); } }
         return unique;
       }, [events]);
-    
+
       const startReview = () => {
         if (!endReviewList.length) return;
         setFinished(false); setScore(0); setAnswered(0); setStreak(0); setEvents([]);
         pickQ(endReviewList[0] && { it:endReviewList[0].it, en:endReviewList[0].correct });
       };
-    
+
       const reset = () => {
         setFinished(false); setScore(0); setAnswered(0); setStreak(0); setEvents([]); setConfettiSeed(0);
         setTimer(prefs.roundLen || 60); pickQ();
       };
-    
+
       return (
         <div className="relative p-4 min-h-screen flex flex-col items-center">
           <ConfettiBurst seed={confettiSeed} />
@@ -1170,17 +960,17 @@
               </div>
             )}
           </div>
-    
+
           <div className="w-full mt-6" style={{maxWidth:900}}>
             <TempoHeatmap stats={stats} terms={TEMPOS} />
           </div>
-    
+
           <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
-    
-    /* ---------- Finger Height Drill (Low/High) ---------- */
+
+    /* ===================== NEW: Finger Height Drill ===================== */
     const HeightDrill = ({ onBack, prefs }) => {
       const [q, setQ] = useState(null);
       const [score, setScore] = useState(0);
@@ -1190,16 +980,12 @@
       const [confettiSeed, setConfettiSeed] = useState(0);
       const beeps = useBeeps(prefs.sound);
       const { speak } = useCallouts(prefs.callouts);
-    
+
       const combos = useMemo(()=> allActualCombos().filter(c => c.valid.length >= 2),[]);
-      // Choose only the extremes in the cell so the question is always Low/High
       const pick = () => {
         const c = getRandomItem(combos);
-        const lowNote  = c.valid[0];                          // convention: first is “low”
-        const highNote = c.valid[c.valid.length - 1];         // last is “high”
-        const flip = Math.random() < 0.5;
-        const note  = flip ? lowNote : highNote;
-        const label = flip ? 'low' : 'high';
+        const note = getRandomItem(c.valid);
+        const label = fingerHeight(note, c.valid);
         speak(fullLoc(c.s, c.p, c.f));
         setQ({ ...c, note, label });
       };
@@ -1208,7 +994,7 @@
         const id = setInterval(()=>setTimer(t => (t <= 1 ? 0 : t-1)), 1000);
         return ()=>clearInterval(id);
       },[]);
-    
+
       const bump = (key, ok) => {
         const st = stats[key] || { low:{correct:0,total:0}, high:{correct:0,total:0}, natural:{correct:0,total:0} };
         const next = { ...stats, [key]: {
@@ -1218,7 +1004,7 @@
         } };
         setStats(next); saveJSON(HEIGHT_STATS_KEY, next);
       };
-    
+
       const answer = (choice) => {
         if (!q || timer===0) return;
         const ok = (choice.toLowerCase() === q.label);
@@ -1229,12 +1015,12 @@
         if (ok) { beeps.good(); setScore(s=>s+1); if (prefs.confetti) setConfettiSeed(x=>x+1); setTimeout(pick, 350); }
         else { beeps.bad(); setTimeout(pick, 700); }
       };
-    
+
       useEffect(()=>{
         const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k==='l') answer('low'); if(k==='h') answer('high'); if(k==='escape') onBack(); };
         window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [onBack, q, timer]);
-    
+      }, [q, timer]);
+
       return (
         <div className="relative p-4 min-h-screen flex flex-col items-center">
           <ConfettiBurst seed={confettiSeed} />
@@ -1246,11 +1032,7 @@
                 <div className="text-center mb-3">
                   <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> at <b>{fullLoc(q.s, q.p, q.f)}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
                 </div>
-                <FingerboardHint
-                  active={{ s: q.s, p: q.p, f: q.f }}
-                  order={prefs.stringOrder}
-                  labelMode="lh"   // or "none" if you prefer no text
-                />
+                <FingerboardHint active={{s:q.s, p:q.p, f:q.f}} />
                 <div className="flex gap-3 justify-center mt-3">
                   <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
                   <button className="btn btn-purple" onClick={()=>answer('high')}>High</button>
@@ -1263,8 +1045,8 @@
         </div>
       );
     };
-    
-    /* ---------- Note Locator (find valid location for a given pitch) ---------- */
+
+    /* ===================== NEW: Note Locator ===================== */
     const NoteLocator = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [timer,setTimer] = useState(prefs.roundLen || 90);
@@ -1273,9 +1055,9 @@
       const [stats, setStats] = useState(loadJSON(LOCATOR_STATS_KEY, {}));
       const beeps = useBeeps(prefs.sound);
       const { speak } = useCallouts(prefs.callouts);
-    
+
       const labelLoc = o => `${fullLoc(o.s, o.p, o.f)}`;
-    
+
       const makeQ = () => {
         const note = getRandomItem(ALL_NOTES_UNIQUE);
         const correctLocs = allLocationsForNote(note);
@@ -1293,19 +1075,19 @@
         speak(note);
         setQ({ note, opts });
       };
-    
+
       useEffect(()=>{ makeQ(); },[]);
       useEffect(()=>{
         const id = setInterval(()=>setTimer(t => t<=1 ? 0 : t-1), 1000);
         return ()=>clearInterval(id);
       },[]);
-    
+
       const bump = (note, ok) => {
         const st = stats[note] || { correct:0, total:0 };
         const next = { ...stats, [note]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
         setStats(next); saveJSON(LOCATOR_STATS_KEY, next);
       };
-    
+
       const answer = (o) => {
         const ok = !!o.ok;
         document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
@@ -1315,7 +1097,7 @@
         if (ok) setScore(s=>s+1);
         setTimeout(makeQ, ok?350:700);
       };
-    
+
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:800}}>
@@ -1338,16 +1120,16 @@
         </div>
       );
     };
-    
-    /* ---------- Shift Coach (stay on one string; choose landing pos/finger) ---------- */
+
+    /* ===================== NEW: Shift Coach ===================== */
     const ShiftCoach = ({ onBack, prefs }) => {
-      const [q,setQ] = React.useState(null);
-      const [score,setScore] = React.useState(0);
-      const [answered,setAnswered] = React.useState(0);
-      const [timer,setTimer] = React.useState(prefs.roundLen || 90);
-      const [stats, setStats] = React.useState(loadJSON(SHIFT_STATS_KEY, {}));
+      const [q,setQ] = useState(null);
+      const [score,setScore] = useState(0);
+      const [answered,setAnswered] = useState(0);
+      const [timer,setTimer] = useState(prefs.roundLen || 90);
+      const [stats, setStats] = useState(loadJSON(SHIFT_STATS_KEY, {}));
       const beeps = useBeeps(prefs.sound);
-    
+
       const locationsForNoteOnString = (note, s) => allLocationsForNote(note).filter(l => l.s === s);
       const samePosExists = (A, B) => A.some(a => B.some(b => a.p===b.p));
       const pathCost = (a, b) => Math.abs(Number(a.p) - Number(b.p));
@@ -1359,7 +1141,7 @@
         }
         return best;
       };
-    
+
       const makePrompt = () => {
         const s = getRandomItem(STRINGS);
         const n1 = getRandomItem(ALL_NOTES_UNIQUE);
@@ -1371,9 +1153,7 @@
         const best = bestPair(A,B);
         const start = best.a;
         const correctEnd = best.b;
-        const pool = allActualCombos()
-          .filter(c => c.s === s)
-          .filter(c => !(validCell(c.s, c.p, c.f) || []).includes(n2));
+        const pool = allActualCombos().filter(c => c.s === s).filter(c => !(validCell(c.s, c.p, c.f) || []).includes(n2));
         const opts = [{...correctEnd, ok:true}];
         for (const cand of shuffle(pool)) {
           if (opts.length >= 4) break;
@@ -1381,19 +1161,19 @@
         }
         setQ({ string:s, startNote:n1, targetNote:n2, start, opts: shuffle(opts) });
       };
-    
-      React.useEffect(()=>{ makePrompt(); },[]);
-      React.useEffect(()=>{
+
+      useEffect(()=>{ makePrompt(); },[]);
+      useEffect(()=>{
         const id = setInterval(()=>setTimer(t => t<=1 ? 0 : t-1), 1000);
         return ()=>clearInterval(id);
       },[]);
-    
+
       const bump = (key, ok) => {
         const st = stats[key] || { correct:0, total:0 };
         const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
         setStats(next); saveJSON(SHIFT_STATS_KEY, next);
       };
-    
+
       const answer = (o) => {
         const ok = !!o.ok;
         const key = `${q.string}:${q.startNote}->${q.targetNote}`;
@@ -1404,35 +1184,22 @@
         if (ok) setScore(s=>s+1);
         setTimeout(makePrompt, ok?350:700);
       };
-    
+
       const labelLoc = o => `${fullLoc(q.string, o.p, o.f, false)}`;
-    
+
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:860}}>
             <h2 className="text-2xl font-bold mb-2">Shift Coach</h2>
-            <div className="muted text-sm mb-4">
-              Stay on one string. Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}
-            </div>
+            <div className="muted text-sm mb-4">Stay on one string. Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
             {q && (
               <>
                 <div className="rounded-md p-4" style={{background:'rgba(0,0,0,.05)'}} aria-live="polite">
                   <div className="font-semibold mb-1">String: <b>{q.string}</b></div>
-                  <div className="text-sm">
-                    Start at <b>{norm(q.startNote)}</b> → <span className="muted">{fullLoc(q.string, q.start.p, q.start.f, false)}</span>
-                  </div>
+                  <div className="text-sm">Start at <b>{norm(q.startNote)}</b> → <span className="muted">{fullLoc(q.string, q.start.p, q.start.f, false)}</span></div>
                   <div className="text-sm">Target note: <b>{norm(q.targetNote)}</b></div>
                 </div>
-    
-                <FingerboardHint
-                  active={{ s: q.string, p: q.start.p, f: q.start.f }}
-                  order={prefs.stringOrder}
-                  labelMode="none"
-                />
-    
-                <div className="text-center text-sm muted mt-2 mb-4">
-                  Which <b>position + finger</b> is the best landing spot for the target?
-                </div>
+                <div className="text-center text-sm muted mt-2 mb-4">Which <b>position + finger</b> is the best landing spot for the target?</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {q.opts.map((o,i)=>(
                     <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
@@ -1448,14 +1215,14 @@
       );
     };
 
-    /* ---------- Harmonics Lab (flashcards + quick quiz) ---------- */
+    /* ===================== NEW: Harmonics Lab ===================== */
     const HarmonicsLab = ({ onBack, prefs }) => {
       const [mode, setMode] = useState('flash'); // flash | quiz
       const [i, setI] = useState(0);
       const [show, setShow] = useState(false);
       const [stats, setStats] = useState(loadJSON(HARM_STATS_KEY, {}));
       const beeps = useBeeps(prefs.sound);
-    
+
       const deck = useMemo(()=>{
         const cards = [];
         for (const s of STRINGS) {
@@ -1466,10 +1233,10 @@
         }
         return cards;
       },[]);
-    
-      const next = () => { setShow(false); setI(x => (x + 1) % deck.length); };
-      const prev = () => { setShow(false); setI(x => (x - 1 + deck.length) % deck.length); };
-    
+
+      const next = () => { setShow(false); setI((i+1)%deck.length); };
+      const prev = () => { setShow(false); setI((i-1+deck.length)%deck.length); };
+
       const [q, setQ] = useState(null);
       const makeQ = () => {
         const s = getRandomItem(STRINGS);
@@ -1482,15 +1249,15 @@
         const options = shuffle([correctRatio, ...distracts]).map(r => ({r, ok: r===correctRatio}));
         setQ({ s, note: noteName, display, options });
       };
-    
+
       useEffect(()=>{ if(mode==='quiz') makeQ(); }, [mode]);
-    
+
       const bump = (key, ok) => {
         const st = stats[key] || { correct:0, total:0 };
         const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
         setStats(next); saveJSON(HARM_STATS_KEY, next);
       };
-    
+
       const answer = (opt) => {
         const ok = !!opt.ok;
         document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
@@ -1499,7 +1266,7 @@
         bump(key, ok);
         setTimeout(makeQ, ok?350:700);
       };
-    
+
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:820}}>
@@ -1510,7 +1277,7 @@
                 <button className={`btn ${mode==='quiz'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('quiz')}>Quick Quiz</button>
               </div>
             </div>
-    
+
             {mode==='flash' && (
               <div className="mt-4">
                 <div className="rounded-xl border-2 p-6 text-center">
@@ -1531,7 +1298,7 @@
                 <div className="text-xs muted mt-2 text-center">Card {i+1} / {deck.length}</div>
               </div>
             )}
-    
+
             {mode==='quiz' && (
               <div className="mt-4">
                 {!q ? <div className="muted">Loading…</div> : (
@@ -1554,8 +1321,8 @@
         </div>
       );
     };
-    
-    /* ---------- Speed Ladder (core fingerboard quiz + SM-2 + XP) ---------- */
+
+    // Speed Ladder (fingerboard) + SM-2 + XP + hint + fingerboard SVG
     const SpeedLadderGame = ({ onBack, prefs, stats, setStats }) => {
       const allCombos = useMemo(()=>allActualCombos(), []);
       const beeps = useBeeps(prefs.sound);
@@ -1573,7 +1340,7 @@
       const lastMissRef = useRef(null);
       const hitIdxRef = useRef(-1);
       const [microHint, setMicroHint] = useState('');
-    
+
       // SM-2: include some due items
       const dueKeys = sm2DueKeys(); // ['G:2:3:C#', ...]
       const dueCombos = useMemo(()=>{
@@ -1586,14 +1353,14 @@
         }
         return arr;
       }, [allCombos, dueKeys.join('|')]);
-    
+
       const candidates = useMemo(()=>{
         const f = prefs.filters||{};
         const okS = f.strings||{}; const okP = f.positions||{}; const okF = f.fingers||{};
         const sel = allCombos.filter(c => (okS[c.s]!==false) && (okP[c.p]!==false) && (okF[c.f]!==false));
         return sel.length ? sel : allCombos;
       }, [allCombos, prefs.filters]);
-    
+
       const weightedPick = () => {
         if (!prefs.adaptive) return getRandomItem(candidates);
         const entries = candidates.map(c=>{
@@ -1615,34 +1382,16 @@
         return entries[entries.length-1].combo;
       };
 
-      const newQuestion = () => {
-        const c = weightedPick();  // pick the next (possibly SM-2 due) combo
-        const canonNotes = allowedFor(c.s, c.p, c.f, { includeExtensions: false });
-        // Dev-only: verify NOTES_DATA matches the canonical allowed notes
-        const auditCanonAgainstNotesData = () => {
-          const problems = [];
-          for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
-            const cell = NOTES_DATA[s]?.[p]?.[f] || [];
-            const allow = new Set(allowedFor(s,p,f,{includeExtensions:true}).map(norm));
-            for (const n of cell) if (!allow.has(norm(n))) problems.push({ s,p,f,n });
-          }
-          if (problems.length) console.table(problems);
-          else console.log('Canonical audit: all good ✅');
-        };
-        const correct = getRandomItem(canonNotes);
+      const newQuestion = (preset=null) => {
+        const c = preset || weightedPick();
+        const correct = c.preferredNote ? c.preferredNote : getRandomItem(c.valid);
         const opts = shuffle([correct, ...getRandomDistractors(correct, 3)]);
         optionsRef.current = opts;
         setMicroHint('');
-        setQuestion({
-          ...c,
-          correct,
-          options: opts,
-          ts: performance.now(),
-          sm2Key: `${c.s}:${c.p}:${c.f}:${norm(correct)}`
-        });
+        setQuestion({ ...c, correct, options: opts, ts: performance.now(), sm2Key: c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}` });
         speak(fullLoc(c.s, c.p, c.f));
       };
-    
+
       useEffect(()=>{ newQuestion(); }, []);
       useEffect(()=>{
         if (finished) return;
@@ -1662,7 +1411,7 @@
         }), 1000);
         return ()=>clearInterval(id);
       }, [finished, score, streak, bestScore, bestStreak, answered]);
-    
+
       const addXP = (type, ok) => {
         if (!ok) return;
         const sb = loadScoreboard();
@@ -1671,7 +1420,7 @@
         const level = levelForXP(xp), next = nextLevelXP(level);
         saveScoreboard({ xp, level, next });
       };
-    
+
       const handleAnswer = (note, idx) => {
         if (finished || !question) return;
         const key = `${question.s}:${question.p}:${question.f}`;
@@ -1682,17 +1431,18 @@
         document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
         setAnswered(a=>a+1);
         hitIdxRef.current = idx;
-    
+
+        // micro hint when wrong
         if (!ok) {
           const label = fingerHeight(question.correct, question.valid);
           setMicroHint(`${norm(question.correct)} = ${label==='natural'?'natural':label} ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
         } else setMicroHint('');
-    
+
         // SM-2
         const speedMs = performance.now() - (question.ts||performance.now());
         const quality = ok ? (speedMs<2000?5:4) : 2;
         sm2Update(question.sm2Key, quality);
-    
+
         if (ok){
           lastMissRef.current=null; beeps.good(); setScore(s=>s+1); setStreak(x=>x+1); addXP('speed', true); if (prefs.confetti) setConfettiSeed(x=>x+1);
           setTimeout(()=>newQuestion(), prefs.coach ? 380 : 550);
@@ -1713,14 +1463,14 @@
         }
         setTimeout(()=>{ hitIdxRef.current = -1; }, 280);
       };
-    
+
       useEffect(()=>{
         const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const raw=optionsRef.current?.[idx]; if(raw) handleAnswer(raw, idx); } if(k==='escape') onBack(); };
         window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [finished, question, onBack]);
-    
+      }, [finished, question]);
+
       const reset = () => { setScore(0); setAnswered(0); setTimer(prefs.roundLen||120); setFinished(false); setStreak(0); setConfettiSeed(0); newQuestion(); };
-    
+
       return (
         <div className="relative p-4 min-h-screen flex flex-col items-center">
           <ConfettiBurst seed={confettiSeed} />
@@ -1735,11 +1485,7 @@
                   </div>
                   <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
                 </div>
-                <FingerboardHint
-                  active={{s:question.s, p:question.p, f:question.f}}
-                  order={prefs.stringOrder}
-                  labelMode="none"
-                />
+                <FingerboardHint active={{s:question.s, p:question.p, f:question.f}} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {question.options.map((note, i)=>(
                     <button key={i} className={`btn btn-blue ${i===hitIdxRef.current ? 'btn-hit ' + (note===question.correct?'ok':'miss') : ''}`} title={`Press ${i+1}`} onClick={()=>handleAnswer(note,i)}>
@@ -1761,8 +1507,8 @@
         </div>
       );
     };
-    
-    /* ---------- Flashcards (two decks) ---------- */
+
+    // Flashcards (fingerboard)
     const Flashcards = ({ onBack }) => {
       const [mode, setMode] = useState('A');
       const [i, setI] = useState(0);
@@ -1777,9 +1523,9 @@
       const uniq = useMemo(()=>[...new Set(ALL_NOTES_UNIQUE)].sort(),[]);
       const deckB = useMemo(()=>uniq.map(n=>({q:`Where can you play ${norm(n)} (Pos 1–5)?`, a:groupLocationsByString(n)})),[uniq]);
       const deck = mode==='A'?deckA:deckB;
-      const next=()=>{ setShow(false); setI(x => (x + 1) % deck.length); };
-      const prev=()=>{ setShow(false); setI(x => (x - 1 + deck.length) % deck.length); };
-      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='escape') onBack(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); }, [onBack]);
+      const next=()=>{ setShow(false); setI((i+1)%deck.length); };
+      const prev=()=>{ setShow(false); setI((i-1+deck.length)%deck.length); };
+      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='escape') onBack(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); }, [i,show]);
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
@@ -1803,8 +1549,8 @@
         </div>
       );
     };
-    
-    /* ---------- Positions Bingo ---------- */
+
+    // Bingo
     const BingoBoard = ({ onBack }) => {
       const base = [
         "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–5","Sight-read in Pos 2",
@@ -1840,8 +1586,8 @@
         </div>
       );
     };
-    
-    /* ---------- Dice of Destiny ---------- */
+
+    // Dice
     const DiceOfDestinyGame = ({ onBack }) => {
       const poolFull = [
         'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–5',
@@ -1854,7 +1600,7 @@
       const [busy,setBusy]=useState(false);
       const [history,setHistory]=useState([]);
       const roll=()=>{ setBusy(true); setCur('…'); setTimeout(()=>{ const p = pool.length ? pool : poolFull; const pick = getRandomItem(p); setCur(pick); setHistory(h=>[pick,...h].slice(0,6)); setPool(p.filter(x=>x!==pick)); setBusy(false); }, 560); };
-      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key.toLowerCase()==='r') roll(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[onBack]);
+      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key.toLowerCase()==='r') roll(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[]);
       return (
         <div className="p-4 min-h-screen flex flex-col items-center">
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
@@ -1873,6 +1619,7 @@
         </div>
       );
     };
+
     /* =========================================================
        Bieler Method Lab
     ========================================================== */
@@ -1960,7 +1707,6 @@
     ========================================================== */
     const FiltersPanel = ({ prefs, setPrefs, stats, onResetStats, onExportCSV }) => {
       const f = prefs.filters;
-      const save = (n) => { setPrefs(n); savePrefs(n); };
       const toggle=(group,key)=>{
         setPrefs(p=>{ const next={...p, filters:{...p.filters, [group]:{...p.filters[group],[key]:!p.filters[group][key]}}}; savePrefs(next); return next; });
       };
@@ -1971,43 +1717,24 @@
         <div className="card rounded-xl p-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="text-sm">Round:
-              <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen}
-                      onChange={e=>save({ ...prefs, roundLen:Number(e.target.value) })}>
+              <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen} onChange={e=>{ const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
                 {[30,60,90,120,180].map(x=><option key={x} value={x}>{x}s</option>)}
               </select>
             </div>
-    
-            {/* NEW: View selector (string order) */}
-            <div className="flex items-center gap-3">
-              <label className="text-sm">
-                View:&nbsp;
-                <select
-                  className="border rounded p-1 text-sm"
-                  value={prefs.stringOrder}
-                  onChange={e=>save({ ...prefs, stringOrder: e.target.value })}
-                  title="String order for diagrams"
-                >
-                  <option value="score">Score view: E–A–D–G (top→bottom)</option>
-                  <option value="player">Player view: G–D–A–E (top→bottom)</option>
-                </select>
-              </label>
-            </div>
-    
             <div className="flex flex-wrap gap-3 items-center">
-              <label className="text-sm"><input type="checkbox" checked={prefs.adaptive}   onChange={e=>save({ ...prefs, adaptive:e.target.checked })}/> Adaptive</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.coach}      onChange={e=>save({ ...prefs, coach:e.target.checked })}/> Coach</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.coachRetry} onChange={e=>save({ ...prefs, coachRetry:e.target.checked })}/> Retry after miss</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.sound}      onChange={e=>save({ ...prefs, sound:e.target.checked })}/> Sound</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.confetti}   onChange={e=>save({ ...prefs, confetti:e.target.checked })}/> Confetti</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.callouts}   onChange={e=>save({ ...prefs, callouts:e.target.checked })}/> Call-outs</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.adaptive} onChange={e=>{ const n={...prefs, adaptive:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Adaptive</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.coach} onChange={e=>{ const n={...prefs, coach:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Coach</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.coachRetry} onChange={e=>{ const n={...prefs, coachRetry:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Retry after miss</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.sound} onChange={e=>{ const n={...prefs, sound:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Sound</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.confetti} onChange={e=>{ const n={...prefs, confetti:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Confetti</label>
+              <label className="text-sm"><input type="checkbox" checked={prefs.callouts} onChange={e=>{ const n={...prefs, callouts:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Call-outs</label>
             </div>
-    
             <div className="flex gap-2">
-              <button className="btn btn-rose"  onClick={onResetStats}>Reset All Stats</button>
+              <button className="btn btn-rose" onClick={onResetStats}>Reset All Stats</button>
               <button className="btn btn-green" onClick={onExportCSV}>Export CSV</button>
             </div>
           </div>
-    
+
           <div className="grid md:grid-cols-3 gap-4 mt-4">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -2043,8 +1770,10 @@
               </div>
             </div>
           </div>
-    
-          <p className="text-xs muted mt-3">Focus Mode pulls only from your selected subset (falls back to all if deselected).</p>
+
+          <p className="text-xs muted mt-3">
+            Focus Mode pulls only from your selected subset (falls back to all if deselected).
+          </p>
         </div>
       );
     };
@@ -2053,96 +1782,43 @@
        Dashboard extras: XP header, Avatar, Weakest 3, Sparkline, Badges
     ========================================================== */
     const AvatarIcon = ({ outfit='classic', trail='none' }) => {
-      const outfitFill =
-        outfit==='rock' ? '#ef4444' :
-        outfit==='fantasy' ? '#22d3ee' :
-        '#6d28d9';
+      const outfitFill = outfit==='rock' ? '#ef4444' : outfit==='fantasy' ? '#22d3ee' : '#6d28d9';
       return (
         <svg className="avatar" viewBox="0 0 64 64">
           <rect x="0" y="0" width="64" height="64" rx="12" fill="rgba(0,0,0,0.04)" />
           <circle cx="32" cy="22" r="10" fill="#fed7aa"/>
           <rect x="16" y="34" width="32" height="18" rx="9" fill={outfitFill} />
-          {trail==='aurora' && (
-            <circle cx="32" cy="54" r="4" fill="var(--accent)">
-              <animate attributeName="r" values="4;6;4" dur="1.6s" repeatCount="indefinite" />
-            </circle>
-          )}
+          {trail==='aurora' && <circle cx="32" cy="54" r="4" fill="var(--accent)"><animate attributeName="r" values="4;6;4" dur="1.6s" repeatCount="indefinite"/></circle>}
         </svg>
       );
     };
-    
+
     const AvatarCustomizer = () => {
-      const [cos, setCos] = useState(
-        loadJSON(COSMETICS_KEY, {
-          selected: { outfit:'classic', trail:'none' },
-          unlocked: { outfits:['classic'], trails:['none'] }
-        })
-      );
-      const save = (nx) => { setCos(nx); saveJSON(COSMETICS_KEY, nx); };
-    
+      const [cos, setCos] = useState(loadJSON(COSMETICS_KEY, { selected:{ outfit:'classic', trail:'none' }, unlocked:{ outfits:['classic'], trails:['none'] } }));
+      const save = (nx)=>{ setCos(nx); saveJSON(COSMETICS_KEY, nx); };
       const unlockBag = loadBadges();
-    
-      // Build a fresh unlocked object (no mutation)
-      const computeUnlocked = () => {
-        const u = {
-          outfits: [...(cos.unlocked?.outfits || ['classic'])],
-          trails:  [...(cos.unlocked?.trails  || ['none'])]
-        };
-        if (unlockBag.earned['first-100']    && !u.outfits.includes('rock'))    u.outfits.push('rock');
-        if (unlockBag.earned['d-string-ace'] && !u.outfits.includes('fantasy')) u.outfits.push('fantasy');
-        if (unlockBag.earned['perfect-20']   && !u.trails.includes('aurora'))   u.trails.push('aurora');
-        return u;
-      };
-    
-      // React when badges (or current unlocked) change
-      useEffect(() => {
-        const nextUnlocked = computeUnlocked();
-        if (JSON.stringify(nextUnlocked) !== JSON.stringify(cos.unlocked)) {
-          save({ ...cos, unlocked: nextUnlocked });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [JSON.stringify(unlockBag.earned), JSON.stringify(cos.unlocked)]);
-    
+      // unlockables from badges
+      const unlocked = { ...cos.unlocked };
+      if (unlockBag.earned['first-100'] && !unlocked.outfits.includes('rock')) unlocked.outfits.push('rock');
+      if (unlockBag.earned['d-string-ace'] && !unlocked.outfits.includes('fantasy')) unlocked.outfits.push('fantasy');
+      if (unlockBag.earned['perfect-20'] && !unlocked.trails.includes('aurora')) unlocked.trails.push('aurora');
+
+      useEffect(()=>{ if (JSON.stringify(unlocked)!==JSON.stringify(cos.unlocked)) save({ ...cos, unlocked }); },[]);
+
       return (
         <div className="card rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="font-semibold">Player Avatar</div>
-            <div className="avatar-wrap">
-              <AvatarIcon outfit={cos.selected.outfit} trail={cos.selected.trail} />
-            </div>
+            <div className="avatar-wrap"><AvatarIcon outfit={cos.selected.outfit} trail={cos.selected.trail}/></div>
           </div>
-    
-          <div className="text-xs avatar-label mb-2">
-            Customize your look with unlocks from badges.
-          </div>
-    
+          <div className="text-xs avatar-label mb-2">Customize your look with unlocks from badges.</div>
           <div className="flex flex-wrap gap-2 items-center">
-            {/* Outfits */}
-            {['classic','rock','fantasy'].map(o => (
-              <button
-                key={o}
-                disabled={!cos.unlocked.outfits.includes(o)}
-                className={`pill ${cos.selected.outfit===o ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
-                onClick={() => save({ ...cos, selected: { ...cos.selected, outfit:o } })}
-                title={cos.unlocked.outfits.includes(o) ? `Select ${o}` : 'Locked'}
-              >
-                {o}
-              </button>
+            {['classic','rock','fantasy'].map(o=>(
+              <button key={o} disabled={!unlocked.outfits.includes(o)} className={`pill ${cos.selected.outfit===o?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>save({ ...cos, selected:{...cos.selected, outfit:o} })}>{o}</button>
             ))}
-    
             <span className="text-xs mx-2 muted">Trail:</span>
-    
-            {/* Trails */}
-            {['none','aurora'].map(t => (
-              <button
-                key={t}
-                disabled={!cos.unlocked.trails.includes(t)}
-                className={`pill ${cos.selected.trail===t ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
-                onClick={() => save({ ...cos, selected: { ...cos.selected, trail:t } })}
-                title={cos.unlocked.trails.includes(t) ? `Select ${t}` : 'Locked'}
-              >
-                {t}
-              </button>
+            {['none','aurora'].map(t=>(
+              <button key={t} disabled={!unlocked.trails.includes(t)} className={`pill ${cos.selected.trail===t?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>save({ ...cos, selected:{...cos.selected, trail:t} })}>{t}</button>
             ))}
           </div>
         </div>
@@ -2156,144 +1832,29 @@
       return <svg width={w} height={h}><path d={path} fill="none" stroke="currentColor" strokeWidth="2"/></svg>;
     };
 
-    const Dashboard = ({ prefs, setPrefs, stats, setStats, onPlay }) => {
-      const onResetStats = () => {
-        saveStats({}); setStats({});
-        saveTempoStats({}); saveJSON('positionsQuest.height.stats.v1', {});
-        saveJSON('positionsQuest.locator.stats.v1', {});
-        saveJSON('positionsQuest.shift.stats.v1', {});
-        saveJSON('positionsQuest.harmonics.stats.v1', {});
-        document.getElementById('sr').textContent = 'All stats reset';
-      };
-    
-      const onExportCSV = () => {
-        const rows = [['cell','correct','total','accuracy']];
-        Object.entries(loadStats()).forEach(([k,v])=>{
-          const acc = v.total ? Math.round(100*v.correct/v.total) : 0;
-          rows.push([k, v.correct||0, v.total||0, `${acc}%`]);
-        });
-        const csv = rows.map(r=>r.join(',')).join('\n');
-        const a = document.createElement('a');
-        a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-        a.download = 'vpq-stats.csv'; a.click();
-      };
-    
+    const WeakestThreePanel = ({ stats, onDrill }) => {
+      const toLB = (c,t)=> t? wilsonLowerBound(c,t) : 0;
+      const list = Object.entries(stats).map(([k,v])=>({k, c:v.correct||0, t:v.total||0, lb:toLB(v.correct||0, v.total||0)}))
+        .filter(x=>x.t>=5).sort((a,b)=>a.lb-b.lb).slice(0,3);
+      if (!list.length) return null;
       return (
-        <div className="p-4 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-2xl font-bold">Violin Positions Quest</div>
-              <div className="text-sm muted">Pick a mode to start training.</div>
-            </div>
-            <AvatarCustomizer />
+        <div className="card rounded-xl p-4">
+          <div className="text-lg font-semibold mb-2">Top 3 Weakest Spots</div>
+          <div className="grid gap-2">
+            {list.map((it,i)=>{
+              const [s,p,f] = it.k.split(':');
+              return (
+                <div key={i} className="flex items-center justify-between rounded border p-2">
+                  <div>{fullLoc(s, Number(p), Number(f))} · <span className="muted text-sm">LB {Math.round(it.lb*100)}% · {it.c}/{it.t}</span></div>
+                  <button className="btn btn-purple" onClick={()=>onDrill(s,Number(p),Number(f))}>Drill This</button>
+                </div>
+              );
+            })}
           </div>
-    
-          <div className="mt-4">
-            <FiltersPanel
-              prefs={prefs}
-              setPrefs={setPrefs}
-              stats={stats}
-              onResetStats={onResetStats}
-              onExportCSV={onExportCSV}
-            />
-          </div>
-    
-          <div className="grid-cards mt-6">
-            <CardButton title="Speed Ladder"   description="Timed note-ID quiz." onClick={()=>onPlay('speed')}           onHelp={()=>{}} />
-            <CardButton title="Flashcards"      description="Two decks: positions & locations." onClick={()=>onPlay('flash')} onHelp={()=>{}} />
-            <CardButton title="Positions Bingo" description="5×5 practice board." onClick={()=>onPlay('bingo')}          onHelp={()=>{}} />
-            <CardButton title="Dice of Destiny" description="Random practice prompts." onClick={()=>onPlay('dice')}     onHelp={()=>{}} />
-            <CardButton title="Tempo Trainer"   description="Flashcards + call-outs." onClick={()=>onPlay('tempoTrainer')}  onHelp={()=>{}} />
-            <CardButton title="Tempo Tester"    description="MCQ + heatmap." onClick={()=>onPlay('tempoTester')}        onHelp={()=>{}} />
-            <CardButton title="Bieler Method Lab" description="Vocab, concepts, apps." onClick={()=>onPlay('bielerLab')} onHelp={()=>{}} />
-            <CardButton title="Finger Height Drill" description="Low vs High." onClick={()=>onPlay('height')}           onHelp={()=>{}} />
-            <CardButton title="Note Locator"    description="Find valid locations." onClick={()=>onPlay('locator')}      onHelp={()=>{}} />
-            <CardButton title="Shift Coach"     description="Best landing pos/finger." onClick={()=>onPlay('shift')}    onHelp={()=>{}} />
-            <CardButton title="Harmonics Lab"   description="Nodes 1/2, 1/3, 1/4." onClick={()=>onPlay('harmonics')}    onHelp={()=>{}} />
-          </div>
-    
-          <div className="mt-6 grid lg:grid-cols-2 gap-4">
-            <AccuracyHeatmap stats={stats} order={prefs.stringOrder} />
-            <WeakestThreePanel
-              stats={stats}
-              onDrill={(s,p,f)=>{
-                setPrefs(prev=>{
-                  const next = { ...prev };
-                  next.filters = {
-                    strings:  { G:false, D:false, A:false, E:false, [s]: true },
-                    positions:{ 1:false, 2:false, 3:false, 4:false, 5:false, [p]: true },
-                    fingers:  { 1:false, 2:false, 3:false, 4:false, [f]: true }
-                  };
-                  savePrefs(next);
-                  return next;
-                });
-                onPlay('speed');
-              }}
-            />
-          </div>
+          <div className="text-xs muted mt-2">LB = 95% confidence lower bound. Each drill opens Speed Ladder focused on that cell.</div>
         </div>
       );
     };
-    
-    const App = () => {
-      const [prefs, setPrefs] = React.useState(loadPrefs());
-      const [stats, setStats] = React.useState(loadStats());
-      const [screen, setScreen] = React.useState('home');
-    
-      const go = (s) => setScreen(s);
-      const back = () => setScreen('home');
-    
-      return (
-        <>
-          {screen==='home'         && <Dashboard prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} onPlay={go} />}
-          {screen==='speed'        && <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} />}
-          {screen==='flash'        && <Flashcards onBack={back} />}
-          {screen==='bingo'        && <BingoBoard onBack={back} />}
-          {screen==='dice'         && <DiceOfDestinyGame onBack={back} />}
-          {screen==='tempoTrainer' && <TempoTrainer onBack={back} prefs={prefs} />}
-          {screen==='tempoTester'  && <TempoTester onBack={back} prefs={prefs} />}
-          {screen==='bielerLab'    && <BielerLab onBack={back} />}
-          {screen==='height'       && <HeightDrill onBack={back} prefs={prefs} />}
-          {screen==='locator'      && <NoteLocator onBack={back} prefs={prefs} />}
-          {screen==='shift'        && <ShiftCoach onBack={back} prefs={prefs} />}
-          {screen==='harmonics'    && <HarmonicsLab onBack={back} prefs={prefs} />}
-        </>
-      );
-    };
-    
-    class ErrorBoundary extends React.Component {
-      constructor(p){super(p); this.state={hasError:false};}
-      static getDerivedStateFromError(){return {hasError:true};}
-      componentDidCatch(err, info){console.error(err, info);}
-      render(){return this.state.hasError ? <div style={{padding:16}}>Something went wrong.</div> : this.props.children;}
-    }
-    
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <ErrorBoundary><App/></ErrorBoundary>
-    );
-        const WeakestThreePanel = ({ stats, onDrill }) => {
-          const toLB = (c,t)=> t? wilsonLowerBound(c,t) : 0;
-          const list = Object.entries(stats).map(([k,v])=>({k, c:v.correct||0, t:v.total||0, lb:toLB(v.correct||0, v.total||0)}))
-            .filter(x=>x.t>=5).sort((a,b)=>a.lb-b.lb).slice(0,3);
-          if (!list.length) return null;
-          return (
-            <div className="card rounded-xl p-4">
-              <div className="text-lg font-semibold mb-2">Top 3 Weakest Spots</div>
-              <div className="grid gap-2">
-                {list.map((it,i)=>{
-                  const [s,p,f] = it.k.split(':');
-                  return (
-                    <div key={i} className="flex items-center justify-between rounded border p-2">
-                      <div>{fullLoc(s, Number(p), Number(f))} · <span className="muted text-sm">LB {Math.round(it.lb*100)}% · {it.c}/{it.t}</span></div>
-                      <button className="btn btn-purple" onClick={()=>onDrill(s,Number(p),Number(f))}>Drill This</button>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="text-xs muted mt-2">LB = 95% confidence lower bound. Each drill opens Speed Ladder focused on that cell.</div>
-            </div>
-          );
-        };
 
     const BadgesPanel = () => {
       const bag = loadBadges();
@@ -2476,16 +2037,16 @@
 
           <div className="grid-cards">
             <CardButton title="Speed Ladder" description="Adaptive fingerboard quiz (Pos 1–5). Coach + retries." onClick={()=>go('speed')} onHelp={()=>setHelpKey('speed')} />
-            <CardButton title="Finger Height Drill" description="Low vs High fingers for intonation." onClick={()=>go('height')} onHelp={()=>setHelpKey('height')} />
+            <CardButton title="Finger Height Drill" description="Low vs High fingers for intonation." onClick={()=>go('height')} onHelp={() => setHelpKey('height')} />
             <CardButton title="Note Locator" description="Pick a valid string/position/finger for a pitch." onClick={()=>go('locator')} onHelp={()=>setHelpKey('locator')} />
-            <CardButton title="Shift Coach" description="Choose efficient shifts on one string." onClick={()=>go('shift')} onHelp={()=>setHelpKey('shift')} />
-            <CardButton title="Harmonics Lab" description="Natural nodes (1/2, 1/3, 1/4) per string." onClick={()=>go('harmonics')} onHelp={()=>setHelpKey('harmonics')} />
-            <CardButton title="Flashcards Mode" description="Two decks: direct hits + note→locations." onClick={()=>go('cards')} onHelp={()=>setHelpKey('cards')} />
-            <CardButton title="Positions Bingo" description="Fill a line with focused tasks." onClick={()=>go('bingo')} onHelp={()=>setHelpKey('bingo')} />
-            <CardButton title="Dice of Destiny" description="Roll for a practice challenge." onClick={()=>go('dice')} onHelp={()=>setHelpKey('dice')} />
-            <CardButton title="Tempo Trainer" description="Italian terms flashcards with call-outs." onClick={()=>go('tempoTrainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
-            <CardButton title="Tempo Tester" description="Timed MCQ + review misses + heatmap." onClick={()=>go('tempoTester')} onHelp={()=>setHelpKey('tempoTester')} />
-            <CardButton title="Bieler Method Lab" description="Vocabulary, concepts, and application." onClick={()=>go('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
+            <CardButton title="Shift Coach" description="Choose efficient shifts on one string." onClick={()=>go('shift')} onHelp={() => setHelpKey('shift')} />
+            <CardButton title="Harmonics Lab" description="Natural nodes (1/2, 1/3, 1/4) per string." onClick={()=>go('harmonics')} onHelp={() => setHelpKey('harmonics')} />
+            <CardButton title="Flashcards Mode" description="Two decks: direct hits + note→locations." onClick={()=>go('cards')} onHelp={() => setHelpKey('cards')} />
+            <CardButton title="Positions Bingo" description="Fill a line with focused tasks." onClick={()=>go('bingo')} onHelp={() => setHelpKey('bingo')} />
+            <CardButton title="Dice of Destiny" description="Roll for a practice challenge." onClick={()=>go('dice')} onHelp={() => setHelpKey('dice')} />
+            <CardButton title="Tempo Trainer" description="Italian terms flashcards with call-outs." onClick={()=>go('tempoTrainer')} onHelp={() => setHelpKey('tempoTrainer')} />
+            <CardButton title="Tempo Tester" description="Timed MCQ + review misses + heatmap." onClick={()=>go('tempoTester')} onHelp={() => setHelpKey('tempoTester')} />
+            <CardButton title="Bieler Method Lab" description="Vocabulary, concepts, and application." onClick={()=>go('bielerLab')} onHelp={() => setHelpKey('bielerLab')} />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-4 mt-6">
@@ -2497,7 +2058,7 @@
                 onResetStats={resetAll}
                 onExportCSV={exportCSV}
               />
-              <div className="mt-4"><AccuracyHeatmap stats={stats} order={prefs.stringOrder} /></div>
+              <div className="mt-4"><AccuracyHeatmap stats={stats} /></div>
             </div>
             <div className="space-y-4">
               <div className="card rounded-xl p-4">
@@ -2513,11 +2074,11 @@
             </div>
           </div>
 
-          <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How to play">
+          <Modal open={!!helpKey} onClose={() => setHelpKey(null)} title="How to play">
             {HELP[helpKey] || 'Select a mode to begin.'}
           </Modal>
 
-          <Toast open={updateReady} text="An update is ready." action="Reload" onAction={()=>location.reload()} />
+          <Toast open={updateReady} text="An update is ready." action="Reload" onAction={() => location.reload()} />
         </div>
       );
     };
@@ -2536,7 +2097,7 @@
               <div className="card rounded-xl p-6">
                 <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
                 <p className="muted text-sm mb-3">{this.state.err}</p>
-                <button className="btn btn-purple" onClick={()=>location.reload()}>Reload App</button>
+                <button className="btn btn-purple" onClick={() => location.reload()}>Reload App</button>
               </div>
             </div>
           );
@@ -2598,20 +2159,8 @@
       return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
     };
 
-    // simple boundary (optional)
-    class ErrorBoundary extends React.Component {
-      constructor(p){ super(p); this.state={hasError:false}; }
-      static getDerivedStateFromError(){ return {hasError:true}; }
-      componentDidCatch(err, info){ console.error(err, info); }
-      render(){ return this.state.hasError ? <div>Something went wrong.</div> : this.props.children; }
-    }
-
-    // mount
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <ErrorBoundary><App/></ErrorBoundary>
     );
   </script>
 </body>
