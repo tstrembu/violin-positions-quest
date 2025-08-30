@@ -129,6 +129,18 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap:6px;
     }
+    /* Make the grid clear space for the chip automatically */
+    .fb-pos .fb-grid{ 
+      padding-top: calc(8px + var(--pos-chip-clear)); /* 8px comes from your p-2 */
+    }
+    /* Chip styling (dark-aware tokens) */
+    .pos-chip{
+      position:absolute; top:6px; left:6px;
+      padding:2px 6px; border-radius:6px; font-size:11px; line-height:1;
+      background: var(--surface-subtle);
+      color: var(--ink-800);
+      border: 1px solid var(--hairline);
+    }
     .fb-tile{
       position: relative;
       display: flex;
@@ -174,6 +186,15 @@
     
     /* Make each position panel able to hold an overlay chip */
     .fb-pos { position: relative; }
+    .fb-pos{
+      flex: 0 0 var(--posw);
+      min-width: var(--posw);
+      scroll-snap-align: start;
+      overflow:hidden;
+      /* ADD these two lines ↓ */
+      position: relative;
+      --pos-chip-clear: 11px; /* reserved space for the Pos chip */
+    }
     
     /* Small position label that respects light/dark tokens */
     .pos-chip{
@@ -638,7 +659,7 @@
                     <div key={p} className="fb-pos rounded-md border">
                       <div className="pos-chip" aria-hidden="true">Pos {p}</div>
                       <span className="sr-only">Position {p}</span>
-                      <div className="fb-grid p-2 pt-6">
+                      <div className="fb-grid p-2">
                         {FINGERS.map(f => {
                           const isReal = !!validCell(s, p, f);
                           const k = `${s}:${p}:${f}`;
