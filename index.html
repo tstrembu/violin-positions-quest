@@ -2081,19 +2081,19 @@ Is this correct?
     
       const unlockBag = loadBadges();
     
-      // build a safe, fresh unlocked object (no mutation)
+      // Build a fresh unlocked object (no mutation)
       const computeUnlocked = () => {
         const u = {
           outfits: [...(cos.unlocked?.outfits || ['classic'])],
           trails:  [...(cos.unlocked?.trails  || ['none'])]
         };
-        if (unlockBag.earned['first-100']   && !u.outfits.includes('rock'))     u.outfits.push('rock');
-        if (unlockBag.earned['d-string-ace']&& !u.outfits.includes('fantasy'))  u.outfits.push('fantasy');
-        if (unlockBag.earned['perfect-20']  && !u.trails.includes('aurora'))    u.trails.push('aurora');
+        if (unlockBag.earned['first-100']    && !u.outfits.includes('rock'))    u.outfits.push('rock');
+        if (unlockBag.earned['d-string-ace'] && !u.outfits.includes('fantasy')) u.outfits.push('fantasy');
+        if (unlockBag.earned['perfect-20']   && !u.trails.includes('aurora'))   u.trails.push('aurora');
         return u;
       };
     
-      // react when badges (or current unlocked) change
+      // React when badges (or current unlocked) change
       useEffect(() => {
         const nextUnlocked = computeUnlocked();
         if (JSON.stringify(nextUnlocked) !== JSON.stringify(cos.unlocked)) {
@@ -2116,12 +2116,14 @@ Is this correct?
           </div>
     
           <div className="flex flex-wrap gap-2 items-center">
+            {/* Outfits */}
             {['classic','rock','fantasy'].map(o => (
               <button
                 key={o}
                 disabled={!cos.unlocked.outfits.includes(o)}
                 className={`pill ${cos.selected.outfit===o ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
                 onClick={() => save({ ...cos, selected: { ...cos.selected, outfit:o } })}
+                title={cos.unlocked.outfits.includes(o) ? `Select ${o}` : 'Locked'}
               >
                 {o}
               </button>
@@ -2129,12 +2131,14 @@ Is this correct?
     
             <span className="text-xs mx-2 muted">Trail:</span>
     
+            {/* Trails */}
             {['none','aurora'].map(t => (
               <button
                 key={t}
                 disabled={!cos.unlocked.trails.includes(t)}
                 className={`pill ${cos.selected.trail===t ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
                 onClick={() => save({ ...cos, selected: { ...cos.selected, trail:t } })}
+                title={cos.unlocked.trails.includes(t) ? `Select ${t}` : 'Locked'}
               >
                 {t}
               </button>
