@@ -2165,8 +2165,24 @@ Is this correct?
             <CardButton title="Harmonics Lab"   description="Nodes 1/2, 1/3, 1/4." onClick={()=>onPlay('harmonics')}    onHelp={()=>{}} />
           </div>
     
-          <div className="mt-6">
+          <div className="mt-6 grid lg:grid-cols-2 gap-4">
             <AccuracyHeatmap stats={stats} order={prefs.stringOrder} />
+            <WeakestThreePanel
+              stats={stats}
+              onDrill={(s,p,f)=>{
+                setPrefs(prev=>{
+                  const next = { ...prev };
+                  next.filters = {
+                    strings:  { G:false, D:false, A:false, E:false, [s]: true },
+                    positions:{ 1:false, 2:false, 3:false, 4:false, 5:false, [p]: true },
+                    fingers:  { 1:false, 2:false, 3:false, 4:false, [f]: true }
+                  };
+                  savePrefs(next);
+                  return next;
+                });
+                onPlay('speed');
+              }}
+            />
           </div>
         </div>
       );
