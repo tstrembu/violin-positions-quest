@@ -2427,9 +2427,19 @@
       return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
     };
 
+    // simple boundary (optional)
+    class ErrorBoundary extends React.Component {
+      constructor(p){ super(p); this.state={hasError:false}; }
+      static getDerivedStateFromError(){ return {hasError:true}; }
+      componentDidCatch(err, info){ console.error(err, info); }
+      render(){ return this.state.hasError ? <div>Something went wrong.</div> : this.props.children; }
+    }
+
+    // mount
     ReactDOM.createRoot(document.getElementById('root')).render(
       <ErrorBoundary><App/></ErrorBoundary>
     );
+    // or just: ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
