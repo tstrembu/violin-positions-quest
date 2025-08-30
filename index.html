@@ -44,6 +44,20 @@
       --ink-500: #64748b;
       --shadow: 0 12px 24px rgba(0,0,0,0.35);
     }
+    /* NEW: dark-aware subtle surfaces & lines */
+    :root{
+      --surface-subtle: rgba(0,0,0,.04);   /* soft panel headers, subtle fills */
+      --hairline:       rgba(0,0,0,.12);   /* borders, dividers */
+      --gridline:       rgba(0,0,0,.20);   /* SVG guidelines */
+    }
+    body.dark{
+      --surface-subtle: rgba(255,255,255,.06);
+      --hairline:       rgba(255,255,255,.14);
+      --gridline:       rgba(255,255,255,.16);
+    }
+    
+    /* Make Tailwind's generic borders readable in dark */
+    body.dark .border, body.dark .border-2 { border-color: var(--hairline) !important; }
     html, body { height:100%; }
     body {
       margin: 0;
@@ -60,7 +74,7 @@
     .modal { width:min(680px, 92vw); }
     .pill { border-radius: 9999px; padding: 4px 10px; display:inline-block; font-size:12px; }
     .badge { background:var(--accent); color:white; border-radius:9999px; padding:.25rem .6rem; font-weight:700; font-size:12px; }
-    .help-dot { width: 22px; height: 22px; border-radius: 9999px; display:inline-flex; align-items:center; justify-content:center; background:#11182717; color:var(--accent); font-weight:700; }
+    .help-dot { width: 22px; height: 22px; border-radius: 9999px; display:inline-flex; align-items:center; justify-content:center; background: var(--surface-subtle); color:var(--accent); font-weight:700; }
     .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 9998; }
     .btn {
       display:inline-flex; align-items:center; justify-content:center;
@@ -411,11 +425,13 @@
     const stabilityAlpha = (n) => { if (!n) return 0.18; const t = Math.min(1, Math.log10(n + 1) / Math.log10(50)); return 0.35 + 0.65 * t; };
     const evidenceStyle = (st) => {
       const correct = st?.correct || 0, total = st?.total || 0;
-      if (!total) { return { bandColor: rgba(SWATCH.gray, 0.45), bg:'transparent', text:'#4b5563', lb:0, acc:0, total }; }
+      if (!total) {
+        return { bandColor: rgba(SWATCH.gray, 0.45), bg:'transparent', text:'var(--ink-600)', lb:0, acc:0, total };
+      }
       const lb = wilsonLowerBound(correct, total);
       const band = bandFromLB(lb);
       const alpha = stabilityAlpha(total);
-      return { bandColor: rgba(SWATCH[band], alpha), bg:'transparent', text:'#111827', lb, acc: correct/total, total, band };
+      return { bandColor: rgba(SWATCH[band], alpha), bg:'transparent', text:'var(--ink-800)', lb, acc: correct/total, total, band };
     };
 
     /* =========================================================
@@ -565,7 +581,7 @@
         {['G','D','A','E'].map(s => (
           <g key={s}>
             <text x="10" y={LANE_Y[s]+4} fontSize="12" fill="currentColor">{s}</text>
-            <line x1="50" x2="670" y1={LANE_Y[s]} y2={LANE_Y[s]} stroke="rgba(0,0,0,.2)" />
+            <line x1="50" x2="670" y1={LANE_Y[s]} y2={LANE_Y[s]} stroke="var(--gridline)" />
             {[1,2,3,4,5].map(p =>
               [1,2,3,4].map(f => {
                 const {x,y}=nodeXY(s,p,f);
@@ -601,7 +617,7 @@
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STRINGS.map(s => (
             <div key={s} className="rounded-lg border overflow-hidden">
-              <div className="px-3 py-2 font-semibold" style={{ background: 'rgba(0,0,0,.04)', whiteSpace:'nowrap' }}>
+              <div className="px-3 py-2 font-semibold" style={{ background: 'var(--surface-subtle)', whiteSpace:'nowrap' }}>
                 {s} string
               </div>
               <div className="p-2">
@@ -621,16 +637,16 @@
                               title={isReal ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}%; LB ${st.total?Math.round(style.lb*100):0}%)` : 'Not a valid finger/position'}
                               aria-label={isReal ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent` : 'Invalid cell'}
                               style={{
-                                border: isReal ? '1px solid rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.20)',
-                                background: 'transparent',
-                                color: isReal ? style.text : '#9ca3af'
-                              }}
+                                  border: isReal ? '1px solid var(--hairline)' : '1px dashed var(--hairline)',
+                                  background: 'transparent',
+                                  color: isReal ? style.text : 'var(--ink-600)'
+                                }}
                             >
                               <div style={{ fontWeight:600 }}>F{f}</div>
                               <div className="text-xs">
                                 {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
                               </div>
-                              <div className="fb-band" style={{ background: isReal ? style.bandColor : 'rgba(0,0,0,0.08)' }} />
+                              <div className="fb-band" style={{ background: isReal ? style.bandColor : 'var(--hairline)' }} />
                             </div>
                           );
                         })}
@@ -1304,7 +1320,7 @@
                 {!q ? <div className="muted">Loading…</div> : (
                   <>
                     <div className="text-lg font-semibold mb-2">Which node ratio produces this harmonic?</div>
-                    <div className="rounded-md p-4 mb-3" style={{background:'rgba(0,0,0,.05)'}}>
+                    <div className="rounded-md p-4 mb-3" style={{background:'var(--surface-subtle)'}}>
                       {q.display}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1606,7 +1622,7 @@
           <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
             <h2 className="text-2xl font-bold mb-4">Dice of Destiny</h2>
             <button disabled={busy} className="btn btn-green text-xl" onClick={roll}>{busy?'…':'Roll Dice'}</button>
-            <div className="rounded-lg p-4 mt-6" style={{ background: 'rgba(0,0,0,.07)' }}>
+            <div className="rounded-lg p-4 mt-6" style={{ background: 'var(--surface-subtle)' }}>
               <div className="text-sm muted">Your Destiny:</div>
               <div className="text-xl font-bold mt-2">{cur || 'Press Roll to begin!'}</div>
             </div>
