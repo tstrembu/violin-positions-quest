@@ -1718,7 +1718,7 @@
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="text-sm">Round:
               <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen} onChange={e=>{ const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
-                {[30,60,90,120,180].map(x=><option key={x} value={x}>{x}s</option>)}
+                {[180,240,300,360,420,480,540].map(x=><option key={x} value={x}>{x}s</option>)}
               </select>
             </div>
             <div className="flex flex-wrap gap-3 items-center">
