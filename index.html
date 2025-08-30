@@ -555,7 +555,7 @@
     /* =========================================================
        Fingerboard Visual Hint (SVG)
     ========================================================== */
-    const LANE_Y = {G:70, D:130, A:190, E:250};
+    const LANE_Y = {E:70, A:130, D:190, G:250};
     const X_FOR_POS = (p)=> 60 + (p-1)*120;
     const FINGER_OFFSET = {1:15, 2:40, 3:65, 4:90};
     const nodeXY = (s,p,f)=>({ x: X_FOR_POS(p)+FINGER_OFFSET[f], y: LANE_Y[s] });
