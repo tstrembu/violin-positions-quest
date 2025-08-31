@@ -207,7 +207,8 @@
   <!-- Tailwind (utility helpers only) -->
   <!-- Tailwind CDN (config first, then script) -->
   <script>
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       darkMode: 'class',
       theme: { extend: { fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] } } }
     };
