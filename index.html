@@ -775,13 +775,16 @@
                             <div
                               key={f}
                               className="fb-tile"
-                              title={isReal ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${st.total?Math.round((st.correct/st.total)*100):0}%; LB ${st.total?Math.round(style.lb*100):0}%)` : 'Not a valid finger/position'}
-                              aria-label={isReal ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Lower bound ${Math.round(style.lb*100)} percent` : 'Invalid cell'}
-                              style={{
-                                  border: isReal ? '1px solid var(--hairline)' : '1px dashed var(--hairline)',
-                                  background: 'transparent',
-                                  color: isReal ? style.text : 'var(--ink-600)'
-                                }}
+                              title={
+                                isReal
+                                  ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${Math.round(style.acc*100)}%; LB ${Math.round(style.lb*100)}%)`
+                                  : 'Not a valid finger/position'
+                              }
+                              aria-label={
+                                isReal
+                                  ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Accuracy ${Math.round(style.acc*100)} percent. Lower bound ${Math.round(style.lb*100)} percent.`
+                                  : 'Invalid cell'
+                              }
                             >
                               <div style={{ fontWeight:600 }}>F{f}</div>
                               <div className="text-xs">
