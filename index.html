@@ -671,7 +671,7 @@
     ========================================================== */
     const HELP = {
       speed: "Speed Ladder: you’ll see a prompt like “G string — 2nd Position, 3rd Finger”. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
-      speedBase: "Speed Ladder — Core: same game, but only the base note in each cell (no low/high). Use this to cement the map before tackling the full ladder.",
+      speed-base: "Speed Ladder — Core: same game, but only the base note in each cell (no low/high). Use this to cement the map before tackling the full ladder.",
       cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is at a given string/position/finger?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
       bingo: "Positions Bingo: a 5×5 practice board with violin tasks. Mark squares as you complete them. The center is FREE. Press R to reshuffle the board.",
       dice: "Dice of Destiny: press Roll for a focused practice challenge. The dice avoids repeats until the set cycles. Copy your challenge to notes if you like.",
@@ -2087,7 +2087,70 @@
       const [theme, setThemeState] = useState(getTheme());
       const [updateReady,setUpdateReady]=useState(false);
       const [accent, setAccent] = useState(getAccent());
-
+      
+      // near your other keys
+      const CARD_ORDER_KEY = 'positionsQuest.dashboard.order.v1';
+      
+      // define a registry of cards in one place
+      const CARD_REGISTRY = {
+        speed:      { title:"Speed Ladder",          desc:"Full ladder.",        open:()=>go('speed'),      help:'speed' },
+        speed-base:  { title:"Speed Ladder — Core",   desc:"Base notes only.",    open:()=>go('speed-base'), help:'speed-base' },
+        flash:      { title:"Flashcards",            desc:"Study & recall.",     open:()=>go('flash'),      help:'cards' },
+        bingo:      { title:"Positions Bingo",       desc:"5×5 practice board.", open:()=>go('bingo') },
+        dice:       { title:"Dice of Destiny",       desc:"Random focused task.",open:()=>go('dice') },
+        tempoT:     { title:"Tempo Trainer",         desc:"Flashcards for tempi.",open:()=>go('tempo-trainer'), help:'tempoTrainer' },
+        tempoQ:     { title:"Tempo Tester",          desc:"Timed MCQ.",          open:()=>go('tempo-tester'), help:'tempoTester' },
+        height:     { title:"Finger Height Drill",   desc:"Low vs High.",        open:()=>go('height'),     help:'height' },
+        locator:    { title:"Note Locator",          desc:"Find all spots.",     open:()=>go('locator'),    help:'locator' },
+        shift:      { title:"Shift Coach",           desc:"Best landing spot.",  open:()=>go('shift'),      help:'shift' },
+        harmonics:  { title:"Harmonics Lab",         desc:"Nodes & quiz.",       open:()=>go('harmonics'),  help:'harmonics' },
+        bieler:     { title:"Bieler Method Lab",     desc:"Concepts & apps.",    open:()=>go('bieler'),     help:'bielerLab' },
+      };
+      
+      // default order for first run
+      const DEFAULT_CARD_ORDER = [
+        'speed-base','speed','flash','bingo','dice',
+        'tempoT','tempoQ','height','locator','shift','harmonics','bieler'
+      ];
+      
+      const loadOrder = () => {
+        try { return JSON.parse(localStorage.getItem(CARD_ORDER_KEY)) || DEFAULT_CARD_ORDER; }
+        catch { return DEFAULT_CARD_ORDER; }
+      };
+      const saveOrder = (order) => { try { localStorage.setItem(CARD_ORDER_KEY, JSON.stringify(order)); } catch {} };
+      
+      // inside Dashboard component state:
+      const [order, setOrder] = React.useState(loadOrder());
+      
+      // helpers to move items without drag&drop
+      const move = (id, dir) => {
+        setOrder(prev => {
+          const i = prev.indexOf(id); if (i < 0) return prev;
+          const j = Math.max(0, Math.min(prev.length - 1, i + dir));
+          if (i === j) return prev;
+          const nx = [...prev]; const [it] = nx.splice(i, 1); nx.splice(j, 0, it);
+          saveOrder(nx);
+          return nx;
+        });
+      };
+      
+      // render
+      useEffect(() => {
+        const all = Object.keys(CARD_REGISTRY);
+        setOrder(prev => {
+          // keep only known ids, then append any new ones at the end
+          const merged = [
+            ...prev.filter(id => all.includes(id)),
+            ...all.filter(id => !prev.includes(id))
+          ];
+          if (merged.join('|') !== prev.join('|')) {
+            saveOrder(merged);
+            return merged;
+          }
+          return prev;
+        });
+      }, []);
+      
       // Backup & Restore
       const backup = () => {
         const payload = {
@@ -2215,7 +2278,7 @@
 
           <div className="grid-cards">
             <CardButton title="Speed Ladder" description="Adaptive fingerboard quiz (Pos 1–5). Coach + retries." onClick={()=>go('speed')} onHelp={()=>setHelpKey('speed')} />
-            <CardButton title="Speed Ladder — Core" description="Base note only (no low/high). Great first step." onClick={()=>go('speedBase')} onHelp={()=>setHelpKey('speedBase')} />
+            <CardButton title="Speed Ladder — Core" description="Base note only (no low/high). Great first step." onClick={()=>go('speed-base')} onHelp={()=>setHelpKey('speed-base')} />
             <CardButton title="Finger Height Drill" description="Low vs High fingers for intonation." onClick={()=>go('height')} onHelp={() => setHelpKey('height')} />
             <CardButton title="Note Locator" description="Pick a valid string/position/finger for a pitch." onClick={()=>go('locator')} onHelp={()=>setHelpKey('locator')} />
             <CardButton title="Shift Coach" description="Choose efficient shifts on one string." onClick={()=>go('shift')} onHelp={() => setHelpKey('shift')} />
@@ -2323,7 +2386,7 @@
 
       // Route table
       if (route==='speed')        return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} />;
-      if (route==='speedBase')     return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
+      if (route==='speed-base')     return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
       if (route==='cards')         return <Flashcards onBack={onBack} />;
       if (route==='bingo')        return <BingoBoard onBack={onBack} />;
       if (route==='dice')         return <DiceOfDestinyGame onBack={onBack} />;
