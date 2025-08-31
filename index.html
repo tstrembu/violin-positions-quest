@@ -537,6 +537,11 @@
       return Math.max(0, (centre - adj) / denom);
     };
     const bandFromLB = (lb) => { if (lb < 0.65) return 'red'; if (lb < 0.85) return 'yellow'; return 'green'; };
+    const bandFromAcc = (acc) => {
+      if (acc < 0.65) return 'red';
+      if (acc < 0.85) return 'yellow';
+      return 'green';
+    };
     const SWATCH = { red:[239,68,68], yellow:[245,158,11], green:[16,185,129], gray:[120,120,120] };
     const rgba = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
     const stabilityAlpha = (n) => { if (!n) return 0.18; const t = Math.min(1, Math.log10(n + 1) / Math.log10(50)); return 0.35 + 0.65 * t; };
@@ -790,8 +795,8 @@
                               <div className="text-xs">
                                 {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
                               </div>
-                              <div className="fb-band fb-band--acc" style={{ background: accColor }} />
-                               <div className="fb-band fb-band--lb"  style={{ background: lbColor  }} />
+                              <div className="fb-band fb-band--acc" style={{ background: style.bandColorAcc }} />
+                               <div className="fb-band fb-band--lb"  style={{ background: style.bandColorLB  }} />
                             </div>
                           );
                         })}
