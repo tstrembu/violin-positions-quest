@@ -2092,18 +2092,18 @@
       
       // Dashboard card registry (consistent keys + routes)
       const CARD_REGISTRY = {
-        'speed':       { title:"Speed Ladder",            desc:"Full ladder.",                open:()=>go('speed'),        help:'speed' },
-        'speed-base':  { title:"Speed Ladder — Core",     desc:"Base notes only.",            open:()=>go('speed-base'),   help:'speed-base' },
-        'flash':       { title:"Flashcards",              desc:"Study & recall.",             open:()=>go('flash'),        help:'cards' },
-        'bingo':       { title:"Positions Bingo",         desc:"5×5 practice board.",         open:()=>go('bingo') },
-        'dice':        { title:"Dice of Destiny",         desc:"Random focused task.",        open:()=>go('dice') },
-        'tempo-trainer': { title:"Tempo Trainer",         desc:"Flashcards for tempi.",       open:()=>go('tempo-trainer'), help:'tempoTrainer' },
-        'tempo-tester':  { title:"Tempo Tester",          desc:"Timed MCQ.",                  open:()=>go('tempo-tester'),  help:'tempoTester' },
-        'height':      { title:"Finger Height Drill",     desc:"Low vs High.",                open:()=>go('height'),       help:'height' },
-        'locator':     { title:"Note Locator",            desc:"Find all spots.",             open:()=>go('locator'),      help:'locator' },
-        'shift':       { title:"Shift Coach",             desc:"Best landing spot.",          open:()=>go('shift'),        help:'shift' },
-        'harmonics':   { title:"Harmonics Lab",           desc:"Nodes & quiz.",               open:()=>go('harmonics'),    help:'harmonics' },
-        'bieler':      { title:"Bieler Method Lab",       desc:"Concepts & apps.",            open:()=>go('bieler'),       help:'bielerLab' },
+        'speed':         { title:"Speed Ladder",            desc:"Full ladder.",                open:()=>go('speed'),          help:'speed' },
+        'speed-base':    { title:"Speed Ladder — Core",     desc:"Base notes only.",            open:()=>go('speed-base'),     help:'speed-base' },
+        'flash':         { title:"Flashcards",              desc:"Study & recall.",             open:()=>go('flash'),          help:'cards' },
+        'bingo':         { title:"Positions Bingo",         desc:"5×5 practice board.",         open:()=>go('bingo') },
+        'dice':          { title:"Dice of Destiny",         desc:"Random focused task.",        open:()=>go('dice') },
+        'tempo-trainer': { title:"Tempo Trainer",           desc:"Flashcards for tempi.",       open:()=>go('tempo-trainer'),  help:'tempoTrainer' },
+        'tempo-tester':  { title:"Tempo Tester",            desc:"Timed MCQ.",                  open:()=>go('tempo-tester'),   help:'tempoTester' },
+        'height':        { title:"Finger Height Drill",     desc:"Low vs High.",                open:()=>go('height'),         help:'height' },
+        'locator':       { title:"Note Locator",            desc:"Find all spots.",             open:()=>go('locator'),        help:'locator' },
+        'shift':         { title:"Shift Coach",             desc:"Best landing spot.",          open:()=>go('shift'),          help:'shift' },
+        'harmonics':     { title:"Harmonics Lab",           desc:"Nodes & quiz.",               open:()=>go('harmonics'),      help:'harmonics' },
+        'bieler':        { title:"Bieler Method Lab",       desc:"Concepts & apps.",            open:()=>go('bieler'),         help:'bielerLab' },
       };
       
       // First-run default order (keys above)
@@ -2112,25 +2112,24 @@
         'tempo-trainer','tempo-tester','height','locator','shift','harmonics','bieler'
       ];
       
-      const loadOrder = () => {
-        try { return JSON.parse(localStorage.getItem(CARD_ORDER_KEY)) || DEFAULT_CARD_ORDER; }
-        catch { return DEFAULT_CARD_ORDER; }
-      };
-      const saveOrder = (order) => { try { localStorage.setItem(CARD_ORDER_KEY, JSON.stringify(order)); } catch {} };
+      // Load/save order so the grid renders immediately even on a fresh profile
+      const CARD_ORDER_KEY = 'positionsQuest.dashboard.order.v1';
+      const [order, setOrder] = React.useState(() => {
+        const saved = loadJSON(CARD_ORDER_KEY, null);
+        return Array.isArray(saved) && saved.length ? saved : DEFAULT_CARD_ORDER;
+      });
+      const saveOrder = (arr) => saveJSON(CARD_ORDER_KEY, arr);
       
-      // inside Dashboard component state:
-      const [order, setOrder] = useState(loadOrder());
-      const [order, setOrder] = React.useState(loadOrder());
-      
-      // helpers to move items without drag&drop
+      // Small helpers to reorder
       const move = (id, dir) => {
         setOrder(prev => {
-          const i = prev.indexOf(id); if (i < 0) return prev;
-          const j = Math.max(0, Math.min(prev.length - 1, i + dir));
-          if (i === j) return prev;
-          const nx = [...prev]; const [it] = nx.splice(i, 1); nx.splice(j, 0, it);
-          saveOrder(nx);
-          return nx;
+          const ix = prev.indexOf(id); if (ix < 0) return prev;
+          const j = Math.max(0, Math.min(prev.length-1, ix + dir));
+          const next = [...prev];
+          const [it] = next.splice(ix,1);
+          next.splice(j,0,it);
+          saveOrder(next);
+          return next;
         });
       };
       
@@ -2303,7 +2302,6 @@
                   onClick={c.open}
                   onHelp={c.help ? ()=>setHelpKey(c.help) : undefined}
                 />
-                {/* optional tiny reorder controls */}
                 <div className="absolute right-3 top-3 flex gap-1">
                   <button className="pill" onClick={()=>move(id,-1)} title="Move up">↑</button>
                   <button className="pill" onClick={()=>move(id, 1)} title="Move down">↓</button>
@@ -2312,6 +2310,10 @@
             );
           })}
         </div>
+        
+        <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How it works">
+          {HELP[helpKey] || 'No help available for this card yet.'}
+        </Modal>
 
           <div className="grid lg:grid-cols-3 gap-4 mt-6">
             <div className="lg:col-span-2">
