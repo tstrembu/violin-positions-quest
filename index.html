@@ -805,9 +805,11 @@
         </div>
 
         <p className="text-xs muted mt-2">
-          Legend — <b>Gray:</b> unseen · <span style={{color:'#ef4444',fontWeight:600}}>Red:</span> needs work (<i>LB</i>&lt;65%)
-          · <span style={{color:'#f59e0b',fontWeight:600}}>Yellow:</span> developing (65–85%)
-          · <span style={{color:'#10b981',fontWeight:600}}>Green:</span> strong (≥85%). Bands use the 95% Wilson lower confidence bound; opacity increases with attempts.
+          Each tile shows <b>two mini bands</b>: top = <b>Accuracy</b> (your current %), bottom = <b>Confidence</b> (95% Wilson <i>LB</i>).
+          Colors: <span style={{color:'#ef4444',fontWeight:600}}>Red</span> &lt;65% ·
+          <span style={{color:'#f59e0b',fontWeight:600}}> Yellow</span> 65–85% ·
+          <span style={{color:'#10b981',fontWeight:600}}> Green</span> ≥85%.
+          Opacity increases with attempts.
         </p>
       </div>
     );
