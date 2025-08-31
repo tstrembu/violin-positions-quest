@@ -184,8 +184,6 @@
     .xpbar { height:10px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden; }
     .xpbar-fill { height:100%; background:var(--accent); }
     
-    /* Make each position panel able to hold an overlay chip */
-    .fb-pos { position: relative; }
     .fb-pos{
       flex: 0 0 var(--posw);
       min-width: var(--posw);
@@ -1538,13 +1536,12 @@
       setMicroHint('');
       setQuestion({
         ...c,
+        valid: baseOnly ? baseNamesFor(c.s, c.p, c.f) : c.valid,
         correct,
         options: opts,
         ts: performance.now(),
         sm2Key: (c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}`)
       });
-      speak(fullLoc(c.s, c.p, c.f));
-    };
 
       useEffect(()=>{ newQuestion(); }, []);
       useEffect(()=>{
