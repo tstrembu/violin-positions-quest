@@ -1537,12 +1537,12 @@
 
       const weightedPick = () => {
         if (!prefs.adaptive) return getRandomItem(candidates);
-        const entries = candidates.map(c=>{
-          const k = `${c.s}:${c.p}:${c.f}`; const st = stats[k]; const total = st?.total ?? 0; const correct = st?.correct ?? 0;
-          const acc = total > 0 ? correct/total : 0; const unseenBoost = total===0 ? .6 : 0;
-          let weight = .1 + (1-acc) + unseenBoost;
-          if (prefs.coach) weight *= 1 + (1-acc);
-          return { combo:c, weight: Math.max(.05, weight) };
+        const entries = candidates.map(c => {
+          const k = `${c.s}:${c.p}:${c.f}`;
+          const st = stats[k] || {correct:0,total:0};
+          const lb = wilsonLowerBound(st.correct, st.total || 0);
+          const unseen = st.total ? 0 : 0.6;
+          return { combo: c, weight: Math.max(0.05, (1 - lb) + unseen) };
         });
         if (prefs.coach && prefs.coachRetry && lastMissRef.current){
           const miss = lastMissRef.current;
