@@ -987,15 +987,9 @@
         speak(correct.it);
       };
 
-      const pushSession = (mode, correct, total) => {
-        // log session (tag base vs full)
+      const pushSession = (correct, total) => {
         const log = loadJSON(SESSIONLOG_KEY, []);
-        log.push({
-          mode: baseOnly ? 'speed-base' : 'speed',
-          date: nowISO(),
-          correct: score,
-          total: answered
-        });
+        log.push({ mode: 'tempo', date: nowISO(), correct, total });
         saveJSON(SESSIONLOG_KEY, log);
       };
 
@@ -1562,7 +1556,12 @@
             setBestScore(bs); setBestStreak(bk); saveBest({ bestScore:bs, bestStreak:bk });
             // log session
             const log = loadJSON(SESSIONLOG_KEY, []);
-            log.push({ mode:'speed', date: nowISO(), correct: score, total: answered });
+            log.push({
+              mode: baseOnly ? 'speed-base' : 'speed',
+              date: nowISO(),
+              correct: score,
+              total: answered
+            });
             saveJSON(SESSIONLOG_KEY, log);
             checkAwardBadges();
             return 0;
