@@ -2409,8 +2409,17 @@
         case 'locator':     return <NoteLocator onBack={back} prefs={prefs} />;
         case 'shift':       return <ShiftCoach onBack={back} prefs={prefs} />;
         case 'harmonics':   return <HarmonicsLab onBack={back} prefs={prefs} />;
+        // inside App()'s render switch, default case:
         default:
           return (
+            <Dashboard
+              go={go}
+              prefs={prefs}
+              setPrefs={setPrefs}
+              stats={stats}
+              setStats={setStats}
+            />
+          );
             <div className="p-4 max-w-6xl mx-auto">
               <ScoreHeader />
               <div className="grid-cards">
