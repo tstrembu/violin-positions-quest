@@ -2358,35 +2358,117 @@
     /* =========================================================
        App router + mount
     ========================================================== */
+    // Router helpers
     const App = () => {
-      const [route, setRoute] = useState('home');
-      const [prefs, setPrefs] = useState(loadPrefs());
-      const [stats, setStats] = useState(loadStats());
+      const [view, setView] = React.useState('home');
     
-      const go = (r) => setRoute(r);
-      const back = () => setRoute('home');
+      // global stats & prefs live here so games share them
+      const [prefs, setPrefs] = React.useState(loadPrefs());
+      const [stats, setStats] = React.useState(loadStats());
     
-      const screens = {
-        home:           () => <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />,
-        speed:          () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="full" />,
-        'speed-base':   () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="base" />,
-        flash:          () => <Flashcards onBack={back} />,
-        bingo:          () => <BingoBoard onBack={back} />,
-        dice:           () => <DiceOfDestinyGame onBack={back} />,
-        'tempo-trainer':() => <TempoTrainer onBack={back} prefs={prefs} />,
-        'tempo-tester': () => <TempoTester onBack={back} prefs={prefs} />,
-        height:         () => <HeightDrill onBack={back} prefs={prefs} />,
-        locator:        () => <NoteLocator onBack={back} prefs={prefs} />,
-        shift:          () => <ShiftCoach onBack={back} prefs={prefs} />,
-        harmonics:      () => <HarmonicsLab onBack={back} prefs={prefs} />,
-        bieler:         () => <BielerLab onBack={back} />,
+      const go = (name) => setView(name);
+    
+      const resetAllStats = () => {
+        saveStats({});
+        saveTempoStats({});
+        saveJSON(HEIGHT_STATS_KEY, {});
+        saveJSON(LOCATOR_STATS_KEY, {});
+        saveJSON(SHIFT_STATS_KEY, {});
+        saveJSON(HARM_STATS_KEY, {});
+        setStats({});
       };
     
-      const Screen = screens[route] || screens.home;
-      return <Screen />;
+      const exportCSV = () => {
+        const rows = [['key','correct','total']];
+        const s = loadStats();
+        Object.entries(s).forEach(([k,v]) => rows.push([k, v.correct||0, v.total||0]));
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `vpq-stats-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+    
+      const CARD_REGISTRY = {
+        speed:           { title: "Speed Ladder",         desc: "Full ladder.",            open: () => go('speed'),         help: 'speed' },
+        'speed-base':    { title: "Speed Ladder — Core",  desc: "Base notes only.",        open: () => go('speed-base'),    help: 'speed-base' },
+        flash:           { title: "Flashcards",           desc: "Study & recall.",         open: () => go('flash'),         help: 'cards' },
+        bingo:           { title: "Positions Bingo",      desc: "5×5 practice board.",     open: () => go('bingo') },
+        dice:            { title: "Dice of Destiny",      desc: "Random focused task.",    open: () => go('dice') },
+        'tempo-trainer': { title: "Tempo Trainer",        desc: "Flashcards for tempi.",   open: () => go('tempo-trainer'), help: 'tempoTrainer' },
+        'tempo-tester':  { title: "Tempo Tester",         desc: "Timed MCQ.",              open: () => go('tempo-tester'),  help: 'tempoTester' },
+        height:          { title: "Finger Height Drill",  desc: "Low vs High.",            open: () => go('height'),        help: 'height' },
+        locator:         { title: "Note Locator",         desc: "Find valid locations.",    open: () => go('locator'),       help: 'locator' },
+        shift:           { title: "Shift Coach",          desc: "Choose the landing.",      open: () => go('shift'),         help: 'shift' },
+        harmonics:       { title: "Harmonics Lab",        desc: "Nodes & quick quiz.",      open: () => go('harmonics'),     help: 'harmonics' },
+        bielerLab:       { title: "Bieler Method Lab",    desc: "Concepts & applications.", open: () => go('bielerLab'),     help: 'bielerLab' },
+      };
+    
+      const DashboardShell = () => (
+        <div className="p-4 max-w-6xl mx-auto">
+          <ScoreHeader />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 grid-cards">
+              {Object.entries(CARD_REGISTRY).map(([key, cfg]) => (
+                <CardButton
+                  key={key}
+                  title={cfg.title}
+                  description={cfg.desc}
+                  onClick={cfg.open}
+                  onHelp={() => alert(HELP[cfg.help] || 'No help for this card yet.')}
+                />
+              ))}
+            </div>
+            <div className="grid gap-4">
+              <FiltersPanel
+                prefs={prefs}
+                setPrefs={setPrefs}
+                stats={stats}
+                onResetStats={resetAllStats}
+                onExportCSV={exportCSV}
+              />
+              <WeakestThreePanel stats={stats} onDrill={(s,p,f)=>{ setPrefs(pv => {
+                const nf = { ...pv.filters };
+                nf.strings = Object.fromEntries(STRINGS.map(x => [x, x===s]));
+                nf.positions = Object.fromEntries(POSITIONS.map(x => [x, x===p]));
+                nf.fingers = Object.fromEntries(FINGERS.map(x => [x, x===f]));
+                const nx = { ...pv, filters: nf };
+                savePrefs(nx);
+                return nx;
+              }); go('speed'); }} />
+              <AvatarCustomizer />
+              <BadgesPanel />
+            </div>
+          </div>
+    
+          <div className="mt-6">
+            <AccuracyHeatmap stats={loadStats()} />
+          </div>
+        </div>
+      );
+    
+      if (view === 'speed')       return <SpeedLadderGame onBack={()=>go('home')} prefs={prefs} stats={stats} setStats={setStats} mode="full" />;
+      if (view === 'speed-base')  return <SpeedLadderGame onBack={()=>go('home')} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
+      if (view === 'flash')       return <Flashcards onBack={()=>go('home')} />;
+      if (view === 'bingo')       return <BingoBoard onBack={()=>go('home')} />;
+      if (view === 'dice')        return <DiceOfDestinyGame onBack={()=>go('home')} />;
+      if (view === 'tempo-trainer') return <TempoTrainer onBack={()=>go('home')} prefs={prefs} />;
+      if (view === 'tempo-tester')  return <TempoTester onBack={()=>go('home')} prefs={prefs} />;
+      if (view === 'height')      return <HeightDrill onBack={()=>go('home')} prefs={prefs} />;
+      if (view === 'locator')     return <NoteLocator onBack={()=>go('home')} prefs={prefs} />;
+      if (view === 'shift')       return <ShiftCoach onBack={()=>go('home')} prefs={prefs} />;
+      if (view === 'harmonics')   return <HarmonicsLab onBack={()=>go('home')} prefs={prefs} />;
+      if (view === 'bielerLab')   return <BielerLab onBack={()=>go('home')} />;
+    
+      return <DashboardShell />;
     };
     
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    // Mount
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
