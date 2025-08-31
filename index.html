@@ -1550,6 +1550,9 @@
       });
     };
       useEffect(()=>{ newQuestion(); }, []);
+      useEffect(() => {
+        if (!finished) setTimer(prefs.roundLen || 120);
+      }, [prefs.roundLen, finished]);
       useEffect(()=>{
         if (finished) return;
         const id = setInterval(()=>setTimer(t=>{
