@@ -158,6 +158,9 @@
       left: 6px; right: 6px; bottom: 6px;
       height: 10px; border-radius: 6px;
     }
+    /* dual bands: top = Accuracy, bottom = Confidence (LB) */
+    .fb-band--acc { bottom: 16px; height: 6px; border-radius: 6px; }
+    .fb-band--lb  { bottom: 6px;  height: 6px; border-radius: 6px; }
     @media (min-width: 1024px){
       .fb-strip{
         display: grid;
@@ -540,12 +543,33 @@
     const evidenceStyle = (st) => {
       const correct = st?.correct || 0, total = st?.total || 0;
       if (!total) {
-        return { bandColor: rgba(SWATCH.gray, 0.45), bg:'transparent', text:'var(--ink-600)', lb:0, acc:0, total };
+        return {
+          // unchanged empty-state styling
+          bandColorLB:  rgba(SWATCH.gray, 0.45),
+          bandColorAcc: rgba(SWATCH.gray, 0.45),
+          bg: 'transparent',
+          text: 'var(--ink-600)',
+          lb: 0,
+          acc: 0,
+          total: 0,
+          bandLB: 'gray',
+          bandAcc: 'gray'
+        };
       }
-      const lb = wilsonLowerBound(correct, total);
-      const band = bandFromLB(lb);
-      const alpha = stabilityAlpha(total);
-      return { bandColor: rgba(SWATCH[band], alpha), bg:'transparent', text:'var(--ink-800)', lb, acc: correct/total, total, band };
+      const acc = correct / total;                 // raw accuracy
+      const lb  = wilsonLowerBound(correct, total); // 95% LB
+      const bandLB  = bandFromLB(lb);
+      const bandAcc = bandFromAcc(acc);
+      const alpha   = stabilityAlpha(total);       // opacity grows with attempts
+    
+      return {
+        bandColorLB:  rgba(SWATCH[bandLB],  alpha),
+        bandColorAcc: rgba(SWATCH[bandAcc], alpha),
+        bg: 'transparent',
+        text: 'var(--ink-800)',
+        lb, acc, total,
+        bandLB, bandAcc
+      };
     };
 
     /* =========================================================
