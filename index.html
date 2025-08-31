@@ -942,6 +942,9 @@
        Shared helpers for fingerboard
     ========================================================== */
     const validCell = (s,p,f) => Array.isArray(NOTES_DATA[s]?.[p]?.[f]) ? NOTES_DATA[s][p][f] : null;
+    // ---- Pitch-class membership helper ----
+    const hasPitch = (cell, note) =>
+      Array.isArray(cell) && cell.some(n => pc(n) === pc(note));
     const allActualCombos = () => {
       const arr = [];
       for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
@@ -951,10 +954,10 @@
       return arr;
     };
     const allLocationsForNote = (note) => {
-      const spots=[];
+      const spots = [];
       for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
-        const cell = validCell(s,p,f);
-        if (cell && cell.includes(note)) spots.push({s,p,f});
+        const cell = validCell(s, p, f);
+        if (hasPitch(cell, note)) spots.push({ s, p, f });
       }
       return spots;
     };
@@ -1252,7 +1255,7 @@
         const correct = getRandomItem(correctLocs);
         const wrongPool = allActualCombos().filter(c => {
           const cell = validCell(c.s, c.p, c.f) || [];
-          return !cell.includes(note);
+          return !hasPitch(cell, note);
         });
         const nearby = wrongPool.filter(c => c.s===correct.s || c.p===correct.p || c.f===correct.f);
         const fillers = nearby.length >= 3 ? nearby : wrongPool;
