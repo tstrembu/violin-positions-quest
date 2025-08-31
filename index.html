@@ -669,7 +669,7 @@
     ========================================================== */
     const HELP = {
       speed: "Speed Ladder: you’ll see a prompt like “G string — 2nd Position, 3rd Finger”. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
-      speed-base: "Speed Ladder — Core: same game, but only the base note in each cell (no low/high). Use this to cement the map before tackling the full ladder.",
+      speedbase: "Speed Ladder — Core: same game, but only the base note in each cell (no low/high). Use this to cement the map before tackling the full ladder.",
       cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is at a given string/position/finger?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
       bingo: "Positions Bingo: a 5×5 practice board with violin tasks. Mark squares as you complete them. The center is FREE. Press R to reshuffle the board.",
       dice: "Dice of Destiny: press Roll for a focused practice challenge. The dice avoids repeats until the set cycles. Copy your challenge to notes if you like.",
@@ -1560,7 +1560,7 @@
             // log session
             const log = loadJSON(SESSIONLOG_KEY, []);
             log.push({
-              mode: baseOnly ? 'speed-base' : 'speed',
+              mode: baseOnly ? 'speedbase' : 'speed',
               date: nowISO(),
               correct: score,
               total: answered
@@ -2099,7 +2099,7 @@
       // Registry
       const CARD_REGISTRY = {
         speed:           { title: "Speed Ladder",            desc: "Full ladder.",            open: () => go('speed'),         help: 'speed' },
-        'speed-base':    { title: "Speed Ladder — Core",     desc: "Base notes only.",        open: () => go('speed-base'),    help: 'speed-base' },
+        'speedbase':     { title: "Speed Ladder — Core",     desc: "Base notes only.",        open: () => go('speedbase'),     help: 'speedbase' },
         flash:           { title: "Flashcards",              desc: "Study & recall.",         open: () => go('flash'),         help: 'cards' },
         bingo:           { title: "Positions Bingo",         desc: "5×5 practice board.",     open: () => go('bingo') },
         dice:            { title: "Dice of Destiny",         desc: "Random focused task.",    open: () => go('dice') },
@@ -2113,7 +2113,7 @@
       };
     
       const DEFAULT_CARD_ORDER = [
-        'speed-base','speed','flash','bingo','dice',
+        'speedbase','speed','flash','bingo','dice',
         'tempo-trainer','tempo-tester','height','locator','shift','harmonics','bieler'
       ];
       const CARD_ORDER_KEY = 'positionsQuest.dashboard.order.v1';
@@ -2273,7 +2273,7 @@
       };
     
       const sessions = loadJSON(SESSIONLOG_KEY, []);
-      const speedPoints = sessions.filter(s=>s.mode==='speed' || s.mode==='speed-base').slice(-20).map(s=> (s.total? s.correct/s.total : 0.0));
+      const speedPoints = sessions.filter(s=>s.mode==='speed' || s.mode==='speedbase').slice(-20).map(s=> (s.total? s.correct/s.total : 0.0));
       const tempoPoints = sessions.filter(s=>s.mode==='tempo').slice(-20).map(s=> (s.total? s.correct/s.total : 0.0));
     
       return (
@@ -2406,7 +2406,7 @@
     
       const CARD_REGISTRY = {
         speed:           { title: "Speed Ladder",         desc: "Full ladder.",            open: () => go('speed'),         help: 'speed' },
-        'speed-base':    { title: "Speed Ladder — Core",  desc: "Base notes only.",        open: () => go('speed-base'),    help: 'speed-base' },
+        'speedbase':     { title: "Speed Ladder — Core",  desc: "Base notes only.",        open: () => go('speedbase'),     help: 'speedbase' },
         flash:           { title: "Flashcards",           desc: "Study & recall.",         open: () => go('flash'),         help: 'cards' },
         bingo:           { title: "Positions Bingo",      desc: "5×5 practice board.",     open: () => go('bingo') },
         dice:            { title: "Dice of Destiny",      desc: "Random focused task.",    open: () => go('dice') },
@@ -2463,7 +2463,7 @@
       );
     
       if (view === 'speed')       return <SpeedLadderGame onBack={()=>go('home')} prefs={prefs} stats={stats} setStats={setStats} mode="full" />;
-      if (view === 'speed-base')  return <SpeedLadderGame onBack={()=>go('home')} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
+      if (view === 'speedbase')   return <SpeedLadderGame onBack={()=>go('home')} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
       if (view === 'flash')       return <Flashcards onBack={()=>go('home')} />;
       if (view === 'bingo')       return <BingoBoard onBack={()=>go('home')} />;
       if (view === 'dice')        return <DiceOfDestinyGame onBack={()=>go('home')} />;
