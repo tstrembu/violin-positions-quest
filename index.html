@@ -2353,45 +2353,46 @@
        Error Boundary (runtime guard)
     ========================================================== */
     class ErrorBoundary extends React.Component {
-      constructor(props){
-        super(props);
-        this.state = { hasError: false, err: null, info: null };
-      }
-      static getDerivedStateFromError(err){
-        return { hasError: true, err };
-      }
-      componentDidCatch(err, info){
-        console.error('App error:', err, info);
-        try { localStorage.setItem('vpq.lastError', String(err)); } catch {}
-      }
-      handleReset = () => this.setState({ hasError:false, err:null, info:null });
-    
+      constructor(props){ super(props); this.state = { hasError:false, error:null }; }
+      static getDerivedStateFromError(error){ return { hasError:true, error }; }
+      componentDidCatch(error, info){ console.error('App crashed:', error, info); }
       render(){
-        if (!this.state.hasError) return this.props.children;
-    
-        const message = this.state.err?.message || String(this.state.err || 'Unknown error');
-        const stack   = this.state.err?.stack || '';
-    
-        return (
-          <div className="p-6">
-            <div className="card rounded-xl p-6">
-              <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-              <p className="muted text-sm mb-3">{message}</p>
-    
-              <details className="text-xs muted mb-4">
-                <summary>Details</summary>
-                <pre style={{ whiteSpace:'pre-wrap' }}>{stack}</pre>
-              </details>
-    
-              <div className="flex gap-2">
-                <button className="btn btn-purple" onClick={() => location.reload()}>Reload App</button>
-                <button className="btn btn-gray" onClick={this.handleReset}>Try Again</button>
-              </div>
+        if (this.state.hasError){
+          return (
+            <div className="card rounded-xl p-6 m-4">
+              <div className="text-xl font-bold mb-2">Something went wrong.</div>
+              <pre style={{whiteSpace:'pre-wrap'}}>{String(this.state.error)}</pre>
             </div>
-          </div>
-        );
+          );
+        }
+        return this.props.children;
       }
     }
+    
+    // --- Boot (mount React) ---
+    (() => {
+      const rootEl = document.getElementById('root');
+      const createRoot =
+        (window.ReactDOM && window.ReactDOM.createRoot) ||
+        (window.ReactDOMClient && window.ReactDOMClient.createRoot);
+    
+      if (!rootEl) { console.error('#root not found'); return; }
+      if (!createRoot) {
+        console.error('createRoot not found. Make sure react-dom@18 UMD is loaded.');
+        return;
+      }
+    
+      // If App isn't defined yet, show a clear placeholder so you notice
+      const RootApp = (typeof window.App === 'function' ? window.App :
+                       (typeof App === 'function' ? App :
+                        () => <div style={{padding:20}}>App is not defined.</div>));
+    
+      createRoot(rootEl).render(
+        <ErrorBoundary>
+          <RootApp />
+        </ErrorBoundary>
+      );
+    })();
 
     /* =========================================================
        Root App (routing + state)
