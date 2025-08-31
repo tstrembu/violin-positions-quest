@@ -2482,5 +2482,34 @@
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
+  <script>
+  (function () {
+    if (!('serviceWorker' in navigator)) return;
+
+    // If your site is at /violin-positions-quest/, leave this as-is.
+    // If your site is at the domain root (custom domain or user site), use '' instead.
+    const base = '/violin-positions-quest';
+
+    navigator.serviceWorker.register(base + '/sw.js').then(reg => {
+      // Auto-activate a newly installed worker
+      if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && reg.waiting) {
+            reg.waiting.postMessage('SKIP_WAITING');
+          }
+        });
+      });
+
+      // Reload the page when the new SW takes control
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
+    });
+  })();
+</script>
 </body>
 </html>
