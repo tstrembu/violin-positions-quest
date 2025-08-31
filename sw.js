@@ -41,34 +41,70 @@ self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE);
-      // If any file 404s, addAll would reject and skip everything.
-      // These adds run individually so one flaky file won't block install.
-      await Promise.all(
-        APP_SHELL.map((u) =>
-          cache.add(u).catch(() => {
-            /* ignore failures (e.g., optional 404.html) */
-          })
-        )
-      );
-    })()
-  );
-
-  // Move to "waiting" immediately; we'll claim on activate.
-  self.skipWaiting();
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    // Optional: speed first load after update
+    if ('navigationPreload' in self.registration) {
+      try { await self.registration.navigationPreload.enable(); } catch {}
+    }
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : undefined)));
+    await self.clients.claim();
+  })());
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : undefined)));
-      await self.clients.claim();
-    })()
-  );
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+
+  // Ignore non-GET early
+  if (req.method !== 'GET') return;
+
+  // Avoid caching byte-range requests
+  if (req.headers.has('range')) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  // 1) HTML navigations: network-first with preload + fallback
+  if (req.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const preload = await event.preloadResponse;
+        const live = preload || await fetch(req);
+        const cache = await caches.open(CACHE);
+        cache.put(INDEX_URL, live.clone()).catch(() => {});
+        return live;
+      } catch {
+        const offline = await caches.match(INDEX_URL, { ignoreSearch: true });
+        return offline || new Response('Offline', { status: 503, statusText: 'Offline' });
+      }
+    })());
+    return;
+  }
+
+  // 2) Everything else: cache-first, with conservative write-through
+  event.respondWith((async () => {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(req);
+
+      if (!res || !res.ok || !isRuntimeAllowed(req.url)) return res;
+
+      // Don’t cache explicit no-store responses
+      const cc = res.headers.get('Cache-Control') || '';
+      if (/\bno-store\b/i.test(cc)) return res;
+
+      const copy = res.clone();
+      const cache = await caches.open(CACHE);
+      cache.put(req, copy).catch(() => {});
+      return res;
+    } catch {
+      const stale = await caches.match(req);
+      return stale || Response.error();
+    }
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
