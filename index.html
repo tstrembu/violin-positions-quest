@@ -2369,38 +2369,38 @@
       );
     };
     
-/* =========================================================
-   App router + mount
-========================================================== */
-const App = () => {
-  const [route, setRoute] = useState('home');
-  const [prefs, setPrefs] = useState(loadPrefs());
-  const [stats, setStats] = useState(loadStats());
-
-  const go = (r) => setRoute(r);
-  const back = () => setRoute('home');
-
-  const screens = {
-    home:           () => <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />,
-    speed:          () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="full" />,
-    'speed-base':   () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="base" />,
-    flash:          () => <Flashcards onBack={back} />,
-    bingo:          () => <BingoBoard onBack={back} />,
-    dice:           () => <DiceOfDestinyGame onBack={back} />,
-    'tempo-trainer':() => <TempoTrainer onBack={back} prefs={prefs} />,
-    'tempo-tester': () => <TempoTester onBack={back} prefs={prefs} />,
-    height:         () => <HeightDrill onBack={back} prefs={prefs} />,
-    locator:        () => <NoteLocator onBack={back} prefs={prefs} />,
-    shift:          () => <ShiftCoach onBack={back} prefs={prefs} />,
-    harmonics:      () => <HarmonicsLab onBack={back} prefs={prefs} />,
-    bieler:         () => <BielerLab onBack={back} />,
-  };
-
-  const Screen = screens[route] || screens.home;
-  return <Screen />;
-};
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    /* =========================================================
+       App router + mount
+    ========================================================== */
+    const App = () => {
+      const [route, setRoute] = useState('home');
+      const [prefs, setPrefs] = useState(loadPrefs());
+      const [stats, setStats] = useState(loadStats());
+    
+      const go = (r) => setRoute(r);
+      const back = () => setRoute('home');
+    
+      const screens = {
+        home:           () => <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />,
+        speed:          () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="full" />,
+        'speed-base':   () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="base" />,
+        flash:          () => <Flashcards onBack={back} />,
+        bingo:          () => <BingoBoard onBack={back} />,
+        dice:           () => <DiceOfDestinyGame onBack={back} />,
+        'tempo-trainer':() => <TempoTrainer onBack={back} prefs={prefs} />,
+        'tempo-tester': () => <TempoTester onBack={back} prefs={prefs} />,
+        height:         () => <HeightDrill onBack={back} prefs={prefs} />,
+        locator:        () => <NoteLocator onBack={back} prefs={prefs} />,
+        shift:          () => <ShiftCoach onBack={back} prefs={prefs} />,
+        harmonics:      () => <HarmonicsLab onBack={back} prefs={prefs} />,
+        bieler:         () => <BielerLab onBack={back} />,
+      };
+    
+      const Screen = screens[route] || screens.home;
+      return <Screen />;
+    };
+    
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
