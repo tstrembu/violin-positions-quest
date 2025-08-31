@@ -988,8 +988,14 @@
       };
 
       const pushSession = (mode, correct, total) => {
+        // log session (tag base vs full)
         const log = loadJSON(SESSIONLOG_KEY, []);
-        log.push({ mode, date: nowISO(), correct, total });
+        log.push({
+          mode: baseOnly ? 'speed-base' : 'speed',
+          date: nowISO(),
+          correct: score,
+          total: answered
+        });
         saveJSON(SESSIONLOG_KEY, log);
       };
 
