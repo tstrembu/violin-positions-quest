@@ -205,10 +205,14 @@
   </style>
 
   <!-- Tailwind (utility helpers only) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CDN (config first, then script) -->
   <script>
-    tailwind.config = { darkMode:'class', theme:{ extend:{ fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] } } } };
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] } } }
+    };
   </script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- React 18 UMD + Babel for in-browser JSX -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
