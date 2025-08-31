@@ -283,7 +283,11 @@
     // ASCII accidental normalizer for display
     const NORM = {'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb','C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#'};
     const norm = n => NORM[n] || n;
-
+    
+    // Pitch-class (enharmonic) helpers
+    const PC = { C:0,'C#':1,Db:1, D:2,'D#':3,Eb:3, E:4, F:5,'F#':6,Gb:6, G:7,'G#':8,Ab:8, A:9,'A#':10,Bb:10, B:11 };
+    const pc = n => PC[(NORM[n] || n)]  // collapse D# and Eb, etc.
+    
     // Label helpers
     const ordinal = n => { const x = Number(n);
       const suf = (x%10===1 && x%100!==11) ? 'st'
@@ -383,14 +387,15 @@
     })();
 
     // Low/High helper
-    const fingerHeight = (note, options) => {
-      if (!Array.isArray(options)) return 'natural';
-      if (options.length <= 1) return 'natural';
-      const [low, high] = [options[0], options[options.length-1]];
-      if (note === low) return 'low';
-      if (note === high) return 'high';
+    function fingerHeight(note, options){
+      if (!Array.isArray(options) || options.length <= 1) return 'natural';
+      const low  = options[0];
+      const high = options[options.length - 1];
+      const k = pc(note);
+      if (k === pc(low))  return 'low';
+      if (k === pc(high)) return 'high';
       return 'natural';
-    };
+    }
 
     // Simple harmonics set per string
     const HARMONICS = {
@@ -411,17 +416,18 @@
     })();
 
     // Distractors avoiding enharmonic duplicates
-    const getRandomDistractors = (correct, count = 3) => {
-      const target = norm(correct);
-      const pool = ALL_NOTES_UNIQUE.filter(n => norm(n) !== target);
-      const picks = []; const seen = new Set([target]);
+    function getRandomDistractors(correct, forbidPCs = [], count = 3){
+      const banned = new Set([pc(correct), ...forbidPCs]);   // block same pitch class + siblings
+      const pool = ALL_NOTES_UNIQUE.filter(n => !banned.has(pc(n)));
+      const picks = [];
+      const seenPC = new Set();
       while (picks.length < Math.min(count, pool.length)) {
-        const n = getRandomItem(pool);
-        const k = norm(n);
-        if (!seen.has(k)) { seen.add(k); picks.push(n); }
+        const cand = getRandomItem(pool);
+        const cls = pc(cand);
+        if (!seenPC.has(cls)) { seenPC.add(cls); picks.push(cand); }
       }
       return picks;
-    };
+    }
 
     /* =========================================================
        Prefs & persistence
@@ -1479,7 +1485,8 @@
       const newQuestion = (preset=null) => {
         const c = preset || weightedPick();
         const correct = c.preferredNote ? c.preferredNote : getRandomItem(c.valid);
-        const opts = shuffle([correct, ...getRandomDistractors(correct, 3)]);
+        const siblingsPCs = (c.valid || []).filter(n => pc(n) !== pc(correct)).map(pc);
+        const opts = shuffle([correct, ...getRandomDistractors(correct, siblingsPCs, 3)]);
         optionsRef.current = opts;
         setMicroHint('');
         setQuestion({ ...c, correct, options: opts, ts: performance.now(), sm2Key: c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}` });
