@@ -987,7 +987,7 @@
         speak(correct.it);
       };
 
-      const pushSession = (correct, total) => {
+      const pushSession = (_mode, correct, total) => {
         const log = loadJSON(SESSIONLOG_KEY, []);
         log.push({ mode: 'tempo', date: nowISO(), correct, total });
         saveJSON(SESSIONLOG_KEY, log);
