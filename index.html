@@ -972,6 +972,18 @@
       return lines.join('  |  ');
     };
 
+    (function pitchClassTests(){
+      const mustFind = [
+        ['D#','Eb'], ['Gb','F#'], ['Cb','B'], ['B#','C'], ['Fb','E'], ['E#','F']
+      ];
+      for (const [a,b] of mustFind){
+        const A = allLocationsForNote(a);
+        const B = allLocationsForNote(b);
+        const same = A.length && B.length && A.some(x => B.some(y => x.s===y.s && x.p===y.p && x.f===y.f));
+        console.log(`${a} ~ ${b}:`, same ? '✓' : '✗');
+      }
+    })();
+
     /* =========================================================
        Games
     ========================================================== */
