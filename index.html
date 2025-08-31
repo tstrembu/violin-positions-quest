@@ -2376,7 +2376,8 @@
        Root App (routing + state)
     ========================================================== */
     const App = () => {
-      const [route, setRoute] = useState(() => (location.hash.replace('#','') || 'home'));
+      const [route, setRoute] = useState(() => (location.hash.replace('#','') || 'dashboard'));
+      const onBack = () => go('dashboard');
       const [prefs, setPrefs] = useState(loadPrefs());
       const [stats, setStats] = useState(loadStats());
 
@@ -2409,23 +2410,22 @@
       },[]);
 
       // Route table
-      if (route==='speed')        return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} />;
-      if (route==='speed-base')     return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
-      if (route==='cards')         return <Flashcards onBack={onBack} />;
-      if (route==='bingo')        return <BingoBoard onBack={onBack} />;
-      if (route==='dice')         return <DiceOfDestinyGame onBack={onBack} />;
-      if (route==='tempoTrainer') return <TempoTrainer onBack={onBack} prefs={prefs} />;
-      if (route==='tempoTester')  return <TempoTester onBack={onBack} prefs={prefs} />;
-      if (route==='bielerLab')    return <BielerLab onBack={onBack} />;
-      if (route==='height')       return <HeightDrill onBack={onBack} prefs={prefs} />;
-      if (route==='locator')      return <NoteLocator onBack={onBack} prefs={prefs} />;
-      if (route==='shift')        return <ShiftCoach onBack={onBack} prefs={prefs} />;
-      if (route==='harmonics')    return <HarmonicsLab onBack={onBack} prefs={prefs} />;
-
-      // Default: Dashboard
+      if (route==='speed')         return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} />;
+      if (route==='speed-base')    return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
+      if (route==='flash')         return <Flashcards onBack={onBack} />;
+      if (route==='bingo')         return <BingoBoard onBack={onBack} />;
+      if (route==='dice')          return <DiceOfDestinyGame onBack={onBack} />;
+      if (route==='tempo-trainer') return <TempoTrainer onBack={onBack} prefs={prefs} />;
+      if (route==='tempo-tester')  return <TempoTester onBack={onBack} prefs={prefs} />;
+      if (route==='bieler')        return <BielerLab onBack={onBack} />;
+      if (route==='height')        return <HeightDrill onBack={onBack} prefs={prefs} />;
+      if (route==='locator')       return <NoteLocator onBack={onBack} prefs={prefs} />;
+      if (route==='shift')         return <ShiftCoach onBack={onBack} prefs={prefs} />;
+      if (route==='harmonics')     return <HarmonicsLab onBack={onBack} prefs={prefs} />;
+      
+      // Default
       return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
-    };
-
+  
     ReactDOM.createRoot(document.getElementById('root')).render(
       <ErrorBoundary><App/></ErrorBoundary>
     );
