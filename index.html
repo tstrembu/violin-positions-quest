@@ -987,28 +987,33 @@
         speak(correct.it);
       };
 
-      const pushSession = (_mode, correct, total) => {
+      // In TempoTester
+      const pushSession = (correct, total) => {
         const log = loadJSON(SESSIONLOG_KEY, []);
         log.push({ mode: 'tempo', date: nowISO(), correct, total });
         saveJSON(SESSIONLOG_KEY, log);
       };
 
-      useEffect(()=>{ setTimer(prefs.roundLen || 60); }, [prefs.roundLen]);
-      useEffect(()=>{ pickQ(); },[]);
-      useEffect(()=>{
+      useEffect(() => {
         if (finished) return;
-        const id = setInterval(()=>setTimer(t=>{
-          if (t<=1){
-            clearInterval(id); setFinished(true);
-            const nb = { bestScore:Math.max(best.bestScore, score), bestStreak:Math.max(best.bestStreak, streak) };
-            setBest(nb); saveTempoBest(nb);
-            pushSession(score, answered);
+        const id = setInterval(() => setTimer(t => {
+          if (t <= 1) {
+            clearInterval(id);
+            setFinished(true);
+            const nb = {
+              bestScore: Math.max(best.bestScore, score),
+              bestStreak: Math.max(best.bestStreak, streak)
+            };
+            setBest(nb);
+            saveTempoBest(nb);
+            pushSession(score, answered);   // <-- correct arg order
             return 0;
           }
-          return t-1;
+          return t - 1;
         }), 1000);
-        return ()=>clearInterval(id);
-      }, [finished, score, streak, best]);
+        return () => clearInterval(id);
+        // include `answered` so the logged total is current
+      }, [finished, score, streak, answered, best]);
 
       const bump = (it, ok) => {
         const st = stats[it] || { correct:0, total:0 };
@@ -2002,11 +2007,17 @@
       );
     };
 
-    const Spark = ({points}) => {
+    const Spark = ({ points }) => {
       if (!points || !points.length) return <div className="muted text-xs">No sessions yet.</div>;
-      const w=240,h=40; const max=Math.max(...points,1);
-      const path=points.map((v,i)=>{const x=i*(w/(points.length-1)); const y=h-(v/max)*h; return `${i?'L':'M'}${x},${y}`;}).join(' ');
-      return <svg width={w} height={h}><path d={path} fill="none" stroke="currentColor" strokeWidth="2"/></svg>;
+      const w = 240, h = 40;
+      const max = Math.max(...points, 1);
+      const denom = Math.max(1, points.length - 1); // <-- fixes divide-by-zero
+      const path = points.map((v, i) => {
+        const x = i * (w / denom);
+        const y = h - (v / max) * h;
+        return `${i ? 'L' : 'M'}${x},${y}`;
+      }).join(' ');
+      return <svg width={w} height={h}><path d={path} fill="none" stroke="currentColor" strokeWidth="2" /></svg>;
     };
 
     const WeakestThreePanel = ({ stats, onDrill }) => {
@@ -2079,7 +2090,7 @@
     };
 
     /* =========================================================
-       Dashboard
+       Dashboard (complete)
     ========================================================== */
     const Dashboard = ({ go, prefs, setPrefs, stats, setStats }) => {
       const [helpKey, setHelpKey] = useState(null);
@@ -2087,37 +2098,34 @@
       const [updateReady, setUpdateReady] = useState(false);
       const [accent, setAccent] = useState(getAccent());
     
-      // Dashboard card registry (consistent keys + routes)
+      // Registry
       const CARD_REGISTRY = {
-        speed:         { title: "Speed Ladder",            desc: "Full ladder.",                  open: () => go('speed'),        help: 'speed' },
-        'speed-base':  { title: "Speed Ladder — Core",     desc: "Base notes only.",              open: () => go('speed-base'),   help: 'speed-base' },
-        flash:         { title: "Flashcards",              desc: "Study & recall.",               open: () => go('flash'),        help: 'cards' },
-        bingo:         { title: "Positions Bingo",         desc: "5×5 practice board.",           open: () => go('bingo') },
-        dice:          { title: "Dice of Destiny",         desc: "Random focused task.",          open: () => go('dice') },
-        'tempo-trainer': { title: "Tempo Trainer",         desc: "Flashcards for tempi.",         open: () => go('tempo-trainer'), help: 'tempoTrainer' },
-        'tempo-tester':  { title: "Tempo Tester",          desc: "Timed MCQ.",                    open: () => go('tempo-tester'),  help: 'tempoTester' },
-        height:        { title: "Finger Height Drill",     desc: "Low vs High.",                  open: () => go('height'),       help: 'height' },
-        locator:       { title: "Note Locator",            desc: "Find all spots.",               open: () => go('locator'),      help: 'locator' },
-        shift:         { title: "Shift Coach",             desc: "Best landing spot.",            open: () => go('shift'),        help: 'shift' },
-        harmonics:     { title: "Harmonics Lab",           desc: "Nodes & quiz.",                 open: () => go('harmonics'),    help: 'harmonics' },
-        bieler:        { title: "Bieler Method Lab",       desc: "Concepts & apps.",              open: () => go('bieler'),       help: 'bielerLab' },
+        speed:           { title: "Speed Ladder",            desc: "Full ladder.",            open: () => go('speed'),         help: 'speed' },
+        'speed-base':    { title: "Speed Ladder — Core",     desc: "Base notes only.",        open: () => go('speed-base'),    help: 'speed-base' },
+        flash:           { title: "Flashcards",              desc: "Study & recall.",         open: () => go('flash'),         help: 'cards' },
+        bingo:           { title: "Positions Bingo",         desc: "5×5 practice board.",     open: () => go('bingo') },
+        dice:            { title: "Dice of Destiny",         desc: "Random focused task.",    open: () => go('dice') },
+        'tempo-trainer': { title: "Tempo Trainer",           desc: "Flashcards for tempi.",   open: () => go('tempo-trainer'), help: 'tempoTrainer' },
+        'tempo-tester':  { title: "Tempo Tester",            desc: "Timed MCQ.",              open: () => go('tempo-tester'),  help: 'tempoTester' },
+        height:          { title: "Finger Height Drill",     desc: "Low vs High.",            open: () => go('height'),        help: 'height' },
+        locator:         { title: "Note Locator",            desc: "Find all spots.",         open: () => go('locator'),       help: 'locator' },
+        shift:           { title: "Shift Coach",             desc: "Best landing spot.",      open: () => go('shift'),         help: 'shift' },
+        harmonics:       { title: "Harmonics Lab",           desc: "Nodes & quiz.",           open: () => go('harmonics'),     help: 'harmonics' },
+        bieler:          { title: "Bieler Method Lab",       desc: "Concepts & apps.",        open: () => go('bieler'),        help: 'bielerLab' },
       };
     
-      // First-run default order
       const DEFAULT_CARD_ORDER = [
         'speed-base','speed','flash','bingo','dice',
         'tempo-trainer','tempo-tester','height','locator','shift','harmonics','bieler'
       ];
-    
-      // Load/save order so the grid renders immediately even on a fresh profile
       const CARD_ORDER_KEY = 'positionsQuest.dashboard.order.v1';
+    
       const [order, setOrder] = useState(() => {
         const saved = loadJSON(CARD_ORDER_KEY, null);
         return Array.isArray(saved) && saved.length ? saved : DEFAULT_CARD_ORDER;
       });
       const saveOrder = (arr) => saveJSON(CARD_ORDER_KEY, arr);
     
-      // Small helpers to reorder
       const move = (id, dir) => {
         setOrder(prev => {
           const ix = prev.indexOf(id); if (ix < 0) return prev;
@@ -2128,10 +2136,10 @@
           saveOrder(next);
           return next;
         });
-        document.getElementById('sr').textContent = 'Card moved';
+        const sr = document.getElementById('sr'); if (sr) sr.textContent = 'Card moved';
       };
     
-      // Ensure order stays in sync with registry (add new cards, drop unknown)
+      // keep order synced with registry
       useEffect(() => {
         const all = Object.keys(CARD_REGISTRY);
         setOrder(prev => {
@@ -2147,27 +2155,27 @@
         });
       }, []);
     
-      // Backup & Restore
+      // Backup & Restore (reuses keys declared earlier)
       const backup = () => {
         const payload = {
           [THEME_KEY]: localStorage.getItem(THEME_KEY) || null,
           [THEME_ACCENT_KEY]: localStorage.getItem(THEME_ACCENT_KEY) || null,
-          [PREFS_KEY]: JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'),
-          [STATS_KEY]: JSON.parse(localStorage.getItem(STATS_KEY) || 'null'),
-          [BEST_KEY]: JSON.parse(localStorage.getItem(BEST_KEY) || 'null'),
-          [TEMPO_STATS_KEY]: JSON.parse(localStorage.getItem(TEMPO_STATS_KEY) || 'null'),
-          [TEMPO_BEST_KEY]: JSON.parse(localStorage.getItem(TEMPO_BEST_KEY) || 'null'),
-          [SEYBOLD_KEY]: JSON.parse(localStorage.getItem(SEYBOLD_KEY) || 'null'),
-          [SCORE_KEY]: JSON.parse(localStorage.getItem(SCORE_KEY) || 'null'),
-          [BADGES_KEY]: JSON.parse(localStorage.getItem(BADGES_KEY) || 'null'),
-          [PRESETS_KEY]: JSON.parse(localStorage.getItem(PRESETS_KEY) || 'null'),
-          [SESSIONLOG_KEY]: JSON.parse(localStorage.getItem(SESSIONLOG_KEY) || 'null'),
-          [HEIGHT_STATS_KEY]: JSON.parse(localStorage.getItem(HEIGHT_STATS_KEY) || 'null'),
-          [LOCATOR_STATS_KEY]: JSON.parse(localStorage.getItem(LOCATOR_STATS_KEY) || 'null'),
-          [SHIFT_STATS_KEY]: JSON.parse(localStorage.getItem(SHIFT_STATS_KEY) || 'null'),
-          [HARM_STATS_KEY]: JSON.parse(localStorage.getItem(HARM_STATS_KEY) || 'null'),
-          [COSMETICS_KEY]: JSON.parse(localStorage.getItem(COSMETICS_KEY) || 'null'),
-          [SM2_KEY]: JSON.parse(localStorage.getItem(SM2_KEY) || 'null'),
+          [PREFS_KEY]: loadJSON(PREFS_KEY, null),
+          [STATS_KEY]: loadJSON(STATS_KEY, null),
+          [BEST_KEY]: loadJSON(BEST_KEY, null),
+          [TEMPO_STATS_KEY]: loadJSON(TEMPO_STATS_KEY, null),
+          [TEMPO_BEST_KEY]: loadJSON(TEMPO_BEST_KEY, null),
+          [SEYBOLD_KEY]: loadJSON(SEYBOLD_KEY, null),
+          [SCORE_KEY]: loadJSON(SCORE_KEY, null),
+          [BADGES_KEY]: loadJSON(BADGES_KEY, null),
+          [PRESETS_KEY]: loadJSON(PRESETS_KEY, null),
+          [SESSIONLOG_KEY]: loadJSON(SESSIONLOG_KEY, null),
+          [HEIGHT_STATS_KEY]: loadJSON(HEIGHT_STATS_KEY, null),
+          [LOCATOR_STATS_KEY]: loadJSON(LOCATOR_STATS_KEY, null),
+          [SHIFT_STATS_KEY]: loadJSON(SHIFT_STATS_KEY, null),
+          [HARM_STATS_KEY]: loadJSON(HARM_STATS_KEY, null),
+          [COSMETICS_KEY]: loadJSON(COSMETICS_KEY, null),
+          [SM2_KEY]: loadJSON(SM2_KEY, null),
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -2234,6 +2242,7 @@
         alert('Stats cleared.');
       };
     
+      // SW update toast
       useEffect(() => {
         checkAwardBadges();
         if ('serviceWorker' in navigator) {
@@ -2251,33 +2260,23 @@
         }
       }, []);
     
-      const toggleTheme = () => {
-        const next = theme === 'light' ? 'dark' : 'light';
-        setTheme(next);
-        setThemeState(next);
-      };
+      const toggleTheme = () => { const next = theme === 'light' ? 'dark' : 'light'; setTheme(next); setThemeState(next); };
       const changeAccent = (name) => { applyAccent(name); setAccent(name); };
     
-      const goDrill = (s, p, f) => {
+      const goDrill = (s,p,f) => {
         const next = { ...prefs };
         next.filters = {
-          strings: Object.fromEntries(STRINGS.map(x => [x, x === s])),
+          strings:   Object.fromEntries(STRINGS.map(x => [x, x === s])),
           positions: Object.fromEntries(POSITIONS.map(x => [x, x === p])),
-          fingers: Object.fromEntries(FINGERS.map(x => [x, x === f])),
+          fingers:   Object.fromEntries(FINGERS.map(x => [x, x === f])),
         };
         setPrefs(next); savePrefs(next);
         go('speed');
       };
     
       const sessions = loadJSON(SESSIONLOG_KEY, []);
-      const speedPoints = sessions
-        .filter(s => s.mode === 'speed' || s.mode === 'speed-base')
-        .slice(-20)
-        .map(s => (s.total ? s.correct / s.total : 0));
-      const tempoPoints = sessions
-        .filter(s => s.mode === 'tempo')
-        .slice(-20)
-        .map(s => (s.total ? s.correct / s.total : 0));
+      const speedPoints = sessions.filter(s=>s.mode==='speed' || s.mode==='speed-base').slice(-20).map(s=> (s.total? s.correct/s.total : 0));
+      const tempoPoints = sessions.filter(s=>s.mode==='tempo').slice(-20).map(s=> (s.total? s.correct/s.total : 0));
     
       return (
         <div className="p-4">
@@ -2287,29 +2286,16 @@
               <div className="muted text-sm">Your daily mission to master the fingerboard—and beyond.</div>
             </div>
             <div className="flex items-center gap-2">
-              <select
-                className="border rounded p-2 text-sm"
-                value={accent}
-                onChange={e => changeAccent(e.target.value)}
-                title="Theme accent"
-              >
+              <select className="border rounded p-2 text-sm" value={accent} onChange={e=>changeAccent(e.target.value)} title="Theme accent">
                 <option value="symphony">Symphony Hall</option>
                 <option value="rockstar">Rockstar</option>
                 <option value="fantasy">Fantasy Quest</option>
                 <option value="lofi">Lo-fi Studio</option>
               </select>
-              <button className="btn btn-gray" onClick={toggleTheme}>
-                {theme === 'dark' ? 'Light' : 'Dark'} Mode
-              </button>
+              <button className="btn btn-gray" onClick={toggleTheme}>{theme === 'dark' ? 'Light' : 'Dark'} Mode</button>
               <button className="btn btn-green" onClick={backup}>Backup</button>
               <button className="btn btn-blue" onClick={() => inputRef.current?.click()}>Restore</button>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="application/json"
-                hidden
-                onChange={e => e.target.files[0] && restore(e.target.files[0])}
-              />
+              <input ref={inputRef} type="file" accept="application/json" hidden onChange={e=>e.target.files[0] && restore(e.target.files[0])}/>
             </div>
           </header>
     
@@ -2326,7 +2312,7 @@
             </button>
           </div>
     
-          {/* Dynamic grid driven by the saved order */}
+          {/* Cards grid */}
           <div className="grid-cards">
             {order.map(id => {
               const c = CARD_REGISTRY[id];
@@ -2341,14 +2327,14 @@
                   />
                   <div className="absolute right-3 top-3 flex gap-1">
                     <button className="pill" onClick={() => move(id, -1)} title="Move up">↑</button>
-                    <button className="pill" onClick={() => move(id, 1)} title="Move down">↓</button>
+                    <button className="pill" onClick={() => move(id, 1)}  title="Move down">↓</button>
                   </div>
                 </div>
               );
             })}
           </div>
     
-          {/* Single help modal */}
+          {/* Help modal */}
           <Modal open={!!helpKey} onClose={() => setHelpKey(null)} title="How to play">
             {HELP[helpKey] || 'Select a mode to begin.'}
           </Modal>
@@ -2382,157 +2368,39 @@
         </div>
       );
     };
+    
+/* =========================================================
+   App router + mount
+========================================================== */
+const App = () => {
+  const [route, setRoute] = useState('home');
+  const [prefs, setPrefs] = useState(loadPrefs());
+  const [stats, setStats] = useState(loadStats());
 
-    /* =========================================================
-       Error Boundary (runtime guard)
-    ========================================================== */
-    /*** Error boundary (so runtime errors don’t leave a blank page) ***/
-    class ErrorBoundary extends React.Component {
-      constructor(props){ super(props); this.state = { hasError:false, err:null }; }
-      static getDerivedStateFromError(err){ return { hasError:true, err }; }
-      componentDidCatch(err, info){ console.error('VPQ ErrorBoundary', err, info); }
-      render(){
-        if (this.state.hasError){
-          return (
-            <div className="p-6 card rounded-xl" style={{maxWidth:720, margin:'24px auto'}}>
-              <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-              <pre className="text-sm overflow-auto" style={{whiteSpace:'pre-wrap'}}>
-                {String(this.state.err)}
-              </pre>
-            </div>
-          );
-        }
-        return this.props.children;
-      }
-    }
-    
-    /*** Minimal App wrapper + routing to your screens ***/
-    const App = () => {
-      const [route, setRoute] = React.useState('home');         // 'speed', 'flash', etc.
-      const [prefs, setPrefs] = React.useState(loadPrefs());    // you already defined loadPrefs/savePrefs
-      const [stats, setStats] = React.useState(loadStats());    // same for stats
-    
-      const go = (r) => setRoute(r);
-    
-      // optional helpers the dashboard/filters may call
-      const onResetStats = () => { saveStats({}); setStats({}); };
-      const onExportCSV  = () => {
-        const st = loadStats();
-        const rows = [['cell','correct','total']];
-        Object.entries(st).forEach(([k,v]) => rows.push([k, v.correct||0, v.total||0]));
-        const csv = rows.map(r=>r.join(',')).join('\n');
-        const blob = new Blob([csv], {type:'text/csv'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'vpq-stats.csv';
-        a.click();
-      };
-    
-      // simple router for your screens (use whatever names you use in Dashboard.go)
-      const back = () => setRoute('home');
-      switch (route) {
-        case 'speed':       return <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} />;
-        case 'speed-base':  return <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
-        case 'flash':       return <Flashcards onBack={back} />;
-        case 'bingo':       return <BingoBoard onBack={back} />;
-        case 'dice':        return <DiceOfDestinyGame onBack={back} />;
-        case 'tempo-trainer': return <TempoTrainer onBack={back} prefs={prefs} />;
-        case 'tempo-tester':  return <TempoTester  onBack={back} prefs={prefs} />;
-        case 'bieler':      return <BielerLab onBack={back} />;
-        case 'height':      return <HeightDrill onBack={back} prefs={prefs} />;
-        case 'locator':     return <NoteLocator onBack={back} prefs={prefs} />;
-        case 'shift':       return <ShiftCoach onBack={back} prefs={prefs} />;
-        case 'harmonics':   return <HarmonicsLab onBack={back} prefs={prefs} />;
-        // inside App()'s render switch, default case:
-        default:
-          return (
-            <Dashboard
-              go={go}
-              prefs={prefs}
-              setPrefs={setPrefs}
-              stats={stats}
-              setStats={setStats}
-            />
-          );
-            <div className="p-4 max-w-6xl mx-auto">
-              <ScoreHeader />
-              <div className="grid-cards">
-                <CardButton title="Speed Ladder"
-                            description="Full fingerboard ladder."
-                            onClick={()=>go('speed')}
-                            onHelp={()=>alert(HELP['speed'])}/>
-                <CardButton title="Speed Ladder — Core"
-                            description="Base notes only."
-                            onClick={()=>go('speed-base')}
-                            onHelp={()=>alert(HELP['speed-base'])}/>
-                <CardButton title="Flashcards"
-                            description="Study & recall."
-                            onClick={()=>go('flash')}
-                            onHelp={()=>alert(HELP['cards'])}/>
-                <CardButton title="Positions Bingo"
-                            description="5×5 practice board."
-                            onClick={()=>go('bingo')}
-                            onHelp={()=>alert(HELP['bingo'])}/>
-                <CardButton title="Dice of Destiny"
-                            description="Random focused task."
-                            onClick={()=>go('dice')}
-                            onHelp={()=>alert(HELP['dice'])}/>
-                <CardButton title="Tempo Trainer"
-                            description="Tempo flashcards."
-                            onClick={()=>go('tempo-trainer')}
-                            onHelp={()=>alert(HELP['tempoTrainer'])}/>
-                <CardButton title="Tempo Tester"
-                            description="Timed MCQ."
-                            onClick={()=>go('tempo-tester')}
-                            onHelp={()=>alert(HELP['tempoTester'])}/>
-                <CardButton title="Bieler Method Lab"
-                            description="Vocab · Concepts · Apps."
-                            onClick={()=>go('bieler')}
-                            onHelp={()=>alert('Bieler Lab: progressive study flow.')}/>
-                <CardButton title="Finger Height Drill"
-                            description="Low vs High."
-                            onClick={()=>go('height')}
-                            onHelp={()=>alert(HELP['height'])}/>
-                <CardButton title="Note Locator"
-                            description="Find valid locations."
-                            onClick={()=>go('locator')}
-                            onHelp={()=>alert(HELP['locator'])}/>
-                <CardButton title="Shift Coach"
-                            description="Plan efficient shifts."
-                            onClick={()=>go('shift')}
-                            onHelp={()=>alert(HELP['shift'])}/>
-                <CardButton title="Harmonics Lab"
-                            description="Nodes & quick quiz."
-                            onClick={()=>go('harmonics')}
-                            onHelp={()=>alert(HELP['harmonics'])}/>
-              </div>
-    
-              {/* Optional analytics & controls down the page */}
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <FiltersPanel
-                  prefs={prefs}
-                  setPrefs={(p)=>{ setPrefs(p); savePrefs(p); }}
-                  stats={stats}
-                  onResetStats={onResetStats}
-                  onExportCSV={onExportCSV}
-                />
-                <AvatarCustomizer />
-                <BadgesPanel />
-                <AccuracyHeatmap stats={stats} />
-              </div>
-            </div>
-          );
-      }
-    };
-    
-    /*** React 18 boot ***/
-    const rootEl = document.getElementById('root');
-    const root = ReactDOM.createRoot(rootEl);
-    root.render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    );
+  const go = (r) => setRoute(r);
+  const back = () => setRoute('home');
+
+  const screens = {
+    home:           () => <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />,
+    speed:          () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="full" />,
+    'speed-base':   () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="base" />,
+    flash:          () => <Flashcards onBack={back} />,
+    bingo:          () => <BingoBoard onBack={back} />,
+    dice:           () => <DiceOfDestinyGame onBack={back} />,
+    'tempo-trainer':() => <TempoTrainer onBack={back} prefs={prefs} />,
+    'tempo-tester': () => <TempoTester onBack={back} prefs={prefs} />,
+    height:         () => <HeightDrill onBack={back} prefs={prefs} />,
+    locator:        () => <NoteLocator onBack={back} prefs={prefs} />,
+    shift:          () => <ShiftCoach onBack={back} prefs={prefs} />,
+    harmonics:      () => <HarmonicsLab onBack={back} prefs={prefs} />,
+    bieler:         () => <BielerLab onBack={back} />,
+  };
+
+  const Screen = screens[route] || screens.home;
+  return <Screen />;
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
