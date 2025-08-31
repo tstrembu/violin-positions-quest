@@ -2161,11 +2161,31 @@
     /* =========================================================
        Dashboard (complete)
     ========================================================== */
-    const Dashboard = ({ go, prefs, setPrefs, stats, setStats }) => {
-      const [helpKey, setHelpKey] = useState(null);
-      const [theme, setThemeState] = useState(getTheme());
-      const [updateReady, setUpdateReady] = useState(false);
-      const [accent, setAccent] = useState(getAccent());
+    const [helpKey, setHelpKey] = useState(null);
+    const [theme, setThemeState] = useState(getTheme());
+    const [updateReady, setUpdateReady] = useState(false);
+    const [accent, setAccent] = useState(getAccent());
+    
+    useEffect(()=>{
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.getRegistration().then(reg=>{
+        if (!reg) return;
+    
+        // If an updated SW is already waiting (e.g., page reloaded after update)
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          setUpdateReady(true);
+        }
+    
+        reg.addEventListener('updatefound', ()=>{
+          const nw = reg.installing;
+          nw?.addEventListener('statechange', ()=>{
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              setUpdateReady(true);
+            }
+          });
+        });
+      });
+    },[])
     
       // Registry
       const CARD_REGISTRY = {
