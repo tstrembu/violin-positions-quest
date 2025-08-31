@@ -448,20 +448,6 @@
       return [...set];
     })();
 
-    // Distractors avoiding enharmonic duplicates
-    function getRandomDistractors(correct, forbidPCs = [], count = 3){
-      const banned = new Set([pc(correct), ...forbidPCs]);   // block same pitch class + siblings
-      const pool = ALL_NOTES_UNIQUE.filter(n => !banned.has(pc(n)));
-      const picks = [];
-      const seenPC = new Set();
-      while (picks.length < Math.min(count, pool.length)) {
-        const cand = getRandomItem(pool);
-        const cls = pc(cand);
-        if (!seenPC.has(cls)) { seenPC.add(cls); picks.push(cand); }
-      }
-      return picks;
-    }
-
     /* =========================================================
        Prefs & persistence
     ========================================================== */
