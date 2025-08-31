@@ -2353,22 +2353,43 @@
        Error Boundary (runtime guard)
     ========================================================== */
     class ErrorBoundary extends React.Component {
-      constructor(props){ super(props); this.state = { hasError:false, err:'' }; }
-      static getDerivedStateFromError(err){ return { hasError:true, err: String(err) }; }
-      componentDidCatch(err, info){ console.error(err, info); }
+      constructor(props){
+        super(props);
+        this.state = { hasError: false, err: null, info: null };
+      }
+      static getDerivedStateFromError(err){
+        return { hasError: true, err };
+      }
+      componentDidCatch(err, info){
+        console.error('App error:', err, info);
+        try { localStorage.setItem('vpq.lastError', String(err)); } catch {}
+      }
+      handleReset = () => this.setState({ hasError:false, err:null, info:null });
+    
       render(){
-        if (this.state.hasError){
-          return (
-            <div className="p-6">
-              <div className="card rounded-xl p-6">
-                <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-                <p className="muted text-sm mb-3">{this.state.err}</p>
+        if (!this.state.hasError) return this.props.children;
+    
+        const message = this.state.err?.message || String(this.state.err || 'Unknown error');
+        const stack   = this.state.err?.stack || '';
+    
+        return (
+          <div className="p-6">
+            <div className="card rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+              <p className="muted text-sm mb-3">{message}</p>
+    
+              <details className="text-xs muted mb-4">
+                <summary>Details</summary>
+                <pre style={{ whiteSpace:'pre-wrap' }}>{stack}</pre>
+              </details>
+    
+              <div className="flex gap-2">
                 <button className="btn btn-purple" onClick={() => location.reload()}>Reload App</button>
+                <button className="btn btn-gray" onClick={this.handleReset}>Try Again</button>
               </div>
             </div>
-          );
-        }
-        return this.props.children;
+          </div>
+        );
       }
     }
 
