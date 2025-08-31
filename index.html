@@ -2120,6 +2120,7 @@
       const saveOrder = (order) => { try { localStorage.setItem(CARD_ORDER_KEY, JSON.stringify(order)); } catch {} };
       
       // inside Dashboard component state:
+      const [order, setOrder] = useState(loadOrder());
       const [order, setOrder] = React.useState(loadOrder());
       
       // helpers to move items without drag&drop
