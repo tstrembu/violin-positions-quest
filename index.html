@@ -1590,6 +1590,9 @@
           const label = fingerHeight(question.correct, question.valid);
           setMicroHint(`${norm(question.correct)} = ${label==='natural'?'natural':label} ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
         } else setMicroHint('');
+        if (!ok && baseOnly) {
+          setMicroHint(`${norm(question.correct)} = base ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
+        }
 
         // SM-2
         const speedMs = performance.now() - (question.ts||performance.now());
@@ -2190,6 +2193,7 @@
 
           <div className="grid-cards">
             <CardButton title="Speed Ladder" description="Adaptive fingerboard quiz (Pos 1–5). Coach + retries." onClick={()=>go('speed')} onHelp={()=>setHelpKey('speed')} />
+            <CardButton title="Speed Ladder — Core" description="Base note only (no low/high). Great first step." onClick={()=>go('speedBase')} onHelp={()=>setHelpKey('speedBase')} />
             <CardButton title="Finger Height Drill" description="Low vs High fingers for intonation." onClick={()=>go('height')} onHelp={() => setHelpKey('height')} />
             <CardButton title="Note Locator" description="Pick a valid string/position/finger for a pitch." onClick={()=>go('locator')} onHelp={()=>setHelpKey('locator')} />
             <CardButton title="Shift Coach" description="Choose efficient shifts on one string." onClick={()=>go('shift')} onHelp={() => setHelpKey('shift')} />
@@ -2297,7 +2301,8 @@
 
       // Route table
       if (route==='speed')        return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} />;
-      if (route==='cards')        return <Flashcards onBack={onBack} />;
+      if (route==='speedBase')     return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
+      if (route==='cards')         return <Flashcards onBack={onBack} />;
       if (route==='bingo')        return <BingoBoard onBack={onBack} />;
       if (route==='dice')         return <DiceOfDestinyGame onBack={onBack} />;
       if (route==='tempoTrainer') return <TempoTrainer onBack={onBack} prefs={prefs} />;
