@@ -787,7 +787,8 @@
                               <div className="text-xs">
                                 {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
                               </div>
-                              <div className="fb-band" style={{ background: isReal ? style.bandColor : 'var(--hairline)' }} />
+                              <div className="fb-band fb-band--acc" style={{ background: accColor }} />
+                               <div className="fb-band fb-band--lb"  style={{ background: lbColor  }} />
                             </div>
                           );
                         })}
