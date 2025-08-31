@@ -320,7 +320,9 @@
     const OPEN_PC = { G:7, D:2, A:9, E:4 };
     // within each position, the “base” (natural) offsets for fingers 1–4
     const BASE_OFF = { 1:2, 2:4, 3:5, 4:7 };
-    
+    // position offsets measured in semitones from 1st position
+    // 1→0, 2→+2, 3→+4, 4→+5, 5→+7  (matches the posters)
+    const POS_SHIFT = { 1:0, 2:2, 3:4, 4:5, 5:7 };
     const wrap12 = n => ((n % 12) + 12) % 12;
     const names   = k => SEMI_TO_NAMES[wrap12(k)];
     const flatFirst  = a => (a.length===2 ? [a[1], a[0]] : a);  // e.g. ['Db','C#']
@@ -333,7 +335,7 @@
         for (let p = 1; p <= 5; p++) {
           data[s][p] = {};
           for (const f of FINGERS) {
-            const basePC = OPEN_PC[s] + 2*(p-1) + BASE_OFF[f];
+            const basePC = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
             if (f === 1 || f === 2) {
               // low (flat) + base
               data[s][p][f] = [...flatFirst(names(basePC-1)), ...names(basePC)];
