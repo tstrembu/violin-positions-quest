@@ -2352,16 +2352,19 @@
     /* =========================================================
        Error Boundary (runtime guard)
     ========================================================== */
+    /*** Error boundary (so runtime errors don’t leave a blank page) ***/
     class ErrorBoundary extends React.Component {
-      constructor(props){ super(props); this.state = { hasError:false, error:null }; }
-      static getDerivedStateFromError(error){ return { hasError:true, error }; }
-      componentDidCatch(error, info){ console.error('App crashed:', error, info); }
+      constructor(props){ super(props); this.state = { hasError:false, err:null }; }
+      static getDerivedStateFromError(err){ return { hasError:true, err }; }
+      componentDidCatch(err, info){ console.error('VPQ ErrorBoundary', err, info); }
       render(){
         if (this.state.hasError){
           return (
-            <div className="card rounded-xl p-6 m-4">
-              <div className="text-xl font-bold mb-2">Something went wrong.</div>
-              <pre style={{whiteSpace:'pre-wrap'}}>{String(this.state.error)}</pre>
+            <div className="p-6 card rounded-xl" style={{maxWidth:720, margin:'24px auto'}}>
+              <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+              <pre className="text-sm overflow-auto" style={{whiteSpace:'pre-wrap'}}>
+                {String(this.state.err)}
+              </pre>
             </div>
           );
         }
@@ -2369,87 +2372,123 @@
       }
     }
     
-    // --- Boot (mount React) ---
-    (() => {
-      const rootEl = document.getElementById('root');
-      const createRoot =
-        (window.ReactDOM && window.ReactDOM.createRoot) ||
-        (window.ReactDOMClient && window.ReactDOMClient.createRoot);
-    
-      if (!rootEl) { console.error('#root not found'); return; }
-      if (!createRoot) {
-        console.error('createRoot not found. Make sure react-dom@18 UMD is loaded.');
-        return;
-      }
-    
-      // If App isn't defined yet, show a clear placeholder so you notice
-      const RootApp = (typeof window.App === 'function' ? window.App :
-                       (typeof App === 'function' ? App :
-                        () => <div style={{padding:20}}>App is not defined.</div>));
-    
-      createRoot(rootEl).render(
-        <ErrorBoundary>
-          <RootApp />
-        </ErrorBoundary>
-      );
-    })();
-
-    /* =========================================================
-       Root App (routing + state)
-    ========================================================== */
+    /*** Minimal App wrapper + routing to your screens ***/
     const App = () => {
-      const [route, setRoute] = useState(() => (location.hash.replace('#','') || 'dashboard'));
-      const onBack = () => go('dashboard');
-      const [prefs, setPrefs] = useState(loadPrefs());
-      const [stats, setStats] = useState(loadStats());
-
-      // Hash routing + deep-link
-      const go = (r) => { setRoute(r); location.hash = r; };
-      const onBack = () => go('home');
-
-      useEffect(()=>{
-        const onHash=()=> setRoute(location.hash.replace('#','') || 'home');
-        window.addEventListener('hashchange', onHash);
-        return ()=>window.removeEventListener('hashchange', onHash);
-      },[]);
-
-      // Persist prefs/stats on change
-      useEffect(()=>{ savePrefs(prefs); }, [prefs]);
-      useEffect(()=>{ saveStats(stats); }, [stats]);
-
-      // Global keyboard: Esc to go home
-      useEffect(()=>{
-        const onKey=(e)=>{ if(e.key==='Escape' && route!=='home') onBack(); };
-        window.addEventListener('keydown', onKey);
-        return ()=>window.removeEventListener('keydown', onKey);
-      }, [route]);
-
-      // Optional: register service worker (if present in repo)
-      useEffect(()=>{
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/violin-positions-quest/sw.js').catch(()=>{});
-        }
-      },[]);
-
-      // Route table
-      if (route==='speed')         return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} />;
-      if (route==='speed-base')    return <SpeedLadderGame onBack={onBack} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
-      if (route==='flash')         return <Flashcards onBack={onBack} />;
-      if (route==='bingo')         return <BingoBoard onBack={onBack} />;
-      if (route==='dice')          return <DiceOfDestinyGame onBack={onBack} />;
-      if (route==='tempo-trainer') return <TempoTrainer onBack={onBack} prefs={prefs} />;
-      if (route==='tempo-tester')  return <TempoTester onBack={onBack} prefs={prefs} />;
-      if (route==='bieler')        return <BielerLab onBack={onBack} />;
-      if (route==='height')        return <HeightDrill onBack={onBack} prefs={prefs} />;
-      if (route==='locator')       return <NoteLocator onBack={onBack} prefs={prefs} />;
-      if (route==='shift')         return <ShiftCoach onBack={onBack} prefs={prefs} />;
-      if (route==='harmonics')     return <HarmonicsLab onBack={onBack} prefs={prefs} />;
-      
-      // Default
-      return <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />;
-  
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <ErrorBoundary><App/></ErrorBoundary>
+      const [route, setRoute] = React.useState('home');         // 'speed', 'flash', etc.
+      const [prefs, setPrefs] = React.useState(loadPrefs());    // you already defined loadPrefs/savePrefs
+      const [stats, setStats] = React.useState(loadStats());    // same for stats
+    
+      const go = (r) => setRoute(r);
+    
+      // optional helpers the dashboard/filters may call
+      const onResetStats = () => { saveStats({}); setStats({}); };
+      const onExportCSV  = () => {
+        const st = loadStats();
+        const rows = [['cell','correct','total']];
+        Object.entries(st).forEach(([k,v]) => rows.push([k, v.correct||0, v.total||0]));
+        const csv = rows.map(r=>r.join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'vpq-stats.csv';
+        a.click();
+      };
+    
+      // simple router for your screens (use whatever names you use in Dashboard.go)
+      const back = () => setRoute('home');
+      switch (route) {
+        case 'speed':       return <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} />;
+        case 'speed-base':  return <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="base" />;
+        case 'flash':       return <Flashcards onBack={back} />;
+        case 'bingo':       return <BingoBoard onBack={back} />;
+        case 'dice':        return <DiceOfDestinyGame onBack={back} />;
+        case 'tempo-trainer': return <TempoTrainer onBack={back} prefs={prefs} />;
+        case 'tempo-tester':  return <TempoTester  onBack={back} prefs={prefs} />;
+        case 'bieler':      return <BielerLab onBack={back} />;
+        case 'height':      return <HeightDrill onBack={back} prefs={prefs} />;
+        case 'locator':     return <NoteLocator onBack={back} prefs={prefs} />;
+        case 'shift':       return <ShiftCoach onBack={back} prefs={prefs} />;
+        case 'harmonics':   return <HarmonicsLab onBack={back} prefs={prefs} />;
+        default:
+          return (
+            <div className="p-4 max-w-6xl mx-auto">
+              <ScoreHeader />
+              <div className="grid-cards">
+                <CardButton title="Speed Ladder"
+                            description="Full fingerboard ladder."
+                            onClick={()=>go('speed')}
+                            onHelp={()=>alert(HELP['speed'])}/>
+                <CardButton title="Speed Ladder — Core"
+                            description="Base notes only."
+                            onClick={()=>go('speed-base')}
+                            onHelp={()=>alert(HELP['speed-base'])}/>
+                <CardButton title="Flashcards"
+                            description="Study & recall."
+                            onClick={()=>go('flash')}
+                            onHelp={()=>alert(HELP['cards'])}/>
+                <CardButton title="Positions Bingo"
+                            description="5×5 practice board."
+                            onClick={()=>go('bingo')}
+                            onHelp={()=>alert(HELP['bingo'])}/>
+                <CardButton title="Dice of Destiny"
+                            description="Random focused task."
+                            onClick={()=>go('dice')}
+                            onHelp={()=>alert(HELP['dice'])}/>
+                <CardButton title="Tempo Trainer"
+                            description="Tempo flashcards."
+                            onClick={()=>go('tempo-trainer')}
+                            onHelp={()=>alert(HELP['tempoTrainer'])}/>
+                <CardButton title="Tempo Tester"
+                            description="Timed MCQ."
+                            onClick={()=>go('tempo-tester')}
+                            onHelp={()=>alert(HELP['tempoTester'])}/>
+                <CardButton title="Bieler Method Lab"
+                            description="Vocab · Concepts · Apps."
+                            onClick={()=>go('bieler')}
+                            onHelp={()=>alert('Bieler Lab: progressive study flow.')}/>
+                <CardButton title="Finger Height Drill"
+                            description="Low vs High."
+                            onClick={()=>go('height')}
+                            onHelp={()=>alert(HELP['height'])}/>
+                <CardButton title="Note Locator"
+                            description="Find valid locations."
+                            onClick={()=>go('locator')}
+                            onHelp={()=>alert(HELP['locator'])}/>
+                <CardButton title="Shift Coach"
+                            description="Plan efficient shifts."
+                            onClick={()=>go('shift')}
+                            onHelp={()=>alert(HELP['shift'])}/>
+                <CardButton title="Harmonics Lab"
+                            description="Nodes & quick quiz."
+                            onClick={()=>go('harmonics')}
+                            onHelp={()=>alert(HELP['harmonics'])}/>
+              </div>
+    
+              {/* Optional analytics & controls down the page */}
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <FiltersPanel
+                  prefs={prefs}
+                  setPrefs={(p)=>{ setPrefs(p); savePrefs(p); }}
+                  stats={stats}
+                  onResetStats={onResetStats}
+                  onExportCSV={onExportCSV}
+                />
+                <AvatarCustomizer />
+                <BadgesPanel />
+                <AccuracyHeatmap stats={stats} />
+              </div>
+            </div>
+          );
+      }
+    };
+    
+    /*** React 18 boot ***/
+    const rootEl = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootEl);
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     );
   </script>
 </body>
