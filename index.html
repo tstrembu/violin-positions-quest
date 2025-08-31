@@ -326,7 +326,8 @@
     const BASE_OFF = { 1:2, 2:4, 3:5, 4:7 };
     // position offsets measured in semitones from 1st position
     // 1→0, 2→+2, 3→+4, 4→+5, 5→+7  (matches the posters)
-    const POS_SHIFT = { 1:0, 2:2, 3:4, 4:5, 5:7 };
+    // Correct semitone offsets from 1st position
+    const POS_SHIFT = { 1:0, 2:2, 3:3, 4:5, 5:7 };
     const wrap12 = n => ((n % 12) + 12) % 12;
     const names   = k => SEMI_TO_NAMES[wrap12(k)];
     const flatFirst  = a => (a.length===2 ? [a[1], a[0]] : a);  // e.g. ['Db','C#']
