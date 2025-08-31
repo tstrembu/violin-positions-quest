@@ -2091,26 +2091,26 @@
       // near your other keys
       const CARD_ORDER_KEY = 'positionsQuest.dashboard.order.v1';
       
-      // define a registry of cards in one place
+      // Dashboard card registry (consistent keys + routes)
       const CARD_REGISTRY = {
-        speed:      { title:"Speed Ladder",          desc:"Full ladder.",        open:()=>go('speed'),      help:'speed' },
-        speed-base:  { title:"Speed Ladder — Core",   desc:"Base notes only.",    open:()=>go('speed-base'), help:'speed-base' },
-        flash:      { title:"Flashcards",            desc:"Study & recall.",     open:()=>go('flash'),      help:'cards' },
-        bingo:      { title:"Positions Bingo",       desc:"5×5 practice board.", open:()=>go('bingo') },
-        dice:       { title:"Dice of Destiny",       desc:"Random focused task.",open:()=>go('dice') },
-        tempoT:     { title:"Tempo Trainer",         desc:"Flashcards for tempi.",open:()=>go('tempo-trainer'), help:'tempoTrainer' },
-        tempoQ:     { title:"Tempo Tester",          desc:"Timed MCQ.",          open:()=>go('tempo-tester'), help:'tempoTester' },
-        height:     { title:"Finger Height Drill",   desc:"Low vs High.",        open:()=>go('height'),     help:'height' },
-        locator:    { title:"Note Locator",          desc:"Find all spots.",     open:()=>go('locator'),    help:'locator' },
-        shift:      { title:"Shift Coach",           desc:"Best landing spot.",  open:()=>go('shift'),      help:'shift' },
-        harmonics:  { title:"Harmonics Lab",         desc:"Nodes & quiz.",       open:()=>go('harmonics'),  help:'harmonics' },
-        bieler:     { title:"Bieler Method Lab",     desc:"Concepts & apps.",    open:()=>go('bieler'),     help:'bielerLab' },
+        'speed':       { title:"Speed Ladder",            desc:"Full ladder.",                open:()=>go('speed'),        help:'speed' },
+        'speed-base':  { title:"Speed Ladder — Core",     desc:"Base notes only.",            open:()=>go('speed-base'),   help:'speed-base' },
+        'flash':       { title:"Flashcards",              desc:"Study & recall.",             open:()=>go('flash'),        help:'cards' },
+        'bingo':       { title:"Positions Bingo",         desc:"5×5 practice board.",         open:()=>go('bingo') },
+        'dice':        { title:"Dice of Destiny",         desc:"Random focused task.",        open:()=>go('dice') },
+        'tempo-trainer': { title:"Tempo Trainer",         desc:"Flashcards for tempi.",       open:()=>go('tempo-trainer'), help:'tempoTrainer' },
+        'tempo-tester':  { title:"Tempo Tester",          desc:"Timed MCQ.",                  open:()=>go('tempo-tester'),  help:'tempoTester' },
+        'height':      { title:"Finger Height Drill",     desc:"Low vs High.",                open:()=>go('height'),       help:'height' },
+        'locator':     { title:"Note Locator",            desc:"Find all spots.",             open:()=>go('locator'),      help:'locator' },
+        'shift':       { title:"Shift Coach",             desc:"Best landing spot.",          open:()=>go('shift'),        help:'shift' },
+        'harmonics':   { title:"Harmonics Lab",           desc:"Nodes & quiz.",               open:()=>go('harmonics'),    help:'harmonics' },
+        'bieler':      { title:"Bieler Method Lab",       desc:"Concepts & apps.",            open:()=>go('bieler'),       help:'bielerLab' },
       };
       
-      // default order for first run
+      // First-run default order (keys above)
       const DEFAULT_CARD_ORDER = [
         'speed-base','speed','flash','bingo','dice',
-        'tempoT','tempoQ','height','locator','shift','harmonics','bieler'
+        'tempo-trainer','tempo-tester','height','locator','shift','harmonics','bieler'
       ];
       
       const loadOrder = () => {
@@ -2302,12 +2302,12 @@
                   title={c.title}
                   description={c.desc}
                   onClick={c.open}
-                  onHelp={c.help ? () => setHelpKey(c.help) : undefined}
+                  onHelp={c.help ? ()=>setHelpKey(c.help) : undefined}
                 />
-                {/* tiny ↑/↓ controls (optional) */}
+                {/* optional tiny reorder controls */}
                 <div className="absolute right-3 top-3 flex gap-1">
-                  <button className="pill" onClick={() => move(id, -1)} title="Move up">↑</button>
-                  <button className="pill" onClick={() => move(id,  1)} title="Move down">↓</button>
+                  <button className="pill" onClick={()=>move(id,-1)} title="Move up">↑</button>
+                  <button className="pill" onClick={()=>move(id, 1)} title="Move down">↓</button>
                 </div>
               </div>
             );
