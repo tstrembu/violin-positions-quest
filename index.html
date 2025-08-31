@@ -10,11 +10,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="VPQ" />
+  <meta name="color-scheme" content="light dark" />
 
   <!-- PWA manifest & icons (GitHub Pages path) -->
   <link rel="manifest" href="/violin-positions-quest/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/violin-positions-quest/icons/icon-192.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/violin-positions-quest/icons/icon-192.png" />
+  <link rel="icon" href="/violin-positions-quest/icons/icon-192.png" sizes="192x192" />
+  <link rel="icon" href="/violin-positions-quest/icons/icon-512.png" sizes="512x512" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -118,12 +121,6 @@
       padding-bottom:6px;
       scroll-snap-type:x mandatory;
     }
-    .fb-pos{
-      flex: 0 0 var(--posw);
-      min-width: var(--posw);
-      scroll-snap-align: start;
-      overflow:hidden;
-    }
     .fb-grid{
       display:grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -132,14 +129,6 @@
     /* Make the grid clear space for the chip automatically */
     .fb-pos .fb-grid{ 
       padding-top: calc(8px + var(--pos-chip-clear)); /* 8px comes from your p-2 */
-    }
-    /* Chip styling (dark-aware tokens) */
-    .pos-chip{
-      position:absolute; top:6px; left:6px;
-      padding:2px 6px; border-radius:6px; font-size:11px; line-height:1;
-      background: var(--surface-subtle);
-      color: var(--ink-800);
-      border: 1px solid var(--hairline);
     }
     .fb-tile{
       position: relative;
@@ -192,12 +181,9 @@
       min-width: var(--posw);
       scroll-snap-align: start;
       overflow:hidden;
-      /* ADD these two lines ↓ */
-      position: relative;
-      --pos-chip-clear: 18px; /* reserved space for the Pos chip */
+      position: relative;          /* ensure chip positions correctly */
+      --pos-chip-clear: 18px;      /* reserved space for the Pos chip */
     }
-    
-    /* Small position label that respects light/dark tokens */
     .pos-chip{
       position:absolute; top:6px; left:6px;
       padding:2px 6px; border-radius:6px; font-size:11px; font-weight:600;
@@ -210,8 +196,8 @@
   <!-- Tailwind (utility helpers only) -->
   <!-- Tailwind CDN (config first, then script) -->
   <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = {
+    tailwind = window.tailwind || {};
+    tailwind.config = {
       darkMode: 'class',
       theme: { extend: { fontFamily: { inter: ['Inter','ui-sans-serif','system-ui'] } } }
     };
