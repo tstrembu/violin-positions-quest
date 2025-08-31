@@ -2277,20 +2277,42 @@
 
           <ScoreHeader />
 
-          <div className="grid-cards">
-            <CardButton title="Speed Ladder" description="Adaptive fingerboard quiz (Pos 1–5). Coach + retries." onClick={()=>go('speed')} onHelp={()=>setHelpKey('speed')} />
-            <CardButton title="Speed Ladder — Core" description="Base note only (no low/high). Great first step." onClick={()=>go('speed-base')} onHelp={()=>setHelpKey('speed-base')} />
-            <CardButton title="Finger Height Drill" description="Low vs High fingers for intonation." onClick={()=>go('height')} onHelp={() => setHelpKey('height')} />
-            <CardButton title="Note Locator" description="Pick a valid string/position/finger for a pitch." onClick={()=>go('locator')} onHelp={()=>setHelpKey('locator')} />
-            <CardButton title="Shift Coach" description="Choose efficient shifts on one string." onClick={()=>go('shift')} onHelp={() => setHelpKey('shift')} />
-            <CardButton title="Harmonics Lab" description="Natural nodes (1/2, 1/3, 1/4) per string." onClick={()=>go('harmonics')} onHelp={() => setHelpKey('harmonics')} />
-            <CardButton title="Flashcards Mode" description="Two decks: direct hits + note→locations." onClick={()=>go('cards')} onHelp={() => setHelpKey('cards')} />
-            <CardButton title="Positions Bingo" description="Fill a line with focused tasks." onClick={()=>go('bingo')} onHelp={() => setHelpKey('bingo')} />
-            <CardButton title="Dice of Destiny" description="Roll for a practice challenge." onClick={()=>go('dice')} onHelp={() => setHelpKey('dice')} />
-            <CardButton title="Tempo Trainer" description="Italian terms flashcards with call-outs." onClick={()=>go('tempoTrainer')} onHelp={() => setHelpKey('tempoTrainer')} />
-            <CardButton title="Tempo Tester" description="Timed MCQ + review misses + heatmap." onClick={()=>go('tempoTester')} onHelp={() => setHelpKey('tempoTester')} />
-            <CardButton title="Bieler Method Lab" description="Vocabulary, concepts, and application." onClick={()=>go('bielerLab')} onHelp={() => setHelpKey('bielerLab')} />
-          </div>
+       {/* Toolbar right above the grid */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm muted">Cards</div>
+          <button
+            className="btn btn-gray"
+            onClick={() => {
+              setOrder(DEFAULT_CARD_ORDER);
+              saveOrder(DEFAULT_CARD_ORDER);
+            }}
+          >
+            Reset Card Order
+          </button>
+        </div>
+        
+        {/* Dynamic grid driven by the saved order */}
+        <div className="grid-cards">
+          {order.map(id => {
+            const c = CARD_REGISTRY[id];
+            if (!c) return null;
+            return (
+              <div key={id} className="relative">
+                <CardButton
+                  title={c.title}
+                  description={c.desc}
+                  onClick={c.open}
+                  onHelp={c.help ? () => setHelpKey(c.help) : undefined}
+                />
+                {/* tiny ↑/↓ controls (optional) */}
+                <div className="absolute right-3 top-3 flex gap-1">
+                  <button className="pill" onClick={() => move(id, -1)} title="Move up">↑</button>
+                  <button className="pill" onClick={() => move(id,  1)} title="Move down">↓</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
           <div className="grid lg:grid-cols-3 gap-4 mt-6">
             <div className="lg:col-span-2">
