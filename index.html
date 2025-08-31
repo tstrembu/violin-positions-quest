@@ -1343,7 +1343,11 @@
         const best = bestPair(A,B);
         const start = best.a;
         const correctEnd = best.b;
-        const pool = allActualCombos().filter(c => c.s === s).filter(c => !(validCell(c.s, c.p, c.f) || []).includes(n2));
+        const pool = allActualCombos().filter(c => c.s === s)
+          .filter(c => {
+            const cell = validCell(c.s, c.p, c.f) || [];
+            return !hasPitch(cell, n2);
+          });
         const opts = [{...correctEnd, ok:true}];
         for (const cand of shuffle(pool)) {
           if (opts.length >= 4) break;
