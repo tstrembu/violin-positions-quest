@@ -1002,7 +1002,7 @@
             clearInterval(id); setFinished(true);
             const nb = { bestScore:Math.max(best.bestScore, score), bestStreak:Math.max(best.bestStreak, streak) };
             setBest(nb); saveTempoBest(nb);
-            pushSession('tempo', score, answered);
+            pushSession(score, answered);
             return 0;
           }
           return t-1;
