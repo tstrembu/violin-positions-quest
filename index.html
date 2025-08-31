@@ -44,19 +44,20 @@
       --ink-500: #64748b;
       --shadow: 0 12px 24px rgba(0,0,0,0.35);
     }
-    /* dark-aware subtle surfaces & lines */
+    /* NEW: dark-aware subtle surfaces & lines */
     :root{
-      --surface-subtle: rgba(0,0,0,.04);
-      --hairline:       rgba(0,0,0,.12);
-      --gridline:       rgba(0,0,0,.20);
+      --surface-subtle: rgba(0,0,0,.04);   /* soft panel headers, subtle fills */
+      --hairline:       rgba(0,0,0,.12);   /* borders, dividers */
+      --gridline:       rgba(0,0,0,.20);   /* SVG guidelines */
     }
     body.dark{
       --surface-subtle: rgba(255,255,255,.06);
       --hairline:       rgba(255,255,255,.14);
       --gridline:       rgba(255,255,255,.16);
     }
-    body.dark .border, body.dark .border-2 { border-color: var(--hairline) !important; }
 
+    /* Make Tailwind's generic borders readable in dark */
+    body.dark .border, body.dark .border-2 { border-color: var(--hairline) !important; }
     html, body { height:100%; }
     body {
       margin: 0;
@@ -87,6 +88,9 @@
     .btn-gray { background:#4b5563; }
     .btn-rose { background:#e11d48; }
     .btn-amber { background:#d97706; }
+    .grid-cards { display:grid; gap: 24px; grid-template-columns: repeat(1, minmax(0,1fr)); }
+    @media(min-width:640px){ .grid-cards{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media(min-width:1024px){ .grid-cards{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
 
     /* micro-animations for answers */
     @keyframes pulseCorrect { from{transform:scale(1)} 50%{transform:scale(1.03)} to{transform:scale(1)} }
@@ -102,30 +106,76 @@
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     *, *::before, *::after { box-sizing: border-box; }
 
-    /* ---- Fingerboard heatmap layout ---- */
-    :root{ --posw: clamp(160px, 45%, 220px); }
-    .fb-strip{ display:flex; gap:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; scroll-snap-type:x mandatory; }
-    .fb-pos{ flex: 0 0 var(--posw); min-width: var(--posw); scroll-snap-align: start; overflow:hidden; position: relative; --pos-chip-clear: 18px; }
-    .fb-grid{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:6px; }
-    .fb-pos .fb-grid{ padding-top: calc(8px + var(--pos-chip-clear)); }
+    /* ---- Fingerboard heatmap layout (fixed overlap) ---- */
+    :root{
+      --posw: clamp(160px, 45%, 220px);
+    }
+    .fb-strip{
+      display:flex;
+      gap:12px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      padding-bottom:6px;
+      scroll-snap-type:x mandatory;
+    }
+    .fb-pos{
+      flex: 0 0 var(--posw);
+      min-width: var(--posw);
+      scroll-snap-align: start;
+      overflow:hidden;
+    }
+    .fb-grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:6px;
+    }
+    /* Make the grid clear space for the chip automatically */
+    .fb-pos .fb-grid{ 
+      padding-top: calc(8px + var(--pos-chip-clear)); /* 8px comes from your p-2 */
+    }
+    /* Chip styling (dark-aware tokens) */
     .pos-chip{
       position:absolute; top:6px; left:6px;
-      padding:2px 6px; border-radius:6px; font-size:11px; font-weight:600;
-      background: var(--surface-subtle); color: var(--ink-800); border: 1px solid var(--hairline);
+      padding:2px 6px; border-radius:6px; font-size:11px; line-height:1;
+      background: var(--surface-subtle);
+      color: var(--ink-800);
+      border: 1px solid var(--hairline);
     }
     .fb-tile{
-      position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-      line-height: 1.1; aspect-ratio: 1 / 1.15; padding: 6px 4px; min-width: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      line-height: 1.1;
+      aspect-ratio: 1 / 1.15;
+      padding: 6px 4px;
+      min-width: 0;
     }
-    .fb-band{ position: absolute; left: 6px; right: 6px; bottom: 6px; height: 10px; border-radius: 6px; }
+    .fb-band{
+      position: absolute;
+      left: 6px; right: 6px; bottom: 6px;
+      height: 10px; border-radius: 6px;
+    }
     @media (min-width: 1024px){
-      .fb-strip{ display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; overflow: visible; }
+      .fb-strip{
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        overflow: visible;
+      }
       .fb-pos{ flex: initial; min-width: 0; }
     }
-    @supports not (aspect-ratio: 1){ .fb-tile { height: 72px; } }
-    @media (min-width: 768px) and (max-width: 1023px){ .fb-strip{ flex-wrap: wrap; } .fb-pos{ flex: 1 1 calc(50% - 12px); min-width: 0; } }
+    @supports not (aspect-ratio: 1){
+      .fb-tile { height: 72px; }
+    }
+    @media (min-width: 768px) and (max-width: 1023px){
+      .fb-strip{ flex-wrap: wrap; }
+      .fb-pos{ flex: 1 1 calc(50% - 12px); min-width: 0; }
+    }
 
-    /* Avatar */
+    /* Avatar (simple layered SVG) */
     .avatar { width:56px; height:56px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,.08); }
     .avatar-wrap { display:flex; align-items:center; gap:10px; }
     .avatar-label { font-size:12px; color:var(--ink-600); }
@@ -133,6 +183,25 @@
     /* XP bar */
     .xpbar { height:10px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden; }
     .xpbar-fill { height:100%; background:var(--accent); }
+    
+    .fb-pos{
+      flex: 0 0 var(--posw);
+      min-width: var(--posw);
+      scroll-snap-align: start;
+      overflow:hidden;
+      /* ADD these two lines ↓ */
+      position: relative;
+      --pos-chip-clear: 18px; /* reserved space for the Pos chip */
+    }
+    
+    /* Small position label that respects light/dark tokens */
+    .pos-chip{
+      position:absolute; top:6px; left:6px;
+      padding:2px 6px; border-radius:6px; font-size:11px; font-weight:600;
+      background: var(--surface-subtle);
+      color: var(--ink-800);
+      border: 1px solid var(--hairline);
+    }
   </style>
 
   <!-- Tailwind (utility helpers only) -->
@@ -148,6 +217,7 @@
 </head>
 <body>
   <div id="root"></div>
+  <!-- A11y live region -->
   <div id="sr" aria-live="polite" class="sr-only"></div>
 
   <!-- App -->
@@ -174,6 +244,7 @@
     const TEMPO_STATS_KEY = 'positionsQuest.tempo.stats.v1';
     const TEMPO_BEST_KEY  = 'positionsQuest.tempo.best.v1';
 
+    // NEW stats keys for added modes
     const HEIGHT_STATS_KEY  = 'positionsQuest.height.stats.v1';
     const LOCATOR_STATS_KEY = 'positionsQuest.locator.stats.v1';
     const SHIFT_STATS_KEY   = 'positionsQuest.shift.stats.v1';
@@ -207,12 +278,15 @@
     const getRandomItem = (arr) => arr[Math.floor(Math.random()*arr.length)];
     const nowISO = () => new Date().toISOString();
 
+    // ASCII accidental normalizer for display
     const NORM = {'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb','C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#'};
     const norm = n => NORM[n] || n;
-
+    
+    // Pitch-class (enharmonic) helpers
     const PC = { C:0,'C#':1,Db:1, D:2,'D#':3,Eb:3, E:4, F:5,'F#':6,Gb:6, G:7,'G#':8,Ab:8, A:9,'A#':10,Bb:10, B:11 };
-    const pc = n => PC[(NORM[n] || n)];
-
+    const pc = n => PC[(NORM[n] || n)]  // collapse D# and Eb, etc.
+    
+    // Label helpers
     const ordinal = n => { const x = Number(n);
       const suf = (x%10===1 && x%100!==11) ? 'st'
                : (x%10===2 && x%100!==12) ? 'nd'
@@ -227,7 +301,7 @@
                  : `${posLabel(p)}, ${fingerLabel(f)}`;
 
     /* =========================================================
-       Core enums
+       Core enums (MUST be defined before use)
     ========================================================== */
     const STRINGS   = ['G','D','A','E'];
     const POSITIONS = [1,2,3,4,5];
@@ -235,21 +309,31 @@
 
     /* =========================================================
        Fingerboard Data — generated from semitone math
+       (replaces the hand-typed NOTES_DATA object)
     ========================================================== */
+    
+    // 0=C … 11=B; include both spellings where they exist
     const SEMI_TO_NAMES = {
       0:['C'],  1:['C#','Db'], 2:['D'], 3:['D#','Eb'],
       4:['E'],  5:['F'],       6:['F#','Gb'], 7:['G'],
       8:['G#','Ab'], 9:['A'], 10:['A#','Bb'], 11:['B']
     };
+    
+    // open-string pitch classes (C=0) for G D A E
     const OPEN_PC = { G:7, D:2, A:9, E:4 };
+    
+    // within each position, the “base” (natural) offsets for fingers 1–4
     const BASE_OFF = { 1:2, 2:4, 3:5, 4:7 };
+ 
+    // position offsets measured in semitones from 1st position
+    // 1→0, 2→+2, 3→+3, 4→+5, 5→+7
     const POS_SHIFT = { 1:0, 2:2, 3:3, 4:5, 5:7 };
-
+    
     const wrap12 = n => ((n % 12) + 12) % 12;
     const names   = k => SEMI_TO_NAMES[wrap12(k)];
-    const flatFirst  = a => (a.length===2 ? [a[1], a[0]] : a);
-    const sharpFirst = a => (a.length===2 ? [a[0], a[1]] : a);
-
+    const flatFirst  = a => (a.length===2 ? [a[1], a[0]] : a);  // e.g. ['Db','C#']
+    const sharpFirst = a => (a.length===2 ? [a[0], a[1]] : a);  // e.g. ['C#','Db']
+    
     function buildNotesData() {
       const data = {};
       for (const s of STRINGS) {
@@ -259,16 +343,18 @@
           for (const f of FINGERS) {
             const basePC = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
             if (f === 1 || f === 2) {
+              // low (flat) + base
               data[s][p][f] = [...flatFirst(names(basePC-1)), ...names(basePC)];
             } else if (f === 3) {
+              // base + high (sharp)
               data[s][p][3] = [...names(basePC), ...sharpFirst(names(basePC+1))];
-            } else {
+            } else { // finger 4 varies by position per posters
               if (p === 1) {
-                data[s][p][4] = [...names(basePC)];
+                data[s][p][4] = [...names(basePC)];                       // natural only
               } else if (p === 2) {
-                data[s][p][4] = [...flatFirst(names(basePC-1)), ...names(basePC)];
+                data[s][p][4] = [...flatFirst(names(basePC-1)), ...names(basePC)]; // low-4
               } else {
-                data[s][p][4] = [...names(basePC), ...sharpFirst(names(basePC+1))];
+                data[s][p][4] = [...names(basePC), ...sharpFirst(names(basePC+1))]; // high-4
               }
             }
           }
@@ -276,13 +362,15 @@
       }
       return data;
     }
+    
     const NOTES_DATA = buildNotesData();
-
+    
+    // ---- Base-only helpers (natural/base note for each cell) ----
     const baseNamesFor = (s,p,f) => {
       const pc0 = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-      return names(pc0);
+      return names(pc0); // may return one or two spellings (e.g., ['C#','Db'])
     };
-
+    
     const ALL_BASE_UNIQUE = (() => {
       const set = new Set();
       STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
@@ -290,7 +378,7 @@
       })));
       return [...set];
     })();
-
+    
     function getDistractorsFromPool(correct, pool, forbidPCs = [], count = 3){
       const banned = new Set([pc(correct), ...forbidPCs]);
       const picks = [];
@@ -303,20 +391,23 @@
       }
       return picks;
     }
-
+    
+    // Quick data sanity check against a few poster anchor points
     (function selfTest(){
       const MUST = {
         'G:1:1':'A','G:1:2':'B','G:1:3':'C','G:1:4':'D',
         'D:1:1':'E','D:1:2':'F#','D:1:3':'G','D:1:4':'A',
         'A:1:1':'B','A:1:2':'C#','A:1:3':'D','A:1:4':'E',
         'E:1:1':'F#','E:1:2':'G#','E:1:3':'A','E:1:4':'B',
+        // spot checks in higher positions that often get mistyped:
         'G:2:2':'C#', 'G:2:3':'D',
-        'G:3:4':'F',
-        'A:4:1':'E',
-        'E:3:4':'D',
-        'G:3:1':'C'
+        'G:3:4':'F',          // fixed
+        'A:4:1':'E',          // fixed
+        'E:3:4':'D',          // new guard
+        'G:3:1':'C'           // new guard
       };
-      const ASCII = {'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb','C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#'};
+      const ASCII = {'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb',
+                     'C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#'};
       const bad=[];
       for (const k in MUST){
         const [s,p,f]=k.split(':');
@@ -328,6 +419,7 @@
       else console.info('Fingerboard data ✓ matches poster spec.');
     })();
 
+    // Low/High helper
     function fingerHeight(note, options){
       if (!Array.isArray(options) || options.length <= 1) return 'natural';
       const low  = options[0];
@@ -338,6 +430,7 @@
       return 'natural';
     }
 
+    // Simple harmonics set per string
     const HARMONICS = {
       G: { '1/2':['G','octave'], '1/3':['D','oct+5th'], '1/4':['G','2 oct'] },
       D: { '1/2':['D','octave'], '1/3':['A','oct+5th'], '1/4':['D','2 oct'] },
@@ -345,6 +438,7 @@
       E: { '1/2':['E','octave'], '1/3':['B','oct+5th'], '1/4':['E','2 oct'] },
     };
 
+    // Unique note list
     const ALL_NOTES_UNIQUE = (() => {
       const set = new Set();
       STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
@@ -416,7 +510,7 @@
     };
 
     /* =========================================================
-       Evidence helpers
+       Evidence-based & visuals helpers
     ========================================================== */
     const wilsonLowerBound = (correct, total, z = 1.96) => {
       if (!total) return 0;
@@ -442,7 +536,7 @@
     };
 
     /* =========================================================
-       Gamification
+       XP, Streaks, Levels, Badges (Gamification Core)
     ========================================================== */
     const BASE_XP = 10;
     const streakMultiplier = (streak) => Math.min(2.0, 1 + Math.floor(streak/5)*0.2);
@@ -450,7 +544,7 @@
       const base = (type==='review'?5 : type==='retry'?1 : BASE_XP);
       return Math.round(base * streakMultiplier(streak));
     };
-    const levelForXP = (xp)=> Math.floor(Math.pow(xp/120, 0.75))+1;
+    const levelForXP = (xp)=> Math.floor(Math.pow(xp/120, 0.75))+1;  // fast early levels
     const nextLevelXP = (lvl)=> Math.round(120*Math.pow(lvl, 1.33));
 
     const loadScoreboard = () => loadJSON(SCORE_KEY, { xp:0, level:1, next: nextLevelXP(1) });
@@ -492,7 +586,7 @@
     };
 
     /* =========================================================
-       SM-2
+       SM-2 Spaced Repetition (Speed Ladder)
     ========================================================== */
     function scheduleSM2(item, quality) { // 0..5
       const MIN_EASE = 1.3;
@@ -541,7 +635,7 @@
             <div className="text-xl font-bold ink800">{title}</div>
             <div className="muted text-sm mt-1">{description}</div>
           </div>
-          {onHelp && <button className="help-dot" title="How to play" onClick={onHelp}>?</button>}
+          <button className="help-dot" title="How to play" onClick={onHelp}>?</button>
         </div>
         <div className="mt-4">
           <button className="btn btn-purple" onClick={onClick}>Open</button>
@@ -549,8 +643,17 @@
       </div>
     );
 
+    const Toast = ({ open, text, action, onAction }) => !open ? null : (
+      <div className="toast">
+        <div className="card rounded-full px-4 py-2 flex items-center gap-3">
+          <span className="ink800">{text}</span>
+          {action && <button className="btn btn-amber" onClick={onAction}>{action}</button>}
+        </div>
+      </div>
+    );
+
     /* =========================================================
-       Help text
+       Help text (one-paragraph per card)
     ========================================================== */
     const HELP = {
       speed: "Speed Ladder: you’ll see a prompt like “G string — 2nd Position, 3rd Finger”. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
@@ -568,7 +671,7 @@
     };
 
     /* =========================================================
-       Fingerboard visual hint (SVG)
+       Fingerboard Visual Hint (SVG)
     ========================================================== */
     const LANE_Y = {E:70, A:130, D:190, G:250};
     const X_FOR_POS = (p)=> 60 + (p-1)*120;
@@ -630,7 +733,7 @@
                           const isReal = !!validCell(s, p, f);
                           const k = `${s}:${p}:${f}`;
                           const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
-                          const style = evidenceStyle(st || {});
+                          const style = evidenceStyle(st);
                           return (
                             <div
                               key={f}
@@ -774,7 +877,7 @@
     };
 
     /* =========================================================
-       Shared fingerboard helpers
+       Shared helpers for fingerboard
     ========================================================== */
     const validCell = (s,p,f) => Array.isArray(NOTES_DATA[s]?.[p]?.[f]) ? NOTES_DATA[s][p][f] : null;
     const allActualCombos = () => {
@@ -805,8 +908,10 @@
     };
 
     /* =========================================================
-       Games (Tempo Trainer, Tempo Tester, Height Drill, Note Locator, Shift Coach, Harmonics)
+       Games
     ========================================================== */
+
+    // Tempo Trainer (flashcards)
     const TempoTrainer = ({ onBack, prefs }) => {
       const [i, setI] = useState(0);
       const [show, setShow] = useState(false);
@@ -842,6 +947,7 @@
       );
     };
 
+    // Tempo Tester (MCQ + XP + session log)
     const TempoTester = ({ onBack, prefs }) => {
       const [best, setBest] = useState(loadTempoBest());
       const [stats, setStats] = useState(loadTempoStats());
@@ -867,13 +973,12 @@
         speak(correct.it);
       };
 
+      // In TempoTester
       const pushSession = (correct, total) => {
         const log = loadJSON(SESSIONLOG_KEY, []);
         log.push({ mode: 'tempo', date: nowISO(), correct, total });
         saveJSON(SESSIONLOG_KEY, log);
       };
-
-      useEffect(() => { setTimer(prefs.roundLen || 60); pickQ(); }, []); // start
 
       useEffect(() => {
         if (finished) return;
@@ -881,14 +986,19 @@
           if (t <= 1) {
             clearInterval(id);
             setFinished(true);
-            const nb = { bestScore: Math.max(best.bestScore, score), bestStreak: Math.max(best.bestStreak, streak) };
-            setBest(nb); saveTempoBest(nb);
-            pushSession(score, answered);
+            const nb = {
+              bestScore: Math.max(best.bestScore, score),
+              bestStreak: Math.max(best.bestStreak, streak)
+            };
+            setBest(nb);
+            saveTempoBest(nb);
+            pushSession(score, answered);   // <-- correct arg order
             return 0;
           }
           return t - 1;
         }), 1000);
         return () => clearInterval(id);
+        // include `answered` so the logged total is current
       }, [finished, score, streak, answered, best]);
 
       const bump = (it, ok) => {
@@ -985,6 +1095,7 @@
       );
     };
 
+    /* ===================== NEW: Finger Height Drill ===================== */
     const HeightDrill = ({ onBack, prefs }) => {
       const [q, setQ] = useState(null);
       const [score, setScore] = useState(0);
@@ -1060,6 +1171,7 @@
       );
     };
 
+    /* ===================== NEW: Note Locator ===================== */
     const NoteLocator = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [timer,setTimer] = useState(prefs.roundLen || 90);
@@ -1134,6 +1246,7 @@
       );
     };
 
+    /* ===================== NEW: Shift Coach ===================== */
     const ShiftCoach = ({ onBack, prefs }) => {
       const [q,setQ] = useState(null);
       const [score,setScore] = useState(0);
@@ -1206,7 +1319,7 @@
             <div className="muted text-sm mb-4">Stay on one string. Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
             {q && (
               <>
-                <div className="rounded-md p-4" style={{background:'rgba(0,0,0,0.05)'}} aria-live="polite">
+                <div className="rounded-md p-4" style={{background:'rgba(0,0,0,.05)'}} aria-live="polite">
                   <div className="font-semibold mb-1">String: <b>{q.string}</b></div>
                   <div className="text-sm">Start at <b>{norm(q.startNote)}</b> → <span className="muted">{fullLoc(q.string, q.start.p, q.start.f, false)}</span></div>
                   <div className="text-sm">Target note: <b>{norm(q.targetNote)}</b></div>
@@ -1227,6 +1340,7 @@
       );
     };
 
+    /* ===================== NEW: Harmonics Lab ===================== */
     const HarmonicsLab = ({ onBack, prefs }) => {
       const [mode, setMode] = useState('flash'); // flash | quiz
       const [i, setI] = useState(0);
@@ -1333,9 +1447,7 @@
       );
     };
 
-    /* =========================================================
-       Speed Ladder (fingerboard)
-    ========================================================== */
+    // Speed Ladder (fingerboard) + SM-2 + XP + hint + fingerboard SVG
     const SpeedLadderGame = ({ onBack, prefs, stats, setStats, mode = 'full' }) => {
       const baseOnly = mode === 'base';
       const allCombos = useMemo(()=>allActualCombos(), []);
@@ -1355,7 +1467,8 @@
       const hitIdxRef = useRef(-1);
       const [microHint, setMicroHint] = useState('');
 
-      const dueKeys = sm2DueKeys();
+      // SM-2: include some due items
+      const dueKeys = sm2DueKeys(); // ['G:2:3:C#', ...]
       const dueCombos = useMemo(()=>{
         const map = new Map(allCombos.map(c=>[`${c.s}:${c.p}:${c.f}`, c]));
         const arr = [];
@@ -1388,6 +1501,7 @@
           const idx = entries.findIndex(e=> e.combo.s===miss.s && e.combo.p===miss.p && e.combo.f===miss.f);
           if (idx>=0) entries[idx].weight*=2.2;
         }
+        // Interleave SM-2 due ~40% when available
         if (dueCombos.length && Math.random()<0.4) return getRandomItem(dueCombos);
         const sum = entries.reduce((a,e)=>a+e.weight,0)||1; let r = Math.random()*sum;
         for (const e of entries){ if((r-=e.weight)<=0) return e.combo; }
@@ -1395,28 +1509,35 @@
       };
 
       const newQuestion = (preset=null) => {
-        const c = preset || weightedPick();
-        const baseOpts = baseNamesFor(c.s, c.p, c.f);
-        const correct = baseOnly
-          ? getRandomItem(baseOpts)
-          : (c.preferredNote ? c.preferredNote : getRandomItem(c.valid));
-        const pool = baseOnly ? ALL_BASE_UNIQUE : ALL_NOTES_UNIQUE;
-        const opts = shuffle([ correct, ...getDistractorsFromPool(correct, pool, [], 3) ]);
-        optionsRef.current = opts;
-        setMicroHint('');
-        setQuestion({
-          ...c,
-          valid: baseOnly ? baseNamesFor(c.s, c.p, c.f) : c.valid,
-          correct,
-          options: opts,
-          ts: performance.now(),
-          sm2Key: (c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}`)
-        });
-      };
-
+      const c = preset || weightedPick();
+      // pick the correct note based on mode
+      const baseOpts = baseNamesFor(c.s, c.p, c.f);
+      const correct = baseOnly
+        ? getRandomItem(baseOpts)
+        : (c.preferredNote ? c.preferredNote : getRandomItem(c.valid));
+    
+      // build options from the appropriate pool
+      const pool = baseOnly ? ALL_BASE_UNIQUE : ALL_NOTES_UNIQUE;
+      const opts = shuffle([
+        correct,
+        ...getDistractorsFromPool(correct, pool, [], 3)
+      ]);
+    
+      optionsRef.current = opts;
+      setMicroHint('');
+      setQuestion({
+        ...c,
+        valid: baseOnly ? baseNamesFor(c.s, c.p, c.f) : c.valid,
+        correct,
+        options: opts,
+        ts: performance.now(),
+        sm2Key: (c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}`)
+      });
+    };
       useEffect(()=>{ newQuestion(); }, []);
-      useEffect(() => { if (!finished) setTimer(prefs.roundLen || 120); }, [prefs.roundLen, finished]);
-
+      useEffect(() => {
+        if (!finished) setTimer(prefs.roundLen || 120);
+      }, [prefs.roundLen, finished]);
       useEffect(()=>{
         if (finished) return;
         const id = setInterval(()=>setTimer(t=>{
@@ -1424,8 +1545,14 @@
             clearInterval(id); setFinished(true);
             const bs = Math.max(bestScore, score); const bk = Math.max(bestStreak, streak);
             setBestScore(bs); setBestStreak(bk); saveBest({ bestScore:bs, bestStreak:bk });
+            // log session
             const log = loadJSON(SESSIONLOG_KEY, []);
-            log.push({ mode: baseOnly ? 'speed-base' : 'speed', date: nowISO(), correct: score, total: answered });
+            log.push({
+              mode: baseOnly ? 'speed-base' : 'speed',
+              date: nowISO(),
+              correct: score,
+              total: answered
+            });
             saveJSON(SESSIONLOG_KEY, log);
             checkAwardBadges();
             return 0;
@@ -1455,12 +1582,16 @@
         setAnswered(a=>a+1);
         hitIdxRef.current = idx;
 
+        // micro hint when wrong
         if (!ok) {
           const label = fingerHeight(question.correct, question.valid);
           setMicroHint(`${norm(question.correct)} = ${label==='natural'?'natural':label} ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
-          if (baseOnly) setMicroHint(`${norm(question.correct)} = base ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
         } else setMicroHint('');
+        if (!ok && baseOnly) {
+          setMicroHint(`${norm(question.correct)} = base ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
+        }
 
+        // SM-2
         const speedMs = performance.now() - (question.ts||performance.now());
         const quality = ok ? (speedMs<2000?5:4) : 2;
         sm2Update(question.sm2Key, quality);
@@ -1475,9 +1606,15 @@
             if (prefs.coach && prefs.coachRetry){
               const miss = lastMissRef.current;
               if (miss){
-                const correct = baseOnly ? getRandomItem(baseNamesFor(miss.s, miss.p, miss.f)) : getRandomItem(miss.valid);
+                // pick the correct note in the same mode we’re in
+                const correct = baseOnly
+                  ? getRandomItem(baseNamesFor(miss.s, miss.p, miss.f))
+                  : getRandomItem(miss.valid);
+          
+                // distractors from the right pool
                 const pool = baseOnly ? ALL_BASE_UNIQUE : ALL_NOTES_UNIQUE;
                 const opts = shuffle([correct, ...getDistractorsFromPool(correct, pool, [], 3)]);
+          
                 optionsRef.current = opts;
                 setQuestion({
                   ...miss,
@@ -1539,9 +1676,7 @@
       );
     };
 
-    /* =========================================================
-       Flashcards, Bingo, Dice, Bieler Lab
-    ========================================================== */
+    // Flashcards (fingerboard)
     const Flashcards = ({ onBack }) => {
       const [mode, setMode] = useState('A');
       const [i, setI] = useState(0);
@@ -1583,6 +1718,7 @@
       );
     };
 
+    // Bingo
     const BingoBoard = ({ onBack }) => {
       const base = [
         "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–5","Sight-read in Pos 2",
@@ -1619,6 +1755,7 @@
       );
     };
 
+    // Dice
     const DiceOfDestinyGame = ({ onBack }) => {
       const poolFull = [
         'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–5',
@@ -1651,6 +1788,9 @@
       );
     };
 
+    /* =========================================================
+       Bieler Method Lab
+    ========================================================== */
     const BielerLab = ({ onBack }) => {
       const [mode,setMode]=useState('vocab');
       const [i,setI]=useState(0); const [show,setShow]=useState(false);
@@ -1746,7 +1886,7 @@
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="text-sm">Round:
               <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen} onChange={e=>{ const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
-                {[60,90,120,180,240,300,360,420,480].map(x=><option key={x} value={x}>{x}s</option>)}
+                {[180,240,300,360,420,480,540].map(x=><option key={x} value={x}>{x}s</option>)}
               </select>
             </div>
             <div className="flex flex-wrap gap-3 items-center">
@@ -1807,7 +1947,7 @@
     };
 
     /* =========================================================
-       Dashboard extras
+       Dashboard extras: XP header, Avatar, Weakest 3, Sparkline, Badges
     ========================================================== */
     const AvatarIcon = ({ outfit='classic', trail='none' }) => {
       const outfitFill = outfit==='rock' ? '#ef4444' : outfit==='fantasy' ? '#22d3ee' : '#6d28d9';
@@ -1825,6 +1965,7 @@
       const [cos, setCos] = useState(loadJSON(COSMETICS_KEY, { selected:{ outfit:'classic', trail:'none' }, unlocked:{ outfits:['classic'], trails:['none'] } }));
       const save = (nx)=>{ setCos(nx); saveJSON(COSMETICS_KEY, nx); };
       const unlockBag = loadBadges();
+      // unlockables from badges
       const unlocked = { ...cos.unlocked };
       if (unlockBag.earned['first-100'] && !unlocked.outfits.includes('rock')) unlocked.outfits.push('rock');
       if (unlockBag.earned['d-string-ace'] && !unlocked.outfits.includes('fantasy')) unlocked.outfits.push('fantasy');
@@ -1856,7 +1997,7 @@
       if (!points || !points.length) return <div className="muted text-xs">No sessions yet.</div>;
       const w = 240, h = 40;
       const max = Math.max(...points, 1);
-      const denom = Math.max(1, points.length - 1);
+      const denom = Math.max(1, points.length - 1); // <-- fixes divide-by-zero
       const path = points.map((v, i) => {
         const x = i * (w / denom);
         const y = h - (v / max) * h;
@@ -1940,8 +2081,10 @@
     const Dashboard = ({ go, prefs, setPrefs, stats, setStats }) => {
       const [helpKey, setHelpKey] = useState(null);
       const [theme, setThemeState] = useState(getTheme());
+      const [updateReady, setUpdateReady] = useState(false);
       const [accent, setAccent] = useState(getAccent());
-
+    
+      // Registry
       const CARD_REGISTRY = {
         speed:           { title: "Speed Ladder",            desc: "Full ladder.",            open: () => go('speed'),         help: 'speed' },
         'speed-base':    { title: "Speed Ladder — Core",     desc: "Base notes only.",        open: () => go('speed-base'),    help: 'speed-base' },
@@ -1950,191 +2093,300 @@
         dice:            { title: "Dice of Destiny",         desc: "Random focused task.",    open: () => go('dice') },
         'tempo-trainer': { title: "Tempo Trainer",           desc: "Flashcards for tempi.",   open: () => go('tempo-trainer'), help: 'tempoTrainer' },
         'tempo-tester':  { title: "Tempo Tester",            desc: "Timed MCQ.",              open: () => go('tempo-tester'),  help: 'tempoTester' },
-        height:          { title: "Finger Height Drill",     desc: "Low vs High fingers.",    open: () => go('height'),        help: 'height' },
-        locator:         { title: "Note Locator",            desc: "Pick a valid location.",  open: () => go('locator'),       help: 'locator' },
-        shift:           { title: "Shift Coach",             desc: "Best landing position.",  open: () => go('shift'),         help: 'shift' },
-        harmonics:       { title: "Harmonics Lab",           desc: "Nodes & quick quiz.",     open: () => go('harmonics'),     help: 'harmonics' },
-        bieler:          { title: "Bieler Method Lab",       desc: "Vocab, concepts, apps.",  open: () => go('bieler'),        help: 'bielerLab' },
+        height:          { title: "Finger Height Drill",     desc: "Low vs High.",            open: () => go('height'),        help: 'height' },
+        locator:         { title: "Note Locator", desc: "Pick a valid location for a given pitch.", open: () => go('locator'), help: 'locator' },
+        shift:            { title: "Shift Coach", desc: "Best landing spot on one string.",        open: () => go('shift'),   help: 'shift' },
+        harmonics:        { title: "Harmonics Lab", desc: "Natural harmonic nodes per string.",  open: () => go('harmonics'), help: 'harmonics' },
+        bieler:           { title: "Bieler Method Lab",       desc: "Concepts & apps.",        open: () => go('bieler'),        help: 'bielerLab' },
       };
-
-      const onThemeToggle = () => {
-        const t = theme==='dark' ? 'light' : 'dark';
-        setTheme(t); setThemeState(t);
+    
+      const DEFAULT_CARD_ORDER = [
+        'speed-base','speed','flash','bingo','dice',
+        'tempo-trainer','tempo-tester','height','locator','shift','harmonics','bieler'
+      ];
+      const CARD_ORDER_KEY = 'positionsQuest.dashboard.order.v1';
+    
+      const [order, setOrder] = useState(() => {
+        const saved = loadJSON(CARD_ORDER_KEY, null);
+        return Array.isArray(saved) && saved.length ? saved : DEFAULT_CARD_ORDER;
+      });
+      const saveOrder = (arr) => saveJSON(CARD_ORDER_KEY, arr);
+    
+      const move = (id, dir) => {
+        setOrder(prev => {
+          const ix = prev.indexOf(id); if (ix < 0) return prev;
+          const j = Math.max(0, Math.min(prev.length - 1, ix + dir));
+          const next = [...prev];
+          const [it] = next.splice(ix, 1);
+          next.splice(j, 0, it);
+          saveOrder(next);
+          return next;
+        });
+        const sr = document.getElementById('sr'); if (sr) sr.textContent = 'Card moved';
       };
-      const onAccent = (name) => { applyAccent(name); setAccent(name); };
-
-      const resetAllStats = () => {
-        // Clear all stat-like keys
-        [STATS_KEY, BEST_KEY, STREAK_KEY,
-         TEMPO_STATS_KEY, TEMPO_BEST_KEY,
-         HEIGHT_STATS_KEY, LOCATOR_STATS_KEY, SHIFT_STATS_KEY, HARM_STATS_KEY
-        ].forEach(k => localStorage.removeItem(k));
-        setStats({});
-      };
-
-      const exportCSV = () => {
-        const fb = loadStats(); // fingerboard
-        const tempo = loadTempoStats();
-        const height = loadJSON(HEIGHT_STATS_KEY, {});
-        const locator = loadJSON(LOCATOR_STATS_KEY, {});
-        const shift = loadJSON(SHIFT_STATS_KEY, {});
-        const harm = loadJSON(HARM_STATS_KEY, {});
-        let out = [];
-
-        out.push('=== Fingerboard (Speed Ladder) ===');
-        out.push('cell,correct,total,accuracy');
-        Object.entries(fb).forEach(([k,v])=>{
-          const acc = (v.total? (v.correct/v.total).toFixed(3) : '0');
-          out.push(`${k},${v.correct||0},${v.total||0},${acc}`);
+    
+      // keep order synced with registry
+      useEffect(() => {
+        const all = Object.keys(CARD_REGISTRY);
+        setOrder(prev => {
+          const merged = [
+            ...prev.filter(id => all.includes(id)),
+            ...all.filter(id => !prev.includes(id))
+          ];
+          if (merged.join('|') !== prev.join('|')) {
+            saveOrder(merged);
+            return merged;
+          }
+          return prev;
         });
-        out.push('');
-
-        out.push('=== Tempo Tester ===');
-        out.push('term,correct,total,accuracy');
-        Object.entries(tempo).forEach(([k,v])=>{
-          const acc = (v.total? (v.correct/v.total).toFixed(3) : '0');
-          out.push(`${k},${v.correct||0},${v.total||0},${acc}`);
-        });
-        out.push('');
-
-        out.push('=== Height Drill ===');
-        out.push('cell,label,correct,total,accuracy');
-        Object.entries(height).forEach(([k,v])=>{
-          ['low','natural','high'].forEach(lbl=>{
-            const c=v?.[lbl]?.correct||0, t=v?.[lbl]?.total||0; const acc=(t? (c/t).toFixed(3):'0');
-            out.push(`${k},${lbl},${c},${t},${acc}`);
-          });
-        });
-        out.push('');
-
-        out.push('=== Note Locator ===');
-        out.push('note,correct,total,accuracy');
-        Object.entries(locator).forEach(([k,v])=>{
-          const acc=(v.total? (v.correct/v.total).toFixed(3):'0');
-          out.push(`${k},${v.correct||0},${v.total||0},${acc}`);
-        });
-        out.push('');
-
-        out.push('=== Shift Coach ===');
-        out.push('prompt,correct,total,accuracy');
-        Object.entries(shift).forEach(([k,v])=>{
-          const acc=(v.total? (v.correct/v.total).toFixed(3):'0');
-          out.push(`${k},${v.correct||0},${v.total||0},${acc}`);
-        });
-        out.push('');
-
-        out.push('=== Harmonics Lab ===');
-        out.push('key,correct,total,accuracy');
-        Object.entries(harm).forEach(([k,v])=>{
-          const acc=(v.total? (v.correct/v.total).toFixed(3):'0');
-          out.push(`${k},${v.correct||0},${v.total||0},${acc}`);
-        });
-
-        const blob = new Blob([out.join('\n')], {type:'text/csv;charset=utf-8;'});
+      }, []);
+    
+      // Backup & Restore
+      const backup = () => {
+        const payload = {
+          [THEME_KEY]: localStorage.getItem(THEME_KEY) || null,
+          [THEME_ACCENT_KEY]: localStorage.getItem(THEME_ACCENT_KEY) || null,
+          [PREFS_KEY]: loadJSON(PREFS_KEY, null),
+          [STATS_KEY]: loadJSON(STATS_KEY, null),
+          [BEST_KEY]: loadJSON(BEST_KEY, null),
+          [TEMPO_STATS_KEY]: loadJSON(TEMPO_STATS_KEY, null),
+          [TEMPO_BEST_KEY]: loadJSON(TEMPO_BEST_KEY, null),
+          [SEYBOLD_KEY]: loadJSON(SEYBOLD_KEY, null),
+          [SCORE_KEY]: loadJSON(SCORE_KEY, null),
+          [BADGES_KEY]: loadJSON(BADGES_KEY, null),
+          [PRESETS_KEY]: loadJSON(PRESETS_KEY, null),
+          [SESSIONLOG_KEY]: loadJSON(SESSIONLOG_KEY, null),
+          [HEIGHT_STATS_KEY]: loadJSON(HEIGHT_STATS_KEY, null),
+          [LOCATOR_STATS_KEY]: loadJSON(LOCATOR_STATS_KEY, null),
+          [SHIFT_STATS_KEY]: loadJSON(SHIFT_STATS_KEY, null),
+          [HARM_STATS_KEY]: loadJSON(HARM_STATS_KEY, null),
+          [COSMETICS_KEY]: loadJSON(COSMETICS_KEY, null),
+          [SM2_KEY]: loadJSON(SM2_KEY, null),
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `vpq-export-${Date.now()}.csv`;
+        const a = document.createElement('a'); a.href = url; a.download = 'vpq_backup.json';
         document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       };
-
-      const onDrill = (s,p,f) => {
-        // narrow filters to just this cell
-        const nf = {
-          strings: Object.fromEntries(STRINGS.map(x => [x, x===s])),
-          positions: Object.fromEntries(POSITIONS.map(x => [x, x===p])),
-          fingers: Object.fromEntries(FINGERS.map(x => [x, x===f])),
+    
+      const restore = async (file) => {
+        try {
+          const txt = await file.text();
+          const obj = JSON.parse(txt);
+          Object.entries(obj).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) {
+              localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+            }
+          });
+          alert('Backup restored. The page will now reload to apply it.');
+          location.reload();
+        } catch (e) {
+          alert('Import failed: ' + e.message);
+        }
+      };
+      const inputRef = useRef(null);
+    
+      const exportCSV = () => {
+        const rows = [['mode','key','correct','total','accuracy']];
+        const packs = [
+          ['speed', stats],
+          ['height', loadJSON(HEIGHT_STATS_KEY, {})],
+          ['locator', loadJSON(LOCATOR_STATS_KEY, {})],
+          ['shift', loadJSON(SHIFT_STATS_KEY, {})],
+          ['harmonics', loadJSON(HARM_STATS_KEY, {})],
+        ];
+        for (const [mode, obj] of packs) {
+          Object.entries(obj || {}).forEach(([k, v]) => {
+            if (v && typeof v === 'object') {
+              if ('low' in v && 'high' in v) {
+                ['low','high','natural'].forEach(h=>{
+                  const c=v[h]?.correct||0, t=v[h]?.total||0, a=t? (c/t).toFixed(4):'0.0000';
+                  rows.push([`${mode}:${h}`, k, c, t, a]);
+                });
+              } else {
+                const c=v.correct||0, t=v.total||0, a=t? (c/t).toFixed(4):'0.0000';
+                rows.push([mode, k, c, t, a]);
+              }
+            }
+          });
+        }
+        const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const url = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+        const a = Object.assign(document.createElement('a'), {href:url, download:'positions_training_stats.csv'});
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      };
+    
+      const resetAll = () => {
+        if (!confirm('Reset all fingerboard stats & bests?')) return;
+        localStorage.removeItem(BEST_KEY);
+        localStorage.removeItem(STATS_KEY);
+        localStorage.removeItem(HEIGHT_STATS_KEY);
+        localStorage.removeItem(LOCATOR_STATS_KEY);
+        localStorage.removeItem(SHIFT_STATS_KEY);
+        localStorage.removeItem(HARM_STATS_KEY);
+        setStats({});
+        alert('Stats cleared.');
+      };
+    
+      // SW update toast (safe if no SW)
+      useEffect(() => {
+        checkAwardBadges();
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration().then(reg => {
+            if (!reg) return;
+            reg.addEventListener('updatefound', () => {
+              const nw = reg.installing;
+              nw?.addEventListener('statechange', () => {
+                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                  setUpdateReady(true);
+                }
+              });
+            });
+          });
+        }
+      }, []);
+    
+      const toggleTheme = () => { const next = theme === 'light' ? 'dark' : 'light'; setTheme(next); setThemeState(next); };
+      const changeAccent = (name) => { applyAccent(name); setAccent(name); };
+    
+      const goDrill = (s,p,f) => {
+        const next = { ...prefs };
+        next.filters = {
+          strings:   Object.fromEntries(STRINGS.map(x => [x, x === s])),
+          positions: Object.fromEntries(POSITIONS.map(x => [x, x === p])),
+          fingers:   Object.fromEntries(FINGERS.map(x => [x, x === f])),
         };
-        const next = { ...prefs, filters: nf };
         setPrefs(next); savePrefs(next);
         go('speed');
       };
-
+    
+      const sessions = loadJSON(SESSIONLOG_KEY, []);
+      const speedPoints = sessions.filter(s=>s.mode==='speed' || s.mode==='speed-base').slice(-20).map(s=> (s.total? s.correct/s.total : 0.0));
+      const tempoPoints = sessions.filter(s=>s.mode==='tempo').slice(-20).map(s=> (s.total? s.correct/s.total : 0.0));
+    
       return (
-        <div className="p-4 max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Violin Positions Quest</h1>
+        <div className="p-4">
+          <header className="mb-4 flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold">Violin Positions Quest</div>
+              <div className="muted text-sm">Your daily mission to master the fingerboard—and beyond.</div>
+            </div>
             <div className="flex items-center gap-2">
-              <div className="muted text-sm">Theme</div>
-              <button className="pill bg-gray-200" onClick={onThemeToggle}>{theme==='dark'?'Light':'Dark'}</button>
-              <div className="muted text-sm ml-2">Accent</div>
-              {['symphony','rockstar','fantasy','lofi'].map(n=>(
-                <button key={n} className={`pill ${accent===n?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>onAccent(n)}>{n}</button>
-              ))}
+              <select className="border rounded p-2 text-sm" value={accent} onChange={e=>changeAccent(e.target.value)} title="Theme accent">
+                <option value="symphony">Symphony Hall</option>
+                <option value="rockstar">Rockstar</option>
+                <option value="fantasy">Fantasy Quest</option>
+                <option value="lofi">Lo-fi Studio</option>
+              </select>
+              <button className="btn btn-gray" onClick={toggleTheme}>{theme === 'dark' ? 'Light' : 'Dark'} Mode</button>
+              <button className="btn btn-green" onClick={backup}>Backup</button>
+              <button className="btn btn-blue" onClick={() => inputRef.current?.click()}>Restore</button>
+              <input ref={inputRef} type="file" accept="application/json" hidden onChange={e=>e.target.files[0] && restore(e.target.files[0])}/>
             </div>
-          </div>
-
+          </header>
+    
           <ScoreHeader />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Object.entries(CARD_REGISTRY).map(([k, meta]) => (
-              <CardButton key={k} title={meta.title} description={meta.desc} onClick={meta.open} onHelp={meta.help ? ()=>setHelpKey(meta.help) : undefined} />
-            ))}
+    
+          {/* Toolbar above the grid */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm muted">Cards</div>
+            <button
+              className="btn btn-gray"
+              onClick={() => { setOrder(DEFAULT_CARD_ORDER); saveOrder(DEFAULT_CARD_ORDER); }}
+            >
+              Reset Card Order
+            </button>
           </div>
-
-          <FiltersPanel
-            prefs={prefs}
-            setPrefs={setPrefs}
-            stats={stats}
-            onResetStats={resetAllStats}
-            onExportCSV={exportCSV}
-          />
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <AccuracyHeatmap stats={stats} />
-            <div className="space-y-6">
-              <WeakestThreePanel stats={stats} onDrill={onDrill} />
-              <BadgesPanel />
-              <AvatarCustomizer />
+    
+          {/* Cards grid */}
+          <div className="grid-cards">
+            {order.map(id => {
+              const c = CARD_REGISTRY[id];
+              if (!c) return null;
+              return (
+                <div key={id} className="relative">
+                  <CardButton
+                    title={c.title}
+                    description={c.desc}
+                    onClick={c.open}
+                    onHelp={c.help ? () => setHelpKey(c.help) : undefined}
+                  />
+                  <div className="absolute right-3 top-3 flex gap-1">
+                    <button className="pill" onClick={() => move(id, -1)} title="Move up">↑</button>
+                    <button className="pill" onClick={() => move(id, 1)}  title="Move down">↓</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+    
+          {/* Help modal */}
+          <Modal open={!!helpKey} onClose={() => setHelpKey(null)} title="How to play">
+            {HELP[helpKey] || 'Select a mode to begin.'}
+          </Modal>
+    
+          <div className="grid lg:grid-cols-3 gap-4 mt-6">
+            <div className="lg:col-span-2">
+              <FiltersPanel
+                prefs={prefs}
+                setPrefs={setPrefs}
+                stats={stats}
+                onResetStats={resetAll}
+                onExportCSV={exportCSV}
+              />
+              <div className="mt-4"><AccuracyHeatmap stats={stats} /></div>
+            </div>
+            <div className="space-y-4">
+              <div className="card rounded-xl p-4">
+                <div className="text-lg font-semibold mb-2">Recent Accuracy</div>
+                <div className="text-xs muted mb-1">Speed Ladder (last 20)</div>
+                <Spark points={speedPoints}/>
+                <div className="text-xs muted mt-2">Tempo Tester (last 20)</div>
+                <Spark points={tempoPoints}/>
+              </div>
+              <WeakestThreePanel stats={stats} onDrill={goDrill}/>
+              <BadgesPanel/>
+              <AvatarCustomizer/>
             </div>
           </div>
-
-          <Modal
-            open={!!helpKey}
-            onClose={()=>setHelpKey(null)}
-            title="How it works"
-          >
-            {helpKey && (HELP[helpKey] || 'No help available for this item.')}
-          </Modal>
+    
+          <Toast open={updateReady} text="An update is ready." action="Reload" onAction={() => location.reload()} />
         </div>
       );
     };
-
+    
     /* =========================================================
-       App shell & routing
+       App router + mount
     ========================================================== */
     const App = () => {
       const [route, setRoute] = useState('home');
       const [prefs, setPrefs] = useState(loadPrefs());
       const [stats, setStats] = useState(loadStats());
+    
       const go = (r) => setRoute(r);
       const back = () => setRoute('home');
-
-      return (
-        <>
-          {route==='home' && <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />}
-
-          {route==='speed'       && <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={(s)=>{ setStats(s); saveStats(s); }} mode="full" />}
-          {route==='speed-base'  && <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={(s)=>{ setStats(s); saveStats(s); }} mode="base" />}
-
-          {route==='flash'       && <Flashcards onBack={back} />}
-          {route==='bingo'       && <BingoBoard onBack={back} />}
-          {route==='dice'        && <DiceOfDestinyGame onBack={back} />}
-
-          {route==='tempo-trainer' && <TempoTrainer onBack={back} prefs={prefs} />}
-          {route==='tempo-tester'  && <TempoTester  onBack={back} prefs={prefs} />}
-
-          {route==='height'     && <HeightDrill  onBack={back} prefs={prefs} />}
-          {route==='locator'    && <NoteLocator  onBack={back} prefs={prefs} />}
-          {route==='shift'      && <ShiftCoach   onBack={back} prefs={prefs} />}
-          {route==='harmonics'  && <HarmonicsLab onBack={back} prefs={prefs} />}
-
-          {route==='bieler'     && <BielerLab onBack={back} />}
-        </>
-      );
+    
+      const screens = {
+        home:           () => <Dashboard go={go} prefs={prefs} setPrefs={setPrefs} stats={stats} setStats={setStats} />,
+        speed:          () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="full" />,
+        'speed-base':   () => <SpeedLadderGame onBack={back} prefs={prefs} stats={stats} setStats={setStats} mode="base" />,
+        flash:          () => <Flashcards onBack={back} />,
+        bingo:          () => <BingoBoard onBack={back} />,
+        dice:           () => <DiceOfDestinyGame onBack={back} />,
+        'tempo-trainer':() => <TempoTrainer onBack={back} prefs={prefs} />,
+        'tempo-tester': () => <TempoTester onBack={back} prefs={prefs} />,
+        height:         () => <HeightDrill onBack={back} prefs={prefs} />,
+        locator:        () => <NoteLocator onBack={back} prefs={prefs} />,
+        shift:          () => <ShiftCoach onBack={back} prefs={prefs} />,
+        harmonics:      () => <HarmonicsLab onBack={back} prefs={prefs} />,
+        bieler:         () => <BielerLab onBack={back} />,
+      };
+    
+      const Screen = screens[route] || screens.home;
+      return <Screen />;
     };
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
