@@ -1608,11 +1608,26 @@
           beeps.bad(); setStreak(0);
           setTimeout(()=>{
             if (prefs.coach && prefs.coachRetry){
-              const miss=lastMissRef.current;
-              if(miss){
-                const c = getRandomItem(miss.valid);
-                const opts = shuffle([c, ...getRandomDistractors(c, 3)]);
-                optionsRef.current=opts; setQuestion({ ...miss, correct:c, options:opts, ts:performance.now(), sm2Key:`${miss.s}:${miss.p}:${miss.f}:${norm(c)}` }); return;
+              const miss = lastMissRef.current;
+              if (miss){
+                // pick the correct note in the same mode we’re in
+                const correct = baseOnly
+                  ? getRandomItem(baseNamesFor(miss.s, miss.p, miss.f))
+                  : getRandomItem(miss.valid);
+          
+                // distractors from the right pool
+                const pool = baseOnly ? ALL_BASE_UNIQUE : ALL_NOTES_UNIQUE;
+                const opts = shuffle([correct, ...getDistractorsFromPool(correct, pool, [], 3)]);
+          
+                optionsRef.current = opts;
+                setQuestion({
+                  ...miss,
+                  correct,
+                  options: opts,
+                  ts: performance.now(),
+                  sm2Key: `${miss.s}:${miss.p}:${miss.f}:${norm(correct)}`
+                });
+                return;
               }
             }
             newQuestion();
