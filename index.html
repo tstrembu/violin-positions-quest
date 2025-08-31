@@ -1542,7 +1542,7 @@
         ts: performance.now(),
         sm2Key: (c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}`)
       });
-
+    };
       useEffect(()=>{ newQuestion(); }, []);
       useEffect(()=>{
         if (finished) return;
