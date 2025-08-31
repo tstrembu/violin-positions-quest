@@ -367,6 +367,33 @@
     
     const NOTES_DATA = buildNotesData();
     
+    // ---- Base-only helpers (natural/base note for each cell) ----
+    const baseNamesFor = (s,p,f) => {
+      const pc0 = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
+      return names(pc0); // may return one or two spellings (e.g., ['C#','Db'])
+    };
+    
+    const ALL_BASE_UNIQUE = (() => {
+      const set = new Set();
+      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
+        baseNamesFor(s,p,f).forEach(n => set.add(n));
+      })));
+      return [...set];
+    })();
+    
+    function getDistractorsFromPool(correct, pool, forbidPCs = [], count = 3){
+      const banned = new Set([pc(correct), ...forbidPCs]);
+      const picks = [];
+      const seen = new Set();
+      const filtered = pool.filter(n => !banned.has(pc(n)));
+      while (picks.length < Math.min(count, filtered.length)) {
+        const cand = getRandomItem(filtered);
+        const cls = pc(cand);
+        if (!seen.has(cls)) { seen.add(cls); picks.push(cand); }
+      }
+      return picks;
+    }
+    
     // Quick data sanity check against a few poster anchor points
     (function selfTest(){
       const MUST = {
@@ -1431,7 +1458,8 @@
     };
 
     // Speed Ladder (fingerboard) + SM-2 + XP + hint + fingerboard SVG
-    const SpeedLadderGame = ({ onBack, prefs, stats, setStats }) => {
+    const SpeedLadderGame = ({ onBack, prefs, stats, setStats, mode = 'full' }) => {
+      const baseOnly = mode === 'base';
       const allCombos = useMemo(()=>allActualCombos(), []);
       const beeps = useBeeps(prefs.sound);
       const { speak } = useCallouts(prefs.callouts);
@@ -1491,15 +1519,31 @@
       };
 
       const newQuestion = (preset=null) => {
-        const c = preset || weightedPick();
-        const correct = c.preferredNote ? c.preferredNote : getRandomItem(c.valid);
-        const siblingsPCs = (c.valid || []).filter(n => pc(n) !== pc(correct)).map(pc);
-        const opts = shuffle([correct, ...getRandomDistractors(correct, siblingsPCs, 3)]);
-        optionsRef.current = opts;
-        setMicroHint('');
-        setQuestion({ ...c, correct, options: opts, ts: performance.now(), sm2Key: c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}` });
-        speak(fullLoc(c.s, c.p, c.f));
-      };
+      const c = preset || weightedPick();
+      // pick the correct note based on mode
+      const baseOpts = baseNamesFor(c.s, c.p, c.f);
+      const correct = baseOnly
+        ? getRandomItem(baseOpts)
+        : (c.preferredNote ? c.preferredNote : getRandomItem(c.valid));
+    
+      // build options from the appropriate pool
+      const pool = baseOnly ? ALL_BASE_UNIQUE : ALL_NOTES_UNIQUE;
+      const opts = shuffle([
+        correct,
+        ...getDistractorsFromPool(correct, pool, [], 3)
+      ]);
+    
+      optionsRef.current = opts;
+      setMicroHint('');
+      setQuestion({
+        ...c,
+        correct,
+        options: opts,
+        ts: performance.now(),
+        sm2Key: (c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}`)
+      });
+      speak(fullLoc(c.s, c.p, c.f));
+    };
 
       useEffect(()=>{ newQuestion(); }, []);
       useEffect(()=>{
