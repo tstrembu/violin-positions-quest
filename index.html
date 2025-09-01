@@ -220,8 +220,8 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(()=>{});
+      addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js', { scope: './' }).catch(()=>{});
       });
     }
   </script>
