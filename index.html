@@ -210,17 +210,19 @@
     })();
   </script>
   <!-- Tailwind (utility helpers only) -->
-  <!-- Tailwind CDN (config first, then script) -->
+  <!-- Tailwind config then CDN ONCE (defer) -->
   <script>
     window.tailwind = window.tailwind || {};
     tailwind.config = { darkMode:'class', theme:{ extend:{ fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] }}}};
   </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Defered libs -->
   <script src="https://cdn.tailwindcss.com" defer></script>
+
+  <!-- React & Babel ONCE (defer) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" defer></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" defer></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
+
+  <!-- Service worker (optional) -->
   <script>
     if ('serviceWorker' in navigator) {
       addEventListener('load', () => {
@@ -228,11 +230,6 @@
       });
     }
   </script>
-  
-  <!-- React 18 UMD + Babel for in-browser JSX -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
