@@ -13,11 +13,11 @@
   <meta name="color-scheme" content="light dark" />
 
   <!-- PWA manifest & icons (GitHub Pages path) -->
-  <link rel="manifest" href="/violin-positions-quest/manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="/violin-positions-quest/icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/violin-positions-quest/icons/icon-192.png" />
-  <link rel="icon" href="/violin-positions-quest/icons/icon-192.png" sizes="192x192" />
-  <link rel="icon" href="/violin-positions-quest/icons/icon-512.png" sizes="512x512" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="icon" href="icon-192.png" sizes="192x192" />
+  <link rel="icon" href="icon-512.png" sizes="512x512" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -221,7 +221,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/violin-positions-quest/sw.js').catch(()=>{});
+        navigator.serviceWorker.register('sw.js').catch(()=>{});
       });
     }
   </script>
