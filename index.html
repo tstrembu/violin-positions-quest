@@ -1701,24 +1701,24 @@
           beeps.bad(); setStreak(0);
           setTimeout(()=>{
             if (prefs.coach && prefs.coachRetry){
+              // inside the miss-retry timeout
               const miss = lastMissRef.current;
               if (miss){
-                // pick the correct note in the same mode we’re in
                 const correct = baseOnly
-                  ? getRandomItem(baseNamesFor(miss.s, miss.p, miss.f))
+                  ? CANON_PC_NAME[pc(getRandomItem(baseNamesFor(miss.s, miss.p, miss.f)))]
                   : getRandomItem(miss.valid);
-          
-                // distractors from the right pool
-                const pool = baseOnly ? ALL_BASE_UNIQUE : ALL_NOTES_UNIQUE;
+              
+                const pool = baseOnly ? ALL_BASE_CANON : ALL_NOTES_UNIQUE;
                 const opts = shuffle([correct, ...getDistractorsFromPool(correct, pool, [], 3)]);
-          
+              
                 optionsRef.current = opts;
                 setQuestion({
                   ...miss,
+                  valid: baseOnly ? baseNamesFor(miss.s, miss.p, miss.f) : miss.valid,
                   correct,
                   options: opts,
                   ts: performance.now(),
-                  sm2Key: `${miss.s}:${miss.p}:${miss.f}:${norm(correct)}`
+                  sm2Key: `${modeKey}:${miss.s}:${miss.p}:${miss.f}:${norm(correct)}`
                 });
                 return;
               }
