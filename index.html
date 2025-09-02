@@ -336,10 +336,24 @@
     
     // within each position, the “base” (natural) offsets for fingers 1–4
     const BASE_OFF = { 1:2, 2:4, 3:5, 4:7 };
- 
+    
+    // Canonical, flat-leaning spellings for reading practice
+    const CANON_PC_NAME = {  // 0..11
+      0:'C', 1:'Db', 2:'D', 3:'Eb', 4:'E', 5:'F', 6:'F#', 7:'G', 8:'Ab', 9:'A', 10:'Bb', 11:'B'
+    };
+    
+    // Unique canonical base-note pool for Core distractors
+    const ALL_BASE_CANON = (() => {
+      const set = new Set();
+      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
+        baseNamesFor(s,p,f).forEach(n => set.add(CANON_PC_NAME[pc(n)]));
+      })));
+      return [...set];  // 12 names
+    })();
+    
     // position offsets measured in semitones from 1st position
-    // 1→0, 2→+2, 3→+3, 4→+5, 5→+7
-    const POS_SHIFT = { 1:0, 2:2, 3:3, 4:5, 5:7 };
+    const POS_SHIFT_BY_POSITION = [0,2,3,5,7];             // positions 1..5
+    const POS_SHIFT = {1:0, 2:2, 3:3, 4:5, 5:7};           // keep object for existing calls
     
     const wrap12 = n => ((n % 12) + 12) % 12;
     const names   = k => SEMI_TO_NAMES[wrap12(k)];
@@ -1531,6 +1545,7 @@
     // Speed Ladder (fingerboard) + SM-2 + XP + hint + fingerboard SVG
     const SpeedLadderGame = ({ onBack, prefs, stats, setStats, mode = 'full' }) => {
       const baseOnly = mode === 'base';
+      const modeKey  = baseOnly ? 'base' : 'full';
       const allCombos = useMemo(()=>allActualCombos(), []);
       const beeps = useBeeps(prefs.sound);
       const { speak } = useCallouts(prefs.callouts);
@@ -1549,17 +1564,18 @@
       const [microHint, setMicroHint] = useState('');
 
       // SM-2: include some due items
-      const dueKeys = sm2DueKeys(); // ['G:2:3:C#', ...]
+      const dueKeysRaw = sm2DueKeys().filter(k => k.startsWith(modeKey + ':')); // <<< new
       const dueCombos = useMemo(()=>{
         const map = new Map(allCombos.map(c=>[`${c.s}:${c.p}:${c.f}`, c]));
         const arr = [];
-        for (const k of dueKeys) {
-          const [s,p,f,maybeNote] = k.split(':');
+        for (const k of dueKeysRaw) {
+          const [, s, p, f, maybeNote] = k.split(':'); // drop mode prefix
           const base = map.get(`${s}:${p}:${f}`);
           if (base) arr.push({ ...base, sm2Key:k, preferredNote: maybeNote });
         }
         return arr;
-      }, [allCombos, dueKeys.join('|')]);
+        // include modeKey so toggling Core/Full doesn't reuse stale dues
+      }, [allCombos, modeKey, dueKeysRaw.join('|')]);
 
       const candidates = useMemo(()=>{
         const f = prefs.filters||{};
@@ -1590,20 +1606,22 @@
       };
 
       const newQuestion = (preset=null) => {
+      if (dueCombos.length && Math.random() < 0.4) return getRandomItem(dueCombos);
       const c = preset || weightedPick();
       // pick the correct note based on mode
       const baseOpts = baseNamesFor(c.s, c.p, c.f);
+
       const correct = baseOnly
-        ? getRandomItem(baseOpts)
+        ? CANON_PC_NAME[pc(baseOpts[0])]                 // force canonical display
         : (c.preferredNote ? c.preferredNote : getRandomItem(c.valid));
-    
-      // build options from the appropriate pool
-      const pool = baseOnly ? ALL_BASE_UNIQUE : ALL_NOTES_UNIQUE;
+      
+      const pool = baseOnly ? ALL_BASE_CANON : ALL_NOTES_UNIQUE;
+      
       const opts = shuffle([
         correct,
         ...getDistractorsFromPool(correct, pool, [], 3)
       ]);
-    
+      
       optionsRef.current = opts;
       setMicroHint('');
       setQuestion({
@@ -1612,7 +1630,7 @@
         correct,
         options: opts,
         ts: performance.now(),
-        sm2Key: (c.sm2Key || `${c.s}:${c.p}:${c.f}:${norm(correct)}`)
+        sm2Key: `${modeKey}:${c.s}:${c.p}:${c.f}:${norm(correct)}`
       });
     };
       useEffect(()=>{ newQuestion(); }, []);
@@ -1665,11 +1683,14 @@
 
         // micro hint when wrong
         if (!ok) {
-          const label = fingerHeight(question.correct, question.valid);
-          setMicroHint(`${norm(question.correct)} = ${label==='natural'?'natural':label} ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
-        } else setMicroHint('');
-        if (!ok && baseOnly) {
-          setMicroHint(`${norm(question.correct)} = base ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
+          if (baseOnly) {
+            setMicroHint(`${norm(question.correct)} = base ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
+          } else {
+            const label = fingerHeight(question.correct, question.valid);
+            setMicroHint(`${norm(question.correct)} = ${label==='natural'?'natural':label} ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
+          }
+        } else {
+          setMicroHint('');
         }
 
         // SM-2
