@@ -342,15 +342,6 @@
       0:'C', 1:'Db', 2:'D', 3:'Eb', 4:'E', 5:'F', 6:'F#', 7:'G', 8:'Ab', 9:'A', 10:'Bb', 11:'B'
     };
     
-    // Unique canonical base-note pool for Core distractors
-    const ALL_BASE_CANON = (() => {
-      const set = new Set();
-      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
-        baseNamesFor(s,p,f).forEach(n => set.add(CANON_PC_NAME[pc(n)]));
-      })));
-      return [...set];  // 12 names
-    })();
-    
     // position offsets measured in semitones from 1st position
     const POS_SHIFT_BY_POSITION = [0,2,3,5,7];             // positions 1..5
     const POS_SHIFT = {1:0, 2:2, 3:3, 4:5, 5:7};           // keep object for existing calls
@@ -414,6 +405,15 @@
       const pc0 = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
       return names(pc0); // may return one or two spellings (e.g., ['C#','Db'])
     };
+    
+    // Unique canonical base-note pool for Core distractors
+    const ALL_BASE_CANON = (() => {
+      const set = new Set();
+      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
+        baseNamesFor(s,p,f).forEach(n => set.add(CANON_PC_NAME[pc(n)]));
+      })));
+      return [...set];  // 12 names
+    })();
     
     const ALL_BASE_UNIQUE = (() => {
       const set = new Set();
@@ -1606,22 +1606,17 @@
       };
 
       const newQuestion = (preset=null) => {
-      if (dueCombos.length && Math.random() < 0.4) return getRandomItem(dueCombos);
-      const c = preset || weightedPick();
-      // pick the correct note based on mode
+      const duePick = (dueCombos.length && Math.random() < 0.4) ? getRandomItem(dueCombos) : null;
+      const c = preset || duePick || weightedPick();
+    
       const baseOpts = baseNamesFor(c.s, c.p, c.f);
-
       const correct = baseOnly
-        ? CANON_PC_NAME[pc(baseOpts[0])]                 // force canonical display
+        ? CANON_PC_NAME[pc(baseOpts[0])]
         : (c.preferredNote ? c.preferredNote : getRandomItem(c.valid));
-      
+    
       const pool = baseOnly ? ALL_BASE_CANON : ALL_NOTES_UNIQUE;
-      
-      const opts = shuffle([
-        correct,
-        ...getDistractorsFromPool(correct, pool, [], 3)
-      ]);
-      
+      const opts = shuffle([correct, ...getDistractorsFromPool(correct, pool, [], 3)]);
+    
       optionsRef.current = opts;
       setMicroHint('');
       setQuestion({
