@@ -234,11 +234,11 @@
   </script>
   <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
 
-  <!-- React + Babel -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin="anonymous"></script>
-
+  <!-- Put these BEFORE your <script type="text/babel">, and do NOT defer Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
   <!-- Service worker (optional) -->
   <script>
     if ('serviceWorker' in navigator) {
