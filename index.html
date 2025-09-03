@@ -41,7 +41,7 @@
       --shadow: 0 10px 20px rgba(0,0,0,0.08);
       --accent: #6d28d9; /* theme accent */
     }
-    body.dark {
+    :root.dark {
       --bg: #0b1020;
       --card: #0f172a;
       --ink-900: #e5e7eb;
@@ -57,14 +57,13 @@
       --hairline:       rgba(0,0,0,.12);   /* borders, dividers */
       --gridline:       rgba(0,0,0,.20);   /* SVG guidelines */
     }
-    body.dark{
+    :root.dark {
       --surface-subtle: rgba(255,255,255,.06);
       --hairline:       rgba(255,255,255,.14);
       --gridline:       rgba(255,255,255,.16);
     }
-
     /* Make Tailwind's generic borders readable in dark */
-    body.dark .border, body.dark .border-2 { border-color: var(--hairline) !important; }
+    .dark .border, .dark .border-2 { border-color: var(--hairline) !important; }
     html, body { height:100%; }
     body {
       margin: 0;
