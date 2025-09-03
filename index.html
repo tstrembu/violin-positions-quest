@@ -1336,10 +1336,16 @@
       };
     
       React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(()=>{
-        const id=setInterval(()=>setTimer(t=>t<=1?0:t-1), 1000);
-        return ()=>clearInterval(id);
-      },[]);
+      React.useEffect(() => {
+        const onKey = (e) => {
+          if (!q || timer === 0) return;
+          const k = e.key.toLowerCase();
+          if (k === 'h') { e.preventDefault(); answer('half'); }
+          if (k === 'w') { e.preventDefault(); answer('whole'); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [q, timer]);
     
       const bump = (key, ok) => {
         const st = stats[key] || { correct:0, total:0 };
@@ -1376,13 +1382,6 @@
         </div>
       );
     };
-    // (Optional) quick keys
-    window.addEventListener('keydown', e=>{
-      const k=e.key.toLowerCase();
-      const btn = (k==='h') ? [...document.querySelectorAll('.btn')].find(b=>b.textContent.toLowerCase().includes('half'))
-                : (k==='w') ? [...document.querySelectorAll('.btn')].find(b=>b.textContent.toLowerCase().includes('whole')) : null;
-      if (btn) btn.click();
-    });
 
     /* ===================== NEW: Finger Height Drill ===================== */
     const HeightDrill = ({ onBack, prefs }) => {
