@@ -2360,7 +2360,9 @@
         if (screen === 'speed')      return <SpeedLadderGame  mode="full" onBack={()=>setScreen('home')} prefs={prefs} stats={stats} setStats={setStats} />;
         if (screen === 'speedbase')  return <SpeedLadderGame  mode="base" onBack={()=>setScreen('home')} prefs={prefs} stats={stats} setStats={setStats} />;
         if (screen === 'flash')      return <Flashcards onBack={()=>setScreen('home')} />;
-        if (screen === 'tempo-train')return <TempoTrainer onBack={()=>setScreen('home')} prefs={prefs} />;
+        if (screen === 'snapshot')    return <SnapshotCore   onBack={()=>setScreen('home')} prefs={prefs} />;
+        if (screen === 'interval')    return <IntervalSprint onBack={()=>setScreen('home')} prefs={prefs} />;
+        if (screen === 'tempo-train') return <TempoTrainer onBack={()=>setScreen('home')} prefs={prefs} />;
         if (screen === 'tempo-test') return <TempoTester onBack={()=>setScreen('home')}  prefs={prefs} />;
         if (screen === 'bingo')      return <BingoBoard onBack={()=>setScreen('home')} />;
         if (screen === 'dice')       return <DiceOfDestinyGame onBack={()=>setScreen('home')} />;
