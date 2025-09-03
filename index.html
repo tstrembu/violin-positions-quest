@@ -1213,7 +1213,7 @@
         const opts = shuffle([correct, ...getDistractorsFromPool(correct, ALL_BASE_CANON, [], 3)]);
         setQ({ s, p, bases, f, correct, opts });
         setPhase('flash'); setShowGrid(true);
-        setTimeout(()=>{ setShowGrid(false); setPhase('quiz'); }, 1400); // 1.4s “photograph”
+        setTimeout(()=>{ setShowGrid(false); setPhase('quiz'); }, 1700); // 1.7s “photograph”
       };
     
       React.useEffect(()=>{ pick(); },[]);
