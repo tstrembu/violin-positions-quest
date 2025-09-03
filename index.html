@@ -2170,75 +2170,125 @@
     ========================================================== */
     const FiltersPanel = ({ prefs, setPrefs, stats, onResetStats, onExportCSV }) => {
       const f = prefs.filters;
-      const toggle=(group,key)=>{
-        setPrefs(p=>{ const next={...p, filters:{...p.filters, [group]:{...p.filters[group],[key]:!p.filters[group][key]}}}; savePrefs(next); return next; });
+    
+      const toggle = (group, key) => {
+        setPrefs(p => {
+          const next = {
+            ...p,
+            filters: {
+              ...p.filters,
+              [group]: { ...p.filters[group], [key]: !p.filters[group][key] }
+            }
+          };
+          savePrefs(next);
+          return next;
+        });
       };
-      const setAll=(group,val)=>{
-        setPrefs(p=>{ const obj=Object.fromEntries(Object.keys(p.filters[group]).map(k=>[k,val])); const next={...p, filters:{...p.filters, [group]:obj}}; savePrefs(next); return next; });
+    
+      const setAll = (group, val) => {
+        setPrefs(p => {
+          const obj = Object.fromEntries(Object.keys(p.filters[group]).map(k => [k, val]));
+          const next = { ...p, filters: { ...p.filters, [group]: obj } };
+          savePrefs(next);
+          return next;
+        });
       };
+    
       return (
-        <div className="card rounded-xl p-4">
-          <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="text-sm">Round:
-              <select className="ml-2 border rounded p-1 text-sm" value={prefs.roundLen} onChange={e => { const n={...prefs, roundLen:Number(e.target.value)}; setPrefs(n); savePrefs(n); }}>
-                {[120,180,240,300,360,420,480,540].map(x =>
-                  <option key={x} value={x}>{x}s</option>
-                )}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-3 items-center">
-              <label className="text-sm"><input type="checkbox" checked={prefs.adaptive} onChange={e=>{ const n={...prefs, adaptive:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Adaptive</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.coach} onChange={e=>{ const n={...prefs, coach:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Coach</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.coachRetry} onChange={e=>{ const n={...prefs, coachRetry:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Retry after miss</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.sound} onChange={e=>{ const n={...prefs, sound:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Sound</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.confetti} onChange={e=>{ const n={...prefs, confetti:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Confetti</label>
-              <label className="text-sm"><input type="checkbox" checked={prefs.callouts} onChange={e=>{ const n={...prefs, callouts:e.target.checked}; setPrefs(n); savePrefs(n); }} /> Call-outs</label>
-            </div>
-            <div className="flex gap-2">
-              <button className="btn btn-rose" onClick={onResetStats}>Reset All Stats</button>
-              <button className="btn btn-green" onClick={onExportCSV}>Export CSV</button>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-4 mt-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold">Strings</div>
-                <div className="text-xs"><span className="linkish" onClick={()=>setAll('strings',true)}>All</span> · <span className="linkish" onClick={()=>setAll('strings',false)}>None</span></div>
-              </div>
+        <div className="card rounded-xl p-5">
+          <div className="text-lg font-bold mb-3">Filters & Settings</div>
+    
+          <div className="grid gap-4 sm:grid-cols-3">
+            {/* Strings */}
+            <div className="rounded border p-3">
+              <div className="font-semibold mb-2">Strings</div>
               <div className="flex flex-wrap gap-2">
-                {STRINGS.map(s=>(
-                  <button key={s} className={`pill ${f.strings[s]?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>toggle('strings',s)}>{s}</button>
+                {STRINGS.map(s => (
+                  <button key={s}
+                    className={`btn ${f.strings[s] ? 'btn-purple' : 'btn-gray'}`}
+                    onClick={() => toggle('strings', s)}>{s}</button>
                 ))}
               </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold">Positions</div>
-                <div className="text-xs"><span className="linkish" onClick={()=>setAll('positions',true)}>All</span> · <span className="linkish" onClick={()=>setAll('positions',false)}>None</span></div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {POSITIONS.map(p=>(
-                  <button key={p} className={`pill ${f.positions[p]?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>toggle('positions',p)}>Pos {p}</button>
-                ))}
+              <div className="mt-2 flex gap-2">
+                <button className="btn btn-amber" onClick={() => setAll('strings', true)}>All</button>
+                <button className="btn btn-gray" onClick={() => setAll('strings', false)}>None</button>
               </div>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold">Fingers</div>
-                <div className="text-xs"><span className="linkish" onClick={()=>setAll('fingers',true)}>All</span> · <span className="linkish" onClick={()=>setAll('fingers',false)}>None</span></div>
-              </div>
+    
+            {/* Positions */}
+            <div className="rounded border p-3">
+              <div className="font-semibold mb-2">Positions</div>
               <div className="flex flex-wrap gap-2">
-                {FINGERS.map(fn=>(
-                  <button key={fn} className={`pill ${f.fingers[fn]?'bg-purple-600 text-white':'bg-gray-200'}`} onClick={()=>toggle('fingers',fn)}>F{fn}</button>
+                {POSITIONS.map(p => (
+                  <button key={p}
+                    className={`btn ${f.positions[p] ? 'btn-purple' : 'btn-gray'}`}
+                    onClick={() => toggle('positions', p)}>{p}</button>
                 ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button className="btn btn-amber" onClick={() => setAll('positions', true)}>All</button>
+                <button className="btn btn-gray" onClick={() => setAll('positions', false)}>None</button>
+              </div>
+            </div>
+    
+            {/* Fingers */}
+            <div className="rounded border p-3">
+              <div className="font-semibold mb-2">Fingers</div>
+              <div className="flex flex-wrap gap-2">
+                {FINGERS.map(fn => (
+                  <button key={fn}
+                    className={`btn ${f.fingers[fn] ? 'btn-purple' : 'btn-gray'}`}
+                    onClick={() => toggle('fingers', fn)}>{fn}</button>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button className="btn btn-amber" onClick={() => setAll('fingers', true)}>All</button>
+                <button className="btn btn-gray" onClick={() => setAll('fingers', false)}>None</button>
               </div>
             </div>
           </div>
-
-          <p className="text-xs muted mt-3">
-            Focus Mode pulls only from your selected subset (falls back to all if deselected).
-          </p>
+    
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded border p-3">
+              <div className="font-semibold mb-2">Round length (seconds)</div>
+              <input
+                type="number" min="30" max="600" step="10"
+                className="rounded border p-2 w-full"
+                value={prefs.roundLen}
+                onChange={(e) => {
+                  const v = Math.max(30, Math.min(600, Number(e.target.value || 0)));
+                  const next = { ...prefs, roundLen: v };
+                  setPrefs(next); savePrefs(next);
+                }}
+              />
+            </div>
+            <div className="rounded border p-3">
+              <div className="font-semibold mb-2">Options</div>
+              {[
+                ['sound','Sound'],
+                ['confetti','Confetti'],
+                ['adaptive','Adaptive coach'],
+                ['coach','Coach on miss'],
+                ['coachRetry','Retry a miss'],
+                ['callouts','Speech call-outs'],
+              ].map(([k,label]) => (
+                <label key={k} className="flex items-center gap-2 block">
+                  <input type="checkbox"
+                         checked={!!prefs[k]}
+                         onChange={(e)=>{
+                           const next = { ...prefs, [k]: e.target.checked };
+                           setPrefs(next); savePrefs(next);
+                         }} />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+    
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button className="btn btn-rose" onClick={onResetStats}>Reset stats</button>
+            <button className="btn btn-green" onClick={onExportCSV}>Export CSV</button>
+          </div>
         </div>
       );
     };
