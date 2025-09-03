@@ -749,15 +749,17 @@
       </div>
     );
 
-    const CardButton = ({ title, description, onClick, onHelp }) => (
-      <div className="card rounded-xl p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-xl font-bold ink800">{title}</div>
-            <div className="muted text-sm mt-1">{description}</div>
-          </div>
-          <button className="help-dot" aria-label="How to play" onClick={onHelp}>?</button>
-        </div>
+   const CardButton = ({ title, description, onClick, onHelp }) => (
+      <div className="card rounded-xl p-5 relative">
+        <button
+          className="help-dot absolute right-3 top-3"
+          aria-label={`How to play: ${title}`}
+          onClick={onHelp}
+        >
+          ?
+        </button>
+        <div className="text-xl font-bold ink800">{title}</div>
+        <div className="muted text-sm mt-1">{description}</div>
         <div className="mt-4">
           <button className="btn btn-purple" onClick={onClick}>Open</button>
         </div>
@@ -2203,8 +2205,13 @@
       const Chip = ({ on, label, onClick }) => (
         <button
           onClick={onClick}
-          className={`px-3 py-1 rounded-full text-sm font-semibold border ${on ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-transparent text-[var(--ink-800)]'}`}
-          style={on ? {} : { borderColor: 'var(--hairline)' }}
+          aria-pressed={on}
+          className="px-3 py-1 rounded-full text-sm font-semibold border"
+          style={
+            on
+              ? { background:'var(--accent)', color:'#fff', borderColor:'transparent' }
+              : { background:'transparent', color:'var(--ink-800)', borderColor:'var(--hairline)' }
+          }
         >
           {label}
         </button>
