@@ -200,16 +200,19 @@
 
   <!-- Put this as the very first <script> in <head> -->
   <script>
-    (function () {
-      try {
-        var key='vpq.theme.v1';
-        var stored = localStorage.getItem(key);
-        var preferDark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
-        var mode = (stored || (preferDark ? 'dark' : 'light'));
-        document.documentElement.classList.toggle('dark', mode === 'dark');
-        document.body && document.body.classList.toggle('dark', mode === 'dark'); // your CSS targets body.dark
-      } catch (e) {}
-    })();
+  (function () {
+    try {
+      var key='vpq.theme.v1';
+      var stored = localStorage.getItem(key);
+      var preferDark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+      var mode = (stored || (preferDark ? 'dark' : 'light'));
+      document.documentElement.classList.toggle('dark', mode === 'dark');
+      // add this so body gets the class as soon as it exists
+      document.addEventListener('DOMContentLoaded', function(){
+        document.body.classList.toggle('dark', mode === 'dark');
+      });
+    } catch (e) {}
+  })();
   </script>
   <!-- Tailwind (utility helpers only) -->
   <!-- Tailwind config then CDN ONCE (defer) -->
@@ -280,7 +283,17 @@
       document.documentElement.classList.toggle('dark', on);
       document.body.classList.toggle('dark', on);
     };
-
+    const ThemeToggle = () => {
+      const [mode, setMode] = React.useState(getTheme());
+      React.useEffect(() => setTheme(mode), [mode]);
+      return (
+        <button className="btn btn-gray"
+                aria-label="Toggle color scheme"
+                onClick={() => setMode(m => (m === 'dark' ? 'light' : 'dark'))}>
+          {mode === 'dark' ? '☀️ Light' : '🌙 Dark'}
+        </button>
+      );
+    };
     const THEMES = {
       symphony: { '--accent':'#6d28d9' },
       rockstar: { '--accent':'#e11d48' },
