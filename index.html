@@ -615,10 +615,10 @@
       const adj = z * Math.sqrt((p*(1-p) + (z*z)/(4*total)) / total);
       return Math.max(0, (centre - adj) / denom);
     };
-    const bandFromLB = (lb) => { if (lb < 0.65) return 'red'; if (lb < 0.85) return 'yellow'; return 'green'; };
-    const bandFromAcc = (acc) => {
-      if (acc < 0.65) return 'red';
-      if (acc < 0.85) return 'yellow';
+    const bandFromLB = (lb, total) => {
+      if (total < 3) return 'gray';      // or keep your original alpha but gray the band
+      if (lb < 0.65) return 'red';
+      if (lb < 0.85) return 'yellow';
       return 'green';
     };
     const SWATCH = { red:[239,68,68], yellow:[245,158,11], green:[16,185,129], gray:[120,120,120] };
@@ -641,8 +641,8 @@
         };
       }
       const acc = correct / total;                 // raw accuracy
-      const lb  = wilsonLowerBound(correct, total); // 95% LB
-      const bandLB  = bandFromLB(lb);
+      const lb  = wilsonLowerBound(correct, total);
+      const bandLB  = bandFromLB(lb, total);
       const bandAcc = bandFromAcc(acc);
       const alpha   = stabilityAlpha(total);       // opacity grows with attempts
     
