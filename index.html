@@ -286,7 +286,15 @@
     /* =========================================================
        Theme
     ========================================================== */
-    const getTheme = () => (localStorage.getItem(THEME_KEY) || 'light');
+    const getTheme = () => {
+      try {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved) return saved;
+      } catch {}
+      const preferDark = window.matchMedia &&
+                         matchMedia('(prefers-color-scheme: dark)').matches;
+      return preferDark ? 'dark' : 'light';
+    };
     const setTheme = (t) => {
       localStorage.setItem(THEME_KEY, t);
       const on = t === 'dark';
