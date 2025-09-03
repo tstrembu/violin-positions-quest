@@ -561,24 +561,35 @@
     const loadPrefs = () => {
       try {
         const p = JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
-        // Start with "all on", then overlay any saved overrides
-        const filters = { ...defaultFilters, ...(p.filters || {}) };
-    return {
-      sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
-      callouts: true, roundLen: 120, goalEnabled: false, goalTarget: 10,
         return {
-          sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
-          callouts: true, roundLen: 120, goalEnabled: false, goalTarget: 10,
-          filters: { ...defaultFilters, ...(p?.filters || {}) }, ...(p || {})
+          // sensible defaults
+          sound: true,
+          confetti: true,
+          adaptive: true,
+          coach: true,
+          coachRetry: true,
+          callouts: true,
+          roundLen: 120,
+          goalEnabled: false,
+          goalTarget: 10,
+          // filters: start “all on”, then overlay any saved overrides
+          filters: { ...defaultFilters, ...(p.filters || {}) },
         };
       } catch {
-        return {
-          sound: true, confetti: true, adaptive: true, coach: true, coachRetry: true,
-          callouts: true, roundLen: 120, goalEnabled: false, goalTarget: 10,
-          filters: defaultFilters
-        };
-      }
-    };
+      return {
+        sound: true,
+        confetti: true,
+        adaptive: true,
+        coach: true,
+        coachRetry: true,
+        callouts: true,
+        roundLen: 120,
+        goalEnabled: false,
+        goalTarget: 10,
+        filters: defaultFilters
+      };
+    }
+  };
     const savePrefs = (obj) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {} };
     const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
     const saveBest = (obj) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(obj)); } catch {} };
