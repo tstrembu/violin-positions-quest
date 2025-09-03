@@ -234,7 +234,7 @@
 <body>
   <div id="root"></div>
   <!-- A11y live region -->
-  <div id="sr" aria-live="polite" class="sr-only"></div>
+  <div id="sr" role="status" aria-live="polite" tabindex="-1" class="sr-only"></div>
 
   <!-- App -->
   <script type="text/babel" data-presets="react,env">
@@ -274,9 +274,9 @@
     const getTheme = () => (localStorage.getItem(THEME_KEY) || 'light');
     const setTheme = (t) => {
       localStorage.setItem(THEME_KEY, t);
-      const isDark = t === 'dark';
-      document.documentElement.classList.toggle('dark', isDark);
-      if (document.body) document.body.classList.toggle('dark', isDark);
+      const on = t === 'dark';
+      document.documentElement.classList.toggle('dark', on);
+      document.body.classList.toggle('dark', on);
     };
 
     const THEMES = {
@@ -349,7 +349,6 @@
     };
     
     // position offsets measured in semitones from 1st position
-    const POS_SHIFT_BY_POSITION = [0,2,3,5,7];             // positions 1..5
     const POS_SHIFT = {1:0, 2:2, 3:3, 4:5, 5:7};           // keep object for existing calls
     
     const wrap12 = n => ((n % 12) + 12) % 12;
