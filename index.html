@@ -2178,208 +2178,208 @@
        Filters & Panels
     ========================================================== */
     // --- minimal filters UI for Strings / Positions / Fingers ---
-const MiniFilters = ({ prefs, setPrefs }) => {
-  const f = prefs.filters || { strings:{}, positions:{}, fingers:{} };
-
-  const toggle = (group, key) => {
-    setPrefs(p => {
-      const prevFilters = p.filters || { strings:{}, positions:{}, fingers:{} };
-      const prevGroup   = prevFilters[group] || {};
-      const isOn        = prevGroup[key] !== false;  // default-on unless explicitly false
-      const nextGroup   = { ...prevGroup };
-
-      if (isOn) nextGroup[key] = false;   // turn OFF by storing false
-      else      delete nextGroup[key];    // turn ON by removing the false override (keeps default-on)
-
-      const next = {
-        ...p,
-        filters: { ...prevFilters, [group]: nextGroup }
+    const MiniFilters = ({ prefs, setPrefs }) => {
+      const f = prefs.filters || { strings:{}, positions:{}, fingers:{} };
+    
+      const toggle = (group, key) => {
+        setPrefs(p => {
+          const prevFilters = p.filters || { strings:{}, positions:{}, fingers:{} };
+          const prevGroup   = prevFilters[group] || {};
+          const isOn        = prevGroup[key] !== false;  // default-on unless explicitly false
+          const nextGroup   = { ...prevGroup };
+    
+          if (isOn) nextGroup[key] = false;   // turn OFF by storing false
+          else      delete nextGroup[key];    // turn ON by removing the false override (keeps default-on)
+    
+          const next = {
+            ...p,
+            filters: { ...prevFilters, [group]: nextGroup }
+          };
+          savePrefs(next);
+          return next;
+        });
       };
-      savePrefs(next);
-      return next;
-    });
-  };
-
-  const Chip = ({ on, label, onClick }) => (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1 rounded-full text-sm font-semibold border ${on ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-transparent text-[var(--ink-800)]'}`}
-      style={on ? {} : { borderColor: 'var(--hairline)' }}
-    >
-      {label}
-    </button>
-  );
-
-  return (
-    <div className="card rounded-xl p-4">
-      <div className="text-lg font-semibold mb-2">Filters</div>
-      <div className="mb-2 text-xs muted">Click to toggle which items are used in drills.</div>
-
-      <div className="mb-2">
-        <div className="font-semibold text-sm mb-1">Strings</div>
-        <div className="flex flex-wrap gap-2">
-          {['G','D','A','E'].map(s => (
-            <Chip key={s} label={s} on={f.strings?.[s] !== false} onClick={()=>toggle('strings', s)} />
-          ))}
+    
+      const Chip = ({ on, label, onClick }) => (
+        <button
+          onClick={onClick}
+          className={`px-3 py-1 rounded-full text-sm font-semibold border ${on ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-transparent text-[var(--ink-800)]'}`}
+          style={on ? {} : { borderColor: 'var(--hairline)' }}
+        >
+          {label}
+        </button>
+      );
+    
+      return (
+        <div className="card rounded-xl p-4">
+          <div className="text-lg font-semibold mb-2">Filters</div>
+          <div className="mb-2 text-xs muted">Click to toggle which items are used in drills.</div>
+    
+          <div className="mb-2">
+            <div className="font-semibold text-sm mb-1">Strings</div>
+            <div className="flex flex-wrap gap-2">
+              {['G','D','A','E'].map(s => (
+                <Chip key={s} label={s} on={f.strings?.[s] !== false} onClick={()=>toggle('strings', s)} />
+              ))}
+            </div>
+          </div>
+    
+          <div className="mb-2">
+            <div className="font-semibold text-sm mb-1">Positions</div>
+            <div className="flex flex-wrap gap-2">
+              {[1,2,3,4,5].map(p => (
+                <Chip key={p} label={String(p)} on={f.positions?.[p] !== false} onClick={()=>toggle('positions', p)} />
+              ))}
+            </div>
+          </div>
+    
+          <div>
+            <div className="font-semibold text-sm mb-1">Fingers</div>
+            <div className="flex flex-wrap gap-2">
+              {[1,2,3,4].map(fn => (
+                <Chip key={fn} label={`F${fn}`} on={f.fingers?.[fn] !== false} onClick={()=>toggle('fingers', fn)} />
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div className="mb-2">
-        <div className="font-semibold text-sm mb-1">Positions</div>
-        <div className="flex flex-wrap gap-2">
-          {[1,2,3,4,5].map(p => (
-            <Chip key={p} label={String(p)} on={f.positions?.[p] !== false} onClick={()=>toggle('positions', p)} />
-          ))}
+      );
+    }; 
+    
+    // --- tiny XP/Level header (reads existing SCORE_KEY data) ---
+    const ScoreHeader = () => {
+      const [sb, setSb] = React.useState(loadScoreboard());
+    
+      React.useEffect(() => {
+        // refresh when other screens update XP (same-tab changes won't fire 'storage')
+        const id = setInterval(() => setSb(loadScoreboard()), 800);
+        const onStorage = (e) => { if (e.key === SCORE_KEY) setSb(loadScoreboard()); };
+        window.addEventListener('storage', onStorage);
+        return () => { clearInterval(id); window.removeEventListener('storage', onStorage); };
+      }, []);
+    
+      const level = sb?.level || 1;
+      const xp    = sb?.xp    || 0;
+      const nextT = sb?.next  || nextLevelXP(level);
+      const prevT = level > 1 ? nextLevelXP(level - 1) : 0;
+      const num   = Math.max(0, xp - prevT);
+      const den   = Math.max(1, nextT - prevT);
+      const pct   = Math.max(0, Math.min(100, Math.round((num / den) * 100)));
+    
+      return (
+        <div className="card rounded-xl p-4 mb-4" aria-label="Player progress">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Level {level}</div>
+            <div className="text-sm muted">
+              {num} / {den} XP to next
+            </div>
+          </div>
+          <div className="xpbar mt-2" role="progressbar" aria-valuemin={0} aria-valuemax={den} aria-valuenow={num}>
+            <div className="xpbar-fill" style={{ width: `${pct}%` }} />
+          </div>
         </div>
-      </div>
-
-      <div>
-        <div className="font-semibold text-sm mb-1">Fingers</div>
-        <div className="flex flex-wrap gap-2">
-          {[1,2,3,4].map(fn => (
-            <Chip key={fn} label={`F${fn}`} on={f.fingers?.[fn] !== false} onClick={()=>toggle('fingers', fn)} />
-          ))}
+      );
+    };
+    
+    // --- App shell with ScoreHeader + robust home
+    const App = () => {
+      const [view, setView]   = React.useState('home');
+      const [prefs, setPrefs] = React.useState(loadPrefs());
+      const [stats, setStats] = React.useState(loadStats());
+      const [helpKey, setHelpKey] = React.useState(null);
+    
+      const onResetStats = () => {
+        if (!confirm('Reset ALL stats?')) return;
+        saveStats({});
+        saveTempoStats({});
+        saveTempoBest({ bestScore: 0, bestStreak: 0 });
+        saveJSON(HEIGHT_STATS_KEY,  {});
+        saveJSON(LOCATOR_STATS_KEY, {});
+        saveJSON(SHIFT_STATS_KEY,   {});
+        saveJSON(HARM_STATS_KEY,    {});
+        saveJSON(SNAPSHOT_STATS_KEY, {});
+        saveJSON(INTERVAL_STATS_KEY, {});
+        setStats({});
+      };
+    
+      const onExportCSV = () => {
+        const s = loadStats();
+        const rows = [['string','position','finger','correct','total','accuracy']];
+        Object.entries(s).forEach(([k,v])=>{
+          const [str,p,f] = k.split(':');
+          const c=v.correct||0, t=v.total||0, acc = t ? (c/t).toFixed(3) : '0';
+          rows.push([str,p,f,c,t,acc]);
+        });
+        const csv = rows.map(r=>r.join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'vpq-stats.csv';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      };
+    
+      if (view === 'speed')         return <SpeedLadderGame onBack={()=>setView('home')} prefs={prefs} stats={stats} setStats={setStats} />;
+      if (view === 'speedbase')     return <SpeedLadderGame mode="base" onBack={()=>setView('home')} prefs={prefs} stats={stats} setStats={setStats} />;
+      if (view === 'flash')         return <Flashcards onBack={()=>setView('home')} />;
+      if (view === 'tempo-trainer') return <TempoTrainer onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'tempo-tester')  return <TempoTester  onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'snapshot')      return <SnapshotCore onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'interval')      return <IntervalSprint onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'height')        return <HeightDrill onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'locator')       return <NoteLocator onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'shift')         return <ShiftCoach onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'harmonics')     return <HarmonicsLab onBack={()=>setView('home')} prefs={prefs} />;
+      if (view === 'bieler')        return <BielerLab onBack={()=>setView('home')} />;
+      if (view === 'bingo')         return <BingoBoard onBack={()=>setView('home')} />;
+      if (view === 'dice')          return <DiceOfDestinyGame onBack={()=>setView('home')} />;
+    
+      return (
+        <div className="p-4 max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">Violin Positions Quest</h1>
+            <ThemeToggle />
+          </div>
+    
+          {/* XP / Level */}
+          <ScoreHeader />
+    
+          {/* quick tools */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button className="btn btn-rose"  onClick={onResetStats}>Reset Stats</button>
+            <button className="btn btn-amber" onClick={onExportCSV}>Export CSV</button>
+          </div>
+    
+          <div className="grid-cards">
+            <CardButton title="Speed Ladder"            description="Full fingerboard drill" onClick={()=>setView('speed')}      onHelp={()=>setHelpKey('speed')} />
+            <CardButton title="Speed Ladder — Core"     description="Base notes only"        onClick={()=>setView('speedbase')}  onHelp={()=>setHelpKey('speedbase')} />
+            <CardButton title="Flashcards"              description="Two decks: by location or by note" onClick={()=>setView('flash')} onHelp={()=>setHelpKey('cards')} />
+            <CardButton title="Tempo Trainer"           description="Tempo flashcards with call-outs"   onClick={()=>setView('tempo-trainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
+            <CardButton title="Tempo Tester"            description="Timed multiple choice"  onClick={()=>setView('tempo-tester')} onHelp={()=>setHelpKey('tempoTester')} />
+            <CardButton title="Snapshot Core"           description="Memorize a position snapshot" onClick={()=>setView('snapshot')} onHelp={()=>setHelpKey('snapshot')} />
+            <CardButton title="Interval Sprint"         description="Half/whole steps in the frame" onClick={()=>setView('interval')} onHelp={()=>setHelpKey('interval')} />
+            <CardButton title="Finger Height Drill"     description="Low vs High answers"    onClick={()=>setView('height')}     onHelp={()=>setHelpKey('height')} />
+            <CardButton title="Note Locator"            description="Find valid locations for a pitch" onClick={()=>setView('locator')} onHelp={()=>setHelpKey('locator')} />
+            <CardButton title="Shift Coach"             description="Best landing choice on one string" onClick={()=>setView('shift')} onHelp={()=>setHelpKey('shift')} />
+            <CardButton title="Harmonics Lab"           description="Nodes & quick checks"   onClick={()=>setView('harmonics')}  onHelp={()=>setHelpKey('harmonics')} />
+            <CardButton title="Bieler Method Lab"       description="Vocab • Concepts • Applications" onClick={()=>setView('bieler')} onHelp={()=>setHelpKey('bielerLab')} />
+            <CardButton title="Positions Bingo"         description="5×5 practice board"     onClick={()=>setView('bingo')}      onHelp={()=>setHelpKey('bingo')} />
+            <CardButton title="Dice of Destiny"         description="Random focused challenge" onClick={()=>setView('dice')}     onHelp={()=>setHelpKey('dice')} />
+          </div>
+    
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <MiniFilters prefs={prefs} setPrefs={setPrefs} />
+            <div>
+              <AccuracyHeatmap stats={stats} />
+            </div>
+          </div>
+    
+          <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How to play">
+            {HELP[helpKey] || 'No help available.'}
+          </Modal>
         </div>
-      </div>
-    </div>
-  );
-}; 
-
-// --- tiny XP/Level header (reads existing SCORE_KEY data) ---
-const ScoreHeader = () => {
-  const [sb, setSb] = React.useState(loadScoreboard());
-
-  React.useEffect(() => {
-    // refresh when other screens update XP (same-tab changes won't fire 'storage')
-    const id = setInterval(() => setSb(loadScoreboard()), 800);
-    const onStorage = (e) => { if (e.key === SCORE_KEY) setSb(loadScoreboard()); };
-    window.addEventListener('storage', onStorage);
-    return () => { clearInterval(id); window.removeEventListener('storage', onStorage); };
-  }, []);
-
-  const level = sb?.level || 1;
-  const xp    = sb?.xp    || 0;
-  const nextT = sb?.next  || nextLevelXP(level);
-  const prevT = level > 1 ? nextLevelXP(level - 1) : 0;
-  const num   = Math.max(0, xp - prevT);
-  const den   = Math.max(1, nextT - prevT);
-  const pct   = Math.max(0, Math.min(100, Math.round((num / den) * 100)));
-
-  return (
-    <div className="card rounded-xl p-4 mb-4" aria-label="Player progress">
-      <div className="flex items-center justify-between">
-        <div className="font-semibold">Level {level}</div>
-        <div className="text-sm muted">
-          {num} / {den} XP to next
-        </div>
-      </div>
-      <div className="xpbar mt-2" role="progressbar" aria-valuemin={0} aria-valuemax={den} aria-valuenow={num}>
-        <div className="xpbar-fill" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-};
-
-// --- App shell with ScoreHeader + robust home
-const App = () => {
-  const [view, setView]   = React.useState('home');
-  const [prefs, setPrefs] = React.useState(loadPrefs());
-  const [stats, setStats] = React.useState(loadStats());
-  const [helpKey, setHelpKey] = React.useState(null);
-
-  const onResetStats = () => {
-    if (!confirm('Reset ALL stats?')) return;
-    saveStats({});
-    saveTempoStats({});
-    saveTempoBest({ bestScore: 0, bestStreak: 0 });
-    saveJSON(HEIGHT_STATS_KEY,  {});
-    saveJSON(LOCATOR_STATS_KEY, {});
-    saveJSON(SHIFT_STATS_KEY,   {});
-    saveJSON(HARM_STATS_KEY,    {});
-    saveJSON(SNAPSHOT_STATS_KEY, {});
-    saveJSON(INTERVAL_STATS_KEY, {});
-    setStats({});
-  };
-
-  const onExportCSV = () => {
-    const s = loadStats();
-    const rows = [['string','position','finger','correct','total','accuracy']];
-    Object.entries(s).forEach(([k,v])=>{
-      const [str,p,f] = k.split(':');
-      const c=v.correct||0, t=v.total||0, acc = t ? (c/t).toFixed(3) : '0';
-      rows.push([str,p,f,c,t,acc]);
-    });
-    const csv = rows.map(r=>r.join(',')).join('\n');
-    const blob = new Blob([csv], {type:'text/csv'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'vpq-stats.csv';
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  };
-
-  if (view === 'speed')         return <SpeedLadderGame onBack={()=>setView('home')} prefs={prefs} stats={stats} setStats={setStats} />;
-  if (view === 'speedbase')     return <SpeedLadderGame mode="base" onBack={()=>setView('home')} prefs={prefs} stats={stats} setStats={setStats} />;
-  if (view === 'flash')         return <Flashcards onBack={()=>setView('home')} />;
-  if (view === 'tempo-trainer') return <TempoTrainer onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'tempo-tester')  return <TempoTester  onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'snapshot')      return <SnapshotCore onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'interval')      return <IntervalSprint onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'height')        return <HeightDrill onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'locator')       return <NoteLocator onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'shift')         return <ShiftCoach onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'harmonics')     return <HarmonicsLab onBack={()=>setView('home')} prefs={prefs} />;
-  if (view === 'bieler')        return <BielerLab onBack={()=>setView('home')} />;
-  if (view === 'bingo')         return <BingoBoard onBack={()=>setView('home')} />;
-  if (view === 'dice')          return <DiceOfDestinyGame onBack={()=>setView('home')} />;
-
-  return (
-    <div className="p-4 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Violin Positions Quest</h1>
-        <ThemeToggle />
-      </div>
-
-      {/* XP / Level */}
-      <ScoreHeader />
-
-      {/* quick tools */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        <button className="btn btn-rose"  onClick={onResetStats}>Reset Stats</button>
-        <button className="btn btn-amber" onClick={onExportCSV}>Export CSV</button>
-      </div>
-
-      <div className="grid-cards">
-        <CardButton title="Speed Ladder"            description="Full fingerboard drill" onClick={()=>setView('speed')}      onHelp={()=>setHelpKey('speed')} />
-        <CardButton title="Speed Ladder — Core"     description="Base notes only"        onClick={()=>setView('speedbase')}  onHelp={()=>setHelpKey('speedbase')} />
-        <CardButton title="Flashcards"              description="Two decks: by location or by note" onClick={()=>setView('flash')} onHelp={()=>setHelpKey('cards')} />
-        <CardButton title="Tempo Trainer"           description="Tempo flashcards with call-outs"   onClick={()=>setView('tempo-trainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
-        <CardButton title="Tempo Tester"            description="Timed multiple choice"  onClick={()=>setView('tempo-tester')} onHelp={()=>setHelpKey('tempoTester')} />
-        <CardButton title="Snapshot Core"           description="Memorize a position snapshot" onClick={()=>setView('snapshot')} onHelp={()=>setHelpKey('snapshot')} />
-        <CardButton title="Interval Sprint"         description="Half/whole steps in the frame" onClick={()=>setView('interval')} onHelp={()=>setHelpKey('interval')} />
-        <CardButton title="Finger Height Drill"     description="Low vs High answers"    onClick={()=>setView('height')}     onHelp={()=>setHelpKey('height')} />
-        <CardButton title="Note Locator"            description="Find valid locations for a pitch" onClick={()=>setView('locator')} onHelp={()=>setHelpKey('locator')} />
-        <CardButton title="Shift Coach"             description="Best landing choice on one string" onClick={()=>setView('shift')} onHelp={()=>setHelpKey('shift')} />
-        <CardButton title="Harmonics Lab"           description="Nodes & quick checks"   onClick={()=>setView('harmonics')}  onHelp={()=>setHelpKey('harmonics')} />
-        <CardButton title="Bieler Method Lab"       description="Vocab • Concepts • Applications" onClick={()=>setView('bieler')} onHelp={()=>setHelpKey('bielerLab')} />
-        <CardButton title="Positions Bingo"         description="5×5 practice board"     onClick={()=>setView('bingo')}      onHelp={()=>setHelpKey('bingo')} />
-        <CardButton title="Dice of Destiny"         description="Random focused challenge" onClick={()=>setView('dice')}     onHelp={()=>setHelpKey('dice')} />
-      </div>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <MiniFilters prefs={prefs} setPrefs={setPrefs} />
-        <div>
-          <AccuracyHeatmap stats={stats} />
-        </div>
-      </div>
-
-      <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How to play">
-        {HELP[helpKey] || 'No help available.'}
-      </Modal>
-    </div>
-  );
-};
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+      );
+    };
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
     </script>
   </body>
 </html>
