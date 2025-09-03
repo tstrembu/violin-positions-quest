@@ -553,6 +553,11 @@
     /* =========================================================
        Prefs & persistence
     ========================================================== */
+    const defaultFilters = {
+      strings:  Object.fromEntries(STRINGS.map(s => [s, true])),
+      positions:Object.fromEntries(POSITIONS.map(p => [p, true])),
+      fingers:  Object.fromEntries(FINGERS.map(f => [f, true])),
+    };
     const loadPrefs = () => {
       try {
         const p = JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
