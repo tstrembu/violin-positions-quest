@@ -272,8 +272,12 @@
        Theme
     ========================================================== */
     const getTheme = () => (localStorage.getItem(THEME_KEY) || 'light');
-    const setTheme = (t) => { localStorage.setItem(THEME_KEY, t); document.body.classList.toggle('dark', t === 'dark'); };
-    (function bootTheme(){ setTheme(getTheme()); })();
+    const setTheme = (t) => {
+      localStorage.setItem(THEME_KEY, t);
+      const isDark = t === 'dark';
+      document.documentElement.classList.toggle('dark', isDark);
+      if (document.body) document.body.classList.toggle('dark', isDark);
+    };
 
     const THEMES = {
       symphony: { '--accent':'#6d28d9' },
