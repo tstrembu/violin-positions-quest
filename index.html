@@ -2158,9 +2158,11 @@
               <div className="mt-4">
                 <div className="muted text-sm mb-2">Score: {scoreA} / {answeredA}</div>
                 <div className="text-lg font-semibold mb-2">Choose the best practice approach:</div>
-                <div className="ink700 mb-3"><i>Scenario: </i>{aq.prompt}</div>
+                <div className="ink700 mb-3"><i>Pick the best practice approach for the scenario.</i></div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {aq.options.map((o,idx)=><button key={idx} className="btn btn-blue" onClick={()=>answerApply(o)}>{o}</button>)}
+                  {aq.options.map((o,idx)=>
+                    <button key={idx} className="btn btn-blue" onClick={()=>answerApply(o)}>{o}</button>
+                  )}
                 </div>
               </div>
             )}
