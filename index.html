@@ -2373,9 +2373,11 @@
             <ScoreHeader />
 
             <div className="mt-4 grid-cards">
-              <CardButton title="Speed Ladder"          description="Full low/high cells"            onClick={()=>start('speed')}      onHelp={()=>setHelp('speed')} />
-              <CardButton title="Speed Ladder — Core"    description="Base notes only"               onClick={()=>start('speedbase')}  onHelp={()=>setHelp('speedbase')} />
               <CardButton title="Flashcards"             description="Two decks"                     onClick={()=>start('flash')}      onHelp={()=>setHelp('cards')} />
+              <CardButton title="Speed Ladder — Core"    description="Base notes only"               onClick={()=>start('speedbase')}  onHelp={()=>setHelp('speedbase')} />
+              <CardButton title="Speed Ladder"          description="Full low/high cells"            onClick={()=>start('speed')}      onHelp={()=>setHelp('speed')} />
+              <CardButton title="Snapshot Core" description="Flash + recall the four base notes for a position." onClick={()=>setScreen('snapshot')} onHelp={()=>setHelp(HELP.snapshot)} />
+              <CardButton title="Interval Sprint" description="Half/whole step fluency inside the frame." onClick={()=>setScreen('interval')} onHelp={()=>setHelp(HELP.interval)} />
               <CardButton title="Tempo Trainer"          description="Italian terms (flashcards)"    onClick={()=>start('tempo-train')}onHelp={()=>setHelp('tempoTrainer')} />
               <CardButton title="Tempo Tester"           description="Timed MCQ"                     onClick={()=>start('tempo-test')} onHelp={()=>setHelp('tempoTester')} />
               <CardButton title="Bieler Lab"             description="Vocabulary, concepts, apps"    onClick={()=>start('bieler')}     onHelp={()=>setHelp('bielerLab')} />
