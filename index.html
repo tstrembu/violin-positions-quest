@@ -2205,16 +2205,11 @@
         setPrefs(p => {
           const prevFilters = p.filters || { strings:{}, positions:{}, fingers:{} };
           const prevGroup   = prevFilters[group] || {};
-          const isOn        = prevGroup[key] !== false;  // default-on unless explicitly false
+          const isOn        = prevGroup[key] !== false;        // default-on unless explicitly false
           const nextGroup   = { ...prevGroup };
-    
-          if (isOn) nextGroup[key] = false;   // turn OFF by storing false
-          else      delete nextGroup[key];    // turn ON by removing the false override (keeps default-on)
-    
-          const next = {
-            ...p,
-            filters: { ...prevFilters, [group]: nextGroup }
-          };
+          if (isOn) nextGroup[key] = false;                    // turn OFF by storing false
+          else      delete nextGroup[key];                     // turn ON by removing override
+          const next = { ...p, filters: { ...prevFilters, [group]: nextGroup } };
           savePrefs(next);
           return next;
         });
