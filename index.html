@@ -1186,6 +1186,159 @@
       );
     };
 
+    /* ===================== NEW: Snapshot Core (mental “photograph” drill) ===================== */
+    const SnapshotCore = ({ onBack, prefs }) => {
+      const [timer, setTimer] = React.useState(prefs.roundLen || 120);
+      const [score, setScore] = React.useState(0);
+      const [answered, setAnswered] = React.useState(0);
+      const [q, setQ] = React.useState(null);
+      const [phase, setPhase] = React.useState('flash'); // flash -> quiz
+      const [showGrid, setShowGrid] = React.useState(false);
+      const [stats, setStats] = React.useState(loadJSON(SNAPSHOT_STATS_KEY, {}));
+      const beeps = useBeeps(prefs.sound);
+    
+      const pick = () => {
+        const s = getRandomItem(STRINGS);
+        const p = getRandomItem(POSITIONS);
+        const bases = FINGERS.map(f => CANON_PC_NAME[pc(baseNamesFor(s,p,f)[0])]); // F1..F4 canonical
+        // ask about one random finger from this snapshot
+        const f = getRandomItem(FINGERS);
+        const correct = bases[f-1];
+        const opts = shuffle([correct, ...getDistractorsFromPool(correct, ALL_BASE_CANON, [], 3)]);
+        setQ({ s, p, bases, f, correct, opts });
+        setPhase('flash'); setShowGrid(true);
+        setTimeout(()=>{ setShowGrid(false); setPhase('quiz'); }, 1400); // 1.4s “photograph”
+      };
+    
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        const id=setInterval(()=>setTimer(t=>t<=1?0:t-1), 1000);
+        return ()=>clearInterval(id);
+      },[]);
+    
+      const bump = (key, ok) => {
+        const st = stats[key] || { correct:0, total:0 };
+        const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
+        setStats(next); saveJSON(SNAPSHOT_STATS_KEY, next);
+      };
+    
+      const answer = (note) => {
+        if (!q || timer===0 || phase!=='quiz') return;
+        const ok = (note===q.correct);
+        beeps[ok?'good':'bad'](); setAnswered(a=>a+1); if (ok) setScore(s=>s+1);
+        bump(`${q.s}:${q.p}:F${q.f}`, ok);
+        setTimeout(pick, ok?350:700);
+      };
+    
+      return (
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
+            <h2 className="text-2xl font-bold mb-2">Snapshot Core</h2>
+            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+    
+            {!!q && (
+              <>
+                <div className="rounded-md border p-3 text-center" style={{background:'var(--surface-subtle)'}}>
+                  <div className="font-semibold">{q.s} string — {posLabel(q.p)}</div>
+                  {showGrid ? (
+                    <div className="mt-2 grid grid-cols-4 gap-2">
+                      {q.bases.map((n,i)=><div key={i} className="rounded border p-2"><div className="text-xs muted">F{i+1}</div><div className="text-lg font-bold">{norm(n)}</div></div>)}
+                    </div>
+                  ) : (
+                    <div className="muted italic mt-2">What is the base note for <b>{fingerLabel(q.f)}</b>?</div>
+                  )}
+                </div>
+    
+                {phase==='quiz' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    {q.opts.map((n,i)=>(
+                      <button key={i} className="btn btn-blue" onClick={()=>answer(n)}>
+                        <span className="pill" style={{background:'rgba(0,0,0,.15)'}}>{i+1}</span>&nbsp; {norm(n)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="text-xs muted mt-3 text-center">Tip: picture the four turquoise notes for this position. That’s your hand-frame.</div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* ===================== NEW: Interval Sprint (half/whole-step fluency inside the frame) ===================== */
+    const IntervalSprint = ({ onBack, prefs }) => {
+      const [timer, setTimer] = React.useState(prefs.roundLen || 90);
+      const [score, setScore] = React.useState(0);
+      const [answered, setAnswered] = React.useState(0);
+      const [q, setQ] = React.useState(null);
+      const [stats, setStats] = React.useState(loadJSON(INTERVAL_STATS_KEY, {}));
+      const beeps = useBeeps(prefs.sound);
+    
+      // Core hand-frame distances between adjacent fingers: W-H-W (2–1–2 semitones)
+      const DIST = { '1-2':'whole', '2-3':'half', '3-4':'whole' };
+    
+      const pick = () => {
+        const s = getRandomItem(STRINGS);
+        const p = getRandomItem(POSITIONS);
+        const f = getRandomItem([1,2,3]); // pair = f .. f+1
+        const baseA = CANON_PC_NAME[pc(baseNamesFor(s,p,f)[0])];
+        const baseB = CANON_PC_NAME[pc(baseNamesFor(s,p,f+1)[0])];
+        const correct = DIST[`${f}-${f+1}`];
+        const opts = shuffle(['half','whole']);
+        setQ({ s, p, f, a:baseA, b:baseB, correct, opts });
+      };
+    
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        const id=setInterval(()=>setTimer(t=>t<=1?0:t-1), 1000);
+        return ()=>clearInterval(id);
+      },[]);
+    
+      const bump = (key, ok) => {
+        const st = stats[key] || { correct:0, total:0 };
+        const nx = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
+        setStats(nx); saveJSON(INTERVAL_STATS_KEY, nx);
+      };
+    
+      const answer = (choice) => {
+        const ok = (choice===q.correct);
+        beeps[ok?'good':'bad'](); setAnswered(a=>a+1); if (ok) setScore(s=>s+1);
+        bump(`${q.s}:${q.p}:${q.f}`, ok);
+        setTimeout(pick, ok?300:650);
+      };
+    
+      return (
+        <div className="p-4 min-h-screen flex flex-col items-center">
+          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
+            <h2 className="text-2xl font-bold mb-2">Interval Sprint</h2>
+            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Shortcuts: H/W</div>
+            {!!q && (
+              <>
+                <div className="text-center mb-2">
+                  <div className="text-xl font-bold">{posLabel(q.p)}, {fingerLabel(q.f)}→{fingerLabel(q.f+1)} on the {q.s} string</div>
+                  <div className="text-sm muted">Between <b>{norm(q.a)}</b> and <b>{norm(q.b)}</b>, is it a <b>half</b>- or <b>whole</b>-step?</div>
+                </div>
+                <FingerboardHint active={{s:q.s, p:q.p, f:q.f}} />
+                <div className="flex gap-3 justify-center mt-3">
+                  {q.opts.map((o,i)=> <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>{o[0].toUpperCase()+o.slice(1)} step</button>)}
+                </div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+    // (Optional) quick keys
+    window.addEventListener('keydown', e=>{
+      const k=e.key.toLowerCase();
+      const btn = (k==='h') ? [...document.querySelectorAll('.btn')].find(b=>b.textContent.toLowerCase().includes('half'))
+                : (k==='w') ? [...document.querySelectorAll('.btn')].find(b=>b.textContent.toLowerCase().includes('whole')) : null;
+      if (btn) btn.click();
+    });
+
     /* ===================== NEW: Finger Height Drill ===================== */
     const HeightDrill = ({ onBack, prefs }) => {
       const [q, setQ] = useState(null);
