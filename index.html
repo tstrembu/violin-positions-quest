@@ -656,7 +656,7 @@
       if (acc < 0.65) return 'red';
       if (acc < 0.85) return 'yellow';
       return 'green';
-    };
+    }; 
     const SWATCH = { red:[239,68,68], yellow:[245,158,11], green:[16,185,129], gray:[120,120,120] };
     const rgba = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
     const stabilityAlpha = (n) => { if (!n) return 0.18; const t = Math.min(1, Math.log10(n + 1) / Math.log10(50)); return 0.35 + 0.65 * t; };
