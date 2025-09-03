@@ -2223,10 +2223,9 @@
         setPrefs(p => {
           const prevFilters = p.filters || { strings:{}, positions:{}, fingers:{} };
           const prevGroup   = prevFilters[group] || {};
-          const isOn        = prevGroup[key] !== false;        // default-on unless explicitly false
+          const isOn        = prevGroup[key] !== false;   // default ON unless explicitly false
           const nextGroup   = { ...prevGroup };
-          if (isOn) nextGroup[key] = false;                    // turn OFF by storing false
-          else      delete nextGroup[key];                     // turn ON by removing override
+          if (isOn) nextGroup[key] = false; else delete nextGroup[key];
           const next = { ...p, filters: { ...prevFilters, [group]: nextGroup } };
           savePrefs(next);
           return next;
@@ -2238,10 +2237,9 @@
           onClick={onClick}
           aria-pressed={on}
           className="px-3 py-1 rounded-full text-sm font-semibold border"
-          style={
-            on
-              ? { background:'var(--accent)', color:'#fff', borderColor:'transparent' }
-              : { background:'transparent', color:'var(--ink-800)', borderColor:'var(--hairline)' }
+          style={on
+            ? { background:'var(--accent)', color:'#fff', borderColor:'transparent' }
+            : { background:'transparent', color:'var(--ink-800)', borderColor:'var(--hairline)' }
           }
         >
           {label}
@@ -2256,8 +2254,8 @@
           <div className="mb-2">
             <div className="font-semibold text-sm mb-1">Strings</div>
             <div className="flex flex-wrap gap-2">
-              {['G','D','A','E'].map(s => (
-                <Chip key={s} label={s} on={f.strings?.[s] !== false} onClick={()=>toggle('strings', s)} />
+              {STRINGS.map(s => (
+                <Chip key={s} label={s} on={f.strings?.[s] !== false} onClick={() => toggle('strings', s)} />
               ))}
             </div>
           </div>
@@ -2265,8 +2263,8 @@
           <div className="mb-2">
             <div className="font-semibold text-sm mb-1">Positions</div>
             <div className="flex flex-wrap gap-2">
-              {[1,2,3,4,5].map(p => (
-                <Chip key={p} label={String(p)} on={f.positions?.[p] !== false} onClick={()=>toggle('positions', p)} />
+              {POSITIONS.map(p => (
+                <Chip key={p} label={String(p)} on={f.positions?.[p] !== false} onClick={() => toggle('positions', p)} />
               ))}
             </div>
           </div>
@@ -2274,8 +2272,8 @@
           <div>
             <div className="font-semibold text-sm mb-1">Fingers</div>
             <div className="flex flex-wrap gap-2">
-              {[1,2,3,4].map(fn => (
-                <Chip key={fn} label={`F${fn}`} on={f.fingers?.[fn] !== false} onClick={()=>toggle('fingers', fn)} />
+              {FINGERS.map(fn => (
+                <Chip key={fn} label={`F${fn}`} on={f.fingers?.[fn] !== false} onClick={() => toggle('fingers', fn)} />
               ))}
             </div>
           </div>
