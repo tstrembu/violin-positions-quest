@@ -25,7 +25,7 @@
   <meta name="apple-mobile-web-app-title" content="VPQ">
   <!-- CSP (compatible with Babel/Tailwind CDNs) -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' https:; script-src 'self' https://cdn.tailwindcss.com https://unpkg.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
+        content="default-src 'self' https:; script-src 'self' https://cdn.tailwindcss.com https://unpkg.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:; connect-src 'self' https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self';">
   
   <!-- Base styles -->
   <style>
@@ -265,6 +265,8 @@
     const LOCATOR_STATS_KEY = 'positionsQuest.locator.stats.v1';
     const SHIFT_STATS_KEY   = 'positionsQuest.shift.stats.v1';
     const HARM_STATS_KEY    = 'positionsQuest.harmonics.stats.v1';
+    const SNAPSHOT_STATS_KEY  = 'positionsQuest.snapshot.stats.v1';
+    const INTERVAL_STATS_KEY = 'positionsQuest.interval.stats.v1';
 
     /* =========================================================
        Theme
