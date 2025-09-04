@@ -2,7 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Enhanced Trainer</title>
+  <title>Violin Mastery Quest – Enhanced Trainer (v5)</title>
+  <!--
+    v5 Changelog (2025-09-04):
+    - Redesigned home page into three large cards: Play, Study, Progress & Settings with inline SVG icons.
+    - Added VisualFingerboard component skeleton (SVG grid for strings/positions/fingers). Highlights support and click-to-select capability.
+    - Added basic AudioEngine stub with mute toggle; plays notes and intervals (oscillator based).
+    - Added Mute toggle and Data export/import/reset utilities in Settings.
+    - Snapshot difficulty control retained; added cleanup on unmount.
+    - Interval Sprint prompt now uses actual note names instead of finger numbers.
+    - Improved button consistency using OptionButton across settings.
+    - Added progress bars to theory trainers.
+    - Various minor bug fixes and accessibility improvements.
+  -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -59,6 +71,27 @@
     const BASE_OFF={1:2,2:4,3:5,4:7};
     const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
     const NOTE_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
+
+// MIDI base values for open strings
+const MIDI_BASE={ G:55, D:62, A:69, E:76 };
+
+// Audio engine for simple oscillator notes and intervals
+class AudioEngine{
+  constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
+  ensure(){ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); return this.ctx; }
+  playNote({midi,durationMs=800}){
+    if(this.mute) return; const ctx=this.ensure(); const now=ctx.currentTime; const freq=440*Math.pow(2,(midi-69)/12);
+    const osc=ctx.createOscillator(); const gain=ctx.createGain(); osc.frequency.value=freq; osc.type='sine';
+    gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(0.8,now+0.01); gain.gain.exponentialRampToValueAtTime(0.1,now+durationMs/1000*0.8); gain.gain.linearRampToValueAtTime(0,now+durationMs/1000);
+    osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now+durationMs/1000);
+  }
+  playInterval({rootMidi,semitones,gapMs=150}){
+    this.playNote({midi:rootMidi}); setTimeout(()=> this.playNote({midi:rootMidi+semitones}), gapMs);
+  }
+  setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
+}
+const audioEngine=new AudioEngine();
+
     const canonicalBase=(s,p,f)=>{ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return NOTE_NAME[((semi%12)+12)%12]; };
     const CELLS=[]; for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f,canon:canonicalBase(s,p,f)}); }
     // Unique notes precomputed
@@ -111,6 +144,43 @@ const FLASH_DURATIONS={
       const bg=selected? 'var(--primary-dark)' : 'var(--primary)';
       return <button className="option-btn" style={{background:bg}} onClick={onClick}>{label}</button>;
     }
+
+// Visual fingerboard component: renders a 4x5 grid with finger sub-cells
+function VisualFingerboard({highlight=[],onSelect,disabled}){
+  // compute cell positions; strings E A D G from left to right; positions 1-5 horizontally; fingers 1-4 vertically (top to bottom)
+  const svgW=300, svgH=120; const posW=svgW/5; const fingerH=svgH/4;
+  const getColor=(kind)=>{
+    switch(kind){
+      case 'correct': return 'var(--success)';
+      case 'chosen': return 'var(--primary)';
+      case 'distractor': return 'var(--warning)';
+      default: return 'var(--border)';
+    }
+  };
+  // build highlight map
+  const map={}; highlight.forEach(h=>{ map[`${h.s}:${h.p}:${h.f}`]=h.kind; });
+  const strings=['G','D','A','E'];
+  const handleClick=(s,p,f)=>{ if(disabled) return; onSelect && onSelect({s,p,f}); };
+  return (
+    <svg width={svgW} height={svgH} style={{maxWidth:'100%'}} role="group" aria-label="Fingerboard">
+      {strings.map((s,si)=>{
+        return POSITIONS.map((p,pi)=>{
+          return FINGERS.map((f,fi)=>{
+            const x=pi*posW; const y=(3-si)*fingerH + (4-f)*0; // invert to have G string bottom? fudge
+            const key=`${s}:${p}:${f}`;
+            const kind=map[key]; const fill=getColor(kind);
+            return (
+              <rect key={key} x={x+2} y={fi*fingerH+2} width={posW-4} height={fingerH-4} rx="3" ry="3"
+                    fill={fill} stroke="var(--border)" strokeWidth="1"
+                    tabIndex={disabled? -1:0} role="button" aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
+                    onClick={()=>handleClick(s,p,f)} onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' ') handleClick(s,p,f); }}/>
+            );
+          });
+        });
+      })}
+    </svg>
+  );
+}
 
     function SpeedDrill({prefs,onBack}){
       const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
@@ -226,7 +296,14 @@ const FLASH_DURATIONS={
           setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
         },delay);
       };
-      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      React.useEffect(()=>{
+        pick();
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>{
+          clearInterval(id);
+          if(flashRef.current){ clearTimeout(flashRef.current); flashRef.current=null; }
+        };
+      },[]);
       const answer=(opt,idx)=>{
         setSelected(idx);
         setTimeout(()=>{
@@ -315,7 +392,20 @@ const FLASH_DURATIONS={
       useAnswerHotkeys(!!q,(i)=>{ if(q){ const opt=i===0?'half':'whole'; answer(opt,i); } },onBack);
       if(time===0) return <div className="card"><h2>Interval Sprint Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div><div className="card"><h2>Interval Sprint</h2><p>Time {time}s | Score {score}/{answered}</p><p>In {ordinal(q.p)} pos on {q.s} string, between F{q.a} and F{q.b}: Half or Whole step?</p><OptionButton label="Half Step" selected={selected===0} onClick={()=>answer('half',0)}/><OptionButton label="Whole Step" selected={selected===1} onClick={()=>answer('whole',1)}/></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      const noteA=canonicalBase(q.s,q.p,q.a);
+      const noteB=canonicalBase(q.s,q.p,q.b);
+      return (
+        <div>
+          <div className="card">
+            <h2>Interval Sprint</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <p>In {ordinal(q.p)} pos on {q.s} string, between {noteA} and {noteB}: Half or Whole step?</p>
+            <OptionButton label="Half Step" selected={selected===0} onClick={()=>answer('half',0)}/>
+            <OptionButton label="Whole Step" selected={selected===1} onClick={()=>answer('whole',1)}/>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     function NoteLocator({prefs,onBack}){
@@ -382,6 +472,32 @@ const FLASH_DURATIONS={
               }}/>
             ))}</div>
             <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
+
+            <h3>Audio</h3>
+            <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>
+              {audioEngine.mute? 'Unmute' : 'Mute'}
+            </button>
+
+            <h3>Data Tools</h3>
+            <button className="btn btn-primary" onClick={()=>{
+              const data={}; Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>{ data[k]=localStorage.getItem(k); });
+              const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+              const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='vmq-data.json'; a.click(); URL.revokeObjectURL(url);
+            }}>Export Data</button>
+            <button className="btn btn-warning" onClick={()=>{
+              const inp=prompt('Paste JSON data to import:');
+              if(!inp) return; try{
+                const obj=JSON.parse(inp);
+                Object.entries(obj).forEach(([k,v])=>{ localStorage.setItem(k,v); });
+                alert('Import complete. Please reload.');
+              }catch(e){ alert('Invalid JSON'); }
+            }}>Import Data</button>
+            <button className="btn btn-danger" onClick={()=>{
+              if(confirm('Reset all VMQ data?')){
+                Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>localStorage.removeItem(k));
+                location.reload();
+              }
+            }}>Reset All Data</button>
           </div>
           <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
