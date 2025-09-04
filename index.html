@@ -2,1573 +2,414 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Positions Quest</title>
+  <title>Violin Mastery Quest</title>
 
-  <!-- Viewport & theme -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#6d28d9" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)" />
+  <!-- Responsive layout & dark-mode support -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
 
-  <!-- Social -->
-  <meta name="description" content="Train violin positions, notes, and technique with drills, flashcards, and heatmaps." />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="Violin Positions Quest" />
-  <meta property="og:description" content="Timed drills, flashcards, heatmaps, and more for violin mastery." />
-  <meta property="og:image" content="icons/og-image.png" />
+  <!-- Short description for sharing -->
+  <meta name="description" content="Master violin positions, notes, theory and technique with evidence‑based drills and games." />
 
-  <!-- PWA (optional) -->
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="VPQ" />
-
-  <!-- CSP (Babel-in-browser demo) -->
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' https:;
-                 script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-eval' 'unsafe-inline' blob:;
-                 style-src 'self' https: 'unsafe-inline';
-                 img-src 'self' https: data:;
-                 font-src 'self' https: data:;
-                 connect-src 'self' https:;
-                 base-uri 'self'; frame-ancestors 'self'; form-action 'self'">
-
-  <!-- Base styles -->
+  <!-- Base styles: modern look with light/dark variables -->
   <style>
-    :root{
-      --bg:#f6f7fb; --card:#fff;
-      --ink-900:#0b1220; --ink-800:#1f2937; --ink-700:#374151; --ink-600:#6b7280; --ink-500:#8b94a6;
-      --accent:#6d28d9;
-      --shadow:0 8px 20px rgba(0,0,0,.08);
-      --surface-subtle: rgba(0,0,0,.04);
+    :root {
+      --bg: #f6f7fb;
+      --card: #fff;
+      --ink-900: #0b1220;
+      --ink-700: #374151;
+      --ink-600: #6b7280;
+      --accent: #6d28d9;
+      --shadow: 0 8px 20px rgba(0,0,0,.08);
       --hairline: rgba(0,0,0,.12);
-      --gridline: rgba(0,0,0,.20);
-      --posw:clamp(160px,46%,220px);
+      --gridline: rgba(0,0,0,.2);
     }
-    :root.dark{
-      --bg:#0b1020; --card:#0f172a;
-      --ink-900:#e5e7eb; --ink-800:#e2e8f0; --ink-700:#cbd5e1; --ink-600:#94a3b8; --ink-500:#7c8aa0;
+    :root.dark {
+      --bg:#0b1020;
+      --card:#0f172a;
+      --ink-900:#e5e7eb;
+      --ink-700:#cbd5e1;
+      --ink-600:#94a3b8;
+      --accent:#a78bfa;
       --shadow:0 14px 28px rgba(0,0,0,.34);
-      --surface-subtle: rgba(255,255,255,.06);
       --hairline: rgba(255,255,255,.14);
-      --gridline: rgba(255,255,255,.16);
+      --gridline: rgba(255,255,255,.2);
     }
-    html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--ink-900);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans;
-      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-      padding-bottom: env(safe-area-inset-bottom);
+    html,body { height: 100%; margin:0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink-900);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .card{background:var(--card); box-shadow:var(--shadow)}
-    .muted{color:var(--ink-600)}
-    .ink700{color:var(--ink-700)}
-    .ink800{color:var(--ink-800)}
-    .sr-only{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
-    *,*::before,*::after{box-sizing:border-box}
-
-    /* Heatmap (mobile readable) */
-    .fb-strip{display:flex; gap:10px; overflow:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; padding-bottom:6px}
-    .fb-pos{flex:0 0 var(--posw); min-width:var(--posw); scroll-snap-align:start; border:1px solid var(--hairline); border-radius:10px; position:relative}
-    .pos-chip{position:absolute; top:6px; left:6px; font-size:11px; font-weight:700; background:var(--surface-subtle); border:1px solid var(--hairline);
-      color:var(--ink-800); padding:2px 6px; border-radius:6px}
-    .fb-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:28px 8px 10px}
-    .fb-colhdr{grid-column:1/-1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; font-size:11px; color:var(--ink-600); margin-bottom:4px}
-    .fb-tile{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; line-height:1.1;
-      aspect-ratio:1/1.08; padding:6px 4px}
-    .fb-pct{font-weight:800}
-    .fb-band{position:absolute; left:6px; right:6px; height:6px; border-radius:6px}
-    .acc{bottom:16px} .lb{bottom:6px}
-    .lowdot{position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:9999px; background:#9ca3af}
-
-    /* Buttons */
-    .btn{display:inline-flex; align-items:center; justify-content:center; min-height:44px; min-width:44px;
-         padding:.72rem 1.1rem; border-radius:9999px; color:#fff; font-weight:700; transition:transform .08s ease}
-    .btn:active{transform:scale(.98)}
-    .btn:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
-    .btn-purple{background:var(--accent)}
-    .btn-blue{background:#2563eb}
-    .btn-green{background:#059669}
-    .btn-gray{background:#4b5563}
-    .btn-rose{background:#e11d48}
-    .btn-amber{background:#d97706}
-
-    /* Help affordance */
-    .help-dot{width:44px; height:44px; border-radius:9999px; display:inline-flex; align-items:center; justify-content:center;
-      background:var(--surface-subtle); color:var(--accent); font-weight:800; border:1px solid var(--hairline);}
-
-    /* Cards Grid */
-    .grid-cards{display:grid; gap:18px; grid-template-columns:repeat(1,minmax(0,1fr))}
-    @media(min-width:640px){.grid-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(min-width:1024px){.grid-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
-
-    /* Sections */
-    .section{position:relative}
-    .section-title{position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg), transparent 0%);
-      padding:.25rem .25rem .5rem .25rem}
-    .section-title .label{display:inline-block; background:var(--surface-subtle); color:var(--ink-800); border:1px solid var(--hairline);
-      border-radius:9999px; padding:.25rem .6rem; font-weight:700; font-size:12px; letter-spacing:.02em}
-
-    /* Toast */
-    .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(18px + env(safe-area-inset-bottom)); z-index:9999}
-
-    /* XP bar */
-    .xpbar{height:14px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden}
-    .xpbar>div{height:100%; background:var(--accent)}
-
-    /* Chevron */
-    .chev{position:absolute; right:14px; bottom:14px; font-size:28px; line-height:1; opacity:.8}
-
-    /* Bottom Tabs */
-    .tabs{position:sticky; bottom:0; left:0; right:0; padding:.25rem .5rem calc(.5rem + env(safe-area-inset-bottom)); background:var(--card);
-      border-top:1px solid var(--hairline); display:flex; gap:8px; justify-content:space-around; z-index:40}
-    .tab{flex:1 1 25%; display:flex; flex-direction:column; align-items:center; gap:4px; padding:.4rem .3rem; border-radius:10px; min-height:44px}
-    .tab[aria-selected="true"]{background:var(--surface-subtle); font-weight:700}
-
-    /* Small chips focus */
-    .chip:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
-    .lead-ico{font-size:18px; margin-right:8px}
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 1rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.6rem 1rem;
+      border-radius: 9999px;
+      color: white;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); }
+    .btn-gray { background: #4b5563; }
+    .btn-green { background: #10b981; }
+    .container { max-width: 860px; margin:auto; padding: 1rem; }
+    h1,h2 { margin: 0 0 0.5rem 0; }
+    h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.4rem; margin-top:1rem; }
+    .grid { display: grid; gap: 1rem; }
+    @media(min-width: 640px){ .grid-cols-2 { grid-template-columns: repeat(2, 1fr);} }
+    @media(min-width: 1024px){ .grid-cols-3 { grid-template-columns: repeat(3, 1fr);} }
+    /* Badge for progress */
+    .badge { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 6px; background: var(--accent); color:#fff; }
+    /* Heatmap style for stats grid */
+    .heat-tile {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding: 0.5rem;
+      border-radius:6px;
+      height:3rem;
+      position:relative;
+    }
+    .heat-dot { position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:#9ca3af; }
   </style>
 
-  <!-- Dark-mode boot -->
-  <script>
-    (function(){
-      try{
-        const KEY='vpq.theme.v1';
-        const saved=localStorage.getItem(KEY);
-        const sys=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
-        const mode=saved||sys;
-        document.documentElement.classList.toggle('dark', mode==='dark');
-        document.documentElement.style.colorScheme=mode;
-        addEventListener('DOMContentLoaded', ()=>document.body.classList.toggle('dark', mode==='dark'));
-      }catch(e){}
-    })();
-  </script>
-
-  <!-- React 18 + Babel -->
+  <!-- React & Babel via CDN -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Tailwind (utilities only) -->
-  <script>window.tailwind={config:{darkMode:'class'}};</script>
-  <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 </head>
 <body>
   <div id="root"></div>
-  <div id="sr" class="sr-only" role="status" aria-live="polite" tabindex="-1"></div>
+  <script type="text/babel">
+    // Evidence-based helpers
+    // These functions implement spaced repetition and retrieval practice basics. For simplicity, spaced repetition uses
+    // exponential review intervals and retrieval practice uses repeated testing in drills.
 
-  <!-- APP -->
-  <script type="text/babel" data-presets="env,react">
-    const {useState,useEffect,useMemo,useRef} = React;
+    // Save and load JSON safely
+    const saveJSON = (key, value) => {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch {};
+    };
+    const loadJSON = (key, fallback = {}) => {
+      try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; };
+    };
 
-    /* ================= Keys & constants ================= */
-    const THEME_KEY='vpq.theme.v1';
-    const PREFS_KEY='positionsQuest.prefs';
-    const STATS_KEY='positionsQuest.speed.stats';
-    const SCORE_KEY='positions.scoreboard.v1';
-    const SESSIONLOG_KEY='positionsQuest.sessions.v1';
-    const TEMPO_STATS_KEY='positionsQuest.tempo.stats.v1';
-    const TEMPO_BEST_KEY ='positionsQuest.tempo.best.v1';
-    const HEIGHT_STATS_KEY='positionsQuest.height.stats.v1';
-    const LOCATOR_STATS_KEY='positionsQuest.locator.stats.v1';
-    const SHIFT_STATS_KEY='positionsQuest.shift.stats.v1';
-    const HARM_STATS_KEY='positionsQuest.harmonics.stats.v1';
-    const SNAPSHOT_STATS_KEY='positionsQuest.snapshot.stats.v1';
-    const INTERVAL_STATS_KEY='positionsQuest.interval.stats.v1';
-    const LAST_MODE_KEY='positionsQuest.lastMode.v1';
+    // Gamification: convert XP to level (superlinear growth) and next level requirement
+    const levelForXP = xp => Math.floor(Math.pow(xp/120, 0.75)) + 1;
+    const nextLevelXP = lvl => Math.round(120 * Math.pow(lvl, 1.33));
 
+    // Weighted random selection: used to pick weaker notes for drills (retrieval practice on weakest items)
+    function pickWeighted(items, weightFn){
+      if(!items.length) return null;
+      const weights = items.map(weightFn);
+      const total = weights.reduce((a,b)=>a+b,0);
+      let r = Math.random() * total;
+      for(let i=0;i<items.length;i++){ r -= weights[i]; if(r <= 0) return items[i]; }
+      return items[items.length-1];
+    }
+
+    // Wilson lower bound for accuracy (confidence interval) to drive adaptive weighting
+    const wilsonLB = (c,t,z=1.96) => {
+      if(!t) return 0;
+      const p = c/t;
+      const denom = 1 + z*z/t;
+      const centre = p + z*z/(2*t);
+      const adj = z * Math.sqrt((p*(1-p)+z*z/(4*t))/t);
+      return Math.max(0, (centre - adj)/denom);
+    };
+
+    // Components and app logic
     const STRINGS=['G','D','A','E'];
-    const DISPLAY_STRINGS=['E','A','D','G'];     // mobile heatmap order
     const POSITIONS=[1,2,3,4,5];
     const FINGERS=[1,2,3,4];
 
-    const defaultFilters = {
-      strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
-      positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
-      fingers:Object.fromEntries(FINGERS.map(f=>[f,true]))
-    };
-
-    /* ================= Utilities & storage ================= */
-    const loadJSON=(k,fb={})=>{try{return JSON.parse(localStorage.getItem(k))??fb}catch{return fb}};
-    const saveJSON=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
-    const nowISO=()=>new Date().toISOString();
-    const shuffle=arr=>{const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
-    const getRandom=i=>i[Math.floor(Math.random()*i.length)];
-    const ordinal=n=>{const x=+n;const s=(x%10===1&&x%100!==11)?'st':(x%10===2&&x%100!==12)?'nd':(x%10===3&&x%100!==13)?'rd':'th';return `${x}${s}`};
-    const posLabel=p=>`${ordinal(p)} Position`, fingerLabel=f=>`${ordinal(f)} Finger`, stringLabel=s=>`${s} string`;
-    const fullLoc=(s,p,f,withString=true)=>withString?`${posLabel(p)}, ${fingerLabel(f)} on the ${stringLabel(s)}`:`${posLabel(p)}, ${fingerLabel(f)}`;
-    const setSR = (txt)=>{ const el=document.getElementById('sr'); if(el){ el.textContent=txt; } };
-
-    /* ================= Notes model (computed) ================= */
-    const SEMI_TO_NAMES = {
-      0:['C'],1:['C#','Db'],2:['D'],3:['D#','Eb'],4:['E'],5:['F'],
-      6:['F#','Gb'],7:['G'],8:['G#','Ab'],9:['A'],10:['A#','Bb'],11:['B']
-    };
-    const NORMALIZE={'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb','F♭':'Fb','C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#','E♯':'E#','B♯':'B#'};
-    const PC={C:0,'B#':0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,Fb:4,F:5,'E#':5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11,Cb:11};
-    const CANON_PC_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
-    const pc=n=>{const k=NORMALIZE[n]||n; const v=PC[k]; if(v===undefined) throw new Error('note'); return v};
-    const wrap12=n=>((n%12)+12)%12;
-    const names   = k=>SEMI_TO_NAMES[wrap12(k)];
-    const flatFirst=a=>a.length===2?[a[1],a[0]]:a;
-    const sharpFirst=a=>a.length===2?[a[0],a[1]]:a;
+    // Build model of fingerboard: base note per cell using semitone math
     const OPEN_PC={G:7,D:2,A:9,E:4};
     const BASE_OFF={1:2,2:4,3:5,4:7};
     const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
+    const pc = n => ((n % 12)+12)%12;
+    const names=(k)=>{
+      const arr = {
+        0:['C'],1:['C#','Db'],2:['D'],3:['D#','Eb'],4:['E'],5:['F'],6:['F#','Gb'],7:['G'],8:['G#','Ab'],9:['A'],10:['A#','Bb'],11:['B']
+      };
+      return arr[pc(k)];
+    };
+    const baseNamesFor=(s,p,f)=>{
+      const k = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
+      return names(k);
+    };
+    const CANON_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
 
-    function buildNotes(){
-      const out={};
-      for(const s of STRINGS){
-        out[s]={};
-        for(let p=1;p<=5;p++){
-          out[s][p]={};
-          for(const f of FINGERS){
-            const basePC = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-            if(f===1||f===2) out[s][p][f]=[...flatFirst(names(basePC-1)),...names(basePC)];
-            else if(f===3)   out[s][p][3]=[...names(basePC),...sharpFirst(names(basePC+1))];
-            else {
-              if(p===1)      out[s][p][4]=[...names(basePC)];
-              else if(p===2) out[s][p][4]=[...flatFirst(names(basePC-1)),...names(basePC)];
-              else           out[s][p][4]=[...names(basePC),...sharpFirst(names(basePC+1))];
-            }
-          }
-        }
+    // Build valid cells and notes list
+    const buildCells = () => {
+      const cells=[];
+      for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){
+        // base names (for reference)
+        const bname = baseNamesFor(s,p,f);
+        // build canonical base (first element of names set) as label
+        const canon = CANON_NAME[pc(baseNamesFor(s,p,f)[0])];
+        cells.push({s,p,f,canon});
       }
-      return out;
-    }
-    const NOTES_DATA=buildNotes();
-    const validCell=(s,p,f)=>Array.isArray(NOTES_DATA[s]?.[p]?.[f])?NOTES_DATA[s][p][f]:null;
-    const baseNamesFor=(s,p,f)=>{const k=OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f]; return names(k)};
-    const allCombos=()=>{const arr=[]; for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){const cell=validCell(s,p,f); if(cell) arr.push({s,p,f,valid:cell})} return arr};
-    const ALL_NOTES_UNIQUE=(()=>{const set=new Set(); for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){(validCell(s,p,f)||[]).forEach(n=>set.add(n))} return [...set]})();
-    const ALL_BASE_CANON=(()=>{const set=new Set(); for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){baseNamesFor(s,p,f).forEach(n=>set.add(CANON_PC_NAME[pc(n)]))} return [...set]})();
-    const hasPitch=(cell,n)=>Array.isArray(cell)&&cell.some(x=>pc(x)===pc(n));
-    const allLocationsForNote=note=>{const spots=[]; for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){const c=validCell(s,p,f); if(hasPitch(c,note)) spots.push({s,p,f})} return spots};
-    const norm=n=>NORMALIZE[n]||n;
-
-    /* ================= Filters & weighting helpers ================= */
-    const loadPrefs=()=>{const p=loadJSON(PREFS_KEY,{}); return {sound:true,confetti:true,adaptive:true,coach:true,coachRetry:true,callouts:true,roundLen:120,filters:{...defaultFilters,...(p.filters||{})},...p}};
-    const savePrefs=p=>saveJSON(PREFS_KEY,p);
-    const isAllowed=(s,p,f)=>{
-      const pf=loadPrefs().filters||defaultFilters;
-      return !!pf.strings?.[s] && !!pf.positions?.[p] && !!pf.fingers?.[f];
+      return cells;
     };
-    function pickWeighted(items, weightFn){
-      if(!items.length) return null;
-      const weights=items.map(it=>Math.max(0.0001, Number(weightFn(it))||1));
-      const total=weights.reduce((a,b)=>a+b,0);
-      let r=Math.random()*total;
-      for(let i=0;i<items.length;i++){ r-=weights[i]; if(r<=0) return items[i]; }
-      return items[items.length-1];
-    }
-    function weaknessWeight(stat){
-      const t=stat?.total||0, c=stat?.correct||0;
-      if(!t) return 1.6;                 // encourage unseen cells
-      const acc=c/t;
-      const scarcity = 1/Math.sqrt(t+1); // more weight if few attempts
-      return 0.6 + (1-acc)*2.6 + scarcity; // poor accuracy + low reps ⇒ higher weight
-    }
+    const CELLS=buildCells();
 
-    /* ================= Stats helpers & evidence bands ================= */
-    const wilsonLB=(correct,total,z=1.96)=>{if(!total) return 0; const p=correct/total; const denom=1+z*z/total; const centre=p+z*z/(2*total);
-      const adj=z*Math.sqrt((p*(1-p)+z*z/(4*total))/total); return Math.max(0,(centre-adj)/denom)};
-    const band=(x)=>x<.65?'red':x<.85?'yellow':'green';
-    const SWATCH={red:[239,68,68],yellow:[245,158,11],green:[16,185,129],gray:[120,120,120]};
-    const RGBA=(r,a)=>`rgba(${r[0]},${r[1]},${r[2]},${a})`;
-    const stability=(n)=>{if(!n) return .18; const t=Math.min(1, Math.log10(n+1)/Math.log10(50)); return .35+.65*t};
+    // Stats keys
+    const STATS_KEY='violinQuest.stats';
+    const XP_KEY='violinQuest.xp';
 
-    const evidenceStyle=(st)=>{
-      const c=st?.correct||0, t=st?.total||0; if(!t) return {acc:0, lb:0, total:0, accColor:RGBA(SWATCH.gray,.35), lbColor:RGBA(SWATCH.gray,.35), dot:true};
-      const acc=c/t, lb=wilsonLB(c,t); const a=stability(t);
-      return { acc, lb, total:t, dot:t<3, accColor:RGBA(SWATCH[band(acc)],a), lbColor:RGBA(SWATCH[band(lb)],a) };
-    };
+    // Drills: Speed Ladder simplified (only base notes). Weighted selection on weaker stats.
+    function SpeedDrill({onBack}){
+      const [stats,setStats] = React.useState(loadJSON(STATS_KEY, {}));
+      const [cell,setCell] = React.useState(null);
+      const [options,setOptions] = React.useState([]);
+      const [time,setTime]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
 
-    /* ================= Gamification (XP / Level) ================= */
-    const levelForXP=x=>Math.floor(Math.pow(x/120,.75))+1;
-    const nextLevelXP=l=>Math.round(120*Math.pow(l,1.33));
-    const xpAdd=({type='normal',streak=0})=>{
-      const base=type==='review'?5:type==='retry'?1:10;
-      const mult=Math.min(2,1+Math.floor(streak/5)*.2);
-      return Math.round(base*mult);
-    };
+      // Build weighting: 1 - Wilson lower bound encourages weaker items
+      const cellWeight = key => {
+        const st = stats[key] || {correct:0,total:0};
+        const lb = wilsonLB(st.correct, st.total);
+        return 1 - lb + 0.1; // constant to avoid zero
+      };
 
-    /* ================= Audio & speech ================= */
-    const useBeeps=(enabled)=>{
-      const ctxRef=useRef(null);
-      const ensure=()=>{ if(!enabled) return null; if(!ctxRef.current) ctxRef.current=new (window.AudioContext||window.webkitAudioContext)(); return ctxRef.current; };
-      const beep=(f=880,d=.08,t='sine')=>{const ctx=ensure(); if(!ctx) return; const o=ctx.createOscillator(), g=ctx.createGain(); o.type=t; o.frequency.value=f; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>o.stop(), d*1000)};
-      return {good:()=>beep(1046,.09,'triangle'), bad:()=>beep(196,.12,'sawtooth')};
-    };
-    const speak=(text)=>{ try{ const u=new SpeechSynthesisUtterance(text); u.rate=1; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);}catch(_){} };
+      // Pick a new cell
+      const pickCell = () => {
+        const chosen = pickWeighted(CELLS, c => cellWeight(`${c.s}:${c.p}:${c.f}`));
+        // correct answer canonical
+        const correct = chosen.canon;
+        // distractors
+        const allCanon = [...new Set(CELLS.map(c=>c.canon))];
+        const distract = allCanon.filter(n=>n!==correct);
+        const randDistr = shuffleArray(distract).slice(0,3);
+        const opts = shuffleArray([correct,...randDistr]);
+        setCell(chosen);
+        setOptions(opts);
+      };
 
-    /* ================= Game timer (pause on hidden tab) ================= */
-    const useGameTimer=(initial=90)=>{
-      const [time,setTime]=useState(initial);
-      const [paused,setPaused]=useState(false);
-      useEffect(()=>{
-        const onVis=()=>setPaused(document.hidden);
-        document.addEventListener('visibilitychange',onVis);
-        return ()=>document.removeEventListener('visibilitychange',onVis);
-      },[]);
-      useEffect(()=>{
-        if(time<=0 || paused) return;
-        const id=setInterval(()=>setTime(t=>t>0?t-1:0),1000);
+      // On mount: start timer and pick first
+      React.useEffect(()=>{
+        pickCell();
+        const id = setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
         return ()=>clearInterval(id);
-      },[time,paused]);
-      return {time,setTime,paused,setPaused};
-    };
-    const PausedBanner=({show})=>!show?null:(
-      <div className="toast"><div className="card rounded-full px-4 py-2">Paused</div></div>
-    );
-
-    /* ================= UI atoms ================= */
-    const Modal=({open,onClose,title,children})=>!open?null:(
-      <div className="fixed inset-0 z-[100] bg-[rgba(0,0,0,.38)] flex items-center justify-center" onClick={onClose}>
-        <div className="card rounded-xl p-5 w-[min(680px,92vw)]" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-lg font-bold">{title}</div>
-            <button className="btn btn-gray" onClick={onClose}>Close</button>
-          </div>
-          <div className="muted text-sm leading-relaxed">{children}</div>
-        </div>
-      </div>);
-    const ActionSheet=({open,onClose,children})=>!open?null:(
-      <div className="fixed inset-0 z-[90] bg-[rgba(0,0,0,.35)]" onClick={onClose}>
-        <div className="card rounded-t-2xl p-4 fixed left-0 right-0 bottom-0" style={{borderTop:'1px solid var(--hairline)'}} onClick={e=>e.stopPropagation()}>
-          {children}
-        </div>
-      </div>);
-
-    const CardButton = ({title,icon,verb='Open',description,onClick,onHelp}) => {
-      const pressRef = React.useRef(null);
-      const onDown = () => { pressRef.current = setTimeout(()=>onHelp?.(), 600); };
-      const onUp   = () => { clearTimeout(pressRef.current); };
-      const onKey  = (e) => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onClick?.(); } };
-      return (
-        <div role="button" tabIndex={0}
-             className="card rounded-xl p-5 relative text-left w-full"
-             onMouseDown={onDown} onMouseUp={onUp} onTouchStart={onDown} onTouchEnd={onUp}
-             onKeyDown={onKey} onClick={onClick} aria-label={`${verb}: ${title}`}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="pr-10">
-              <div className="text-xl font-bold ink800">
-                {icon ? <span className="lead-ico" aria-hidden>{icon}</span> : null}{title}
-              </div>
-              <div className="muted text-sm mt-1">{description}</div>
-              <div className="mt-2">
-                <span className="inline-block text-xs rounded-full px-2 py-0.5 bg-[color:var(--surface-subtle)] border"
-                      style={{borderColor:'var(--hairline)'}}>{verb}</span>
-              </div>
-            </div>
-            <button type="button" className="help-dot" aria-label={`Info: ${title}`}
-                    onClick={(e)=>{e.stopPropagation(); onHelp?.();}}>i</button>
-          </div>
-          <span aria-hidden="true" className="chev">›</span>
-        </div>
-      );
-    };
-
-    const Toast=({open,text,action,onAction})=>!open?null:(
-      <div className="toast">
-        <div className="card rounded-full px-4 py-2 flex items-center gap-3">
-          <span className="ink800">{text}</span>
-          {action && <button className="btn btn-amber" onClick={onAction}>{action}</button>}
-        </div>
-      </div>
-    );
-
-    /* ================= Help text ================= */
-    const HELP={
-      speed:"Speed Ladder: prompt like “G string — 2nd Position, 3rd Finger”. Pick the correct pitch; 1–4 shortcuts. Coach resurfaces weak spots.",
-      speedbase:"Speed Ladder — Core: same drill, but only the base note per cell (no low/high). Map the hand frame first.",
-      cards:"Flashcards: (A) fingerboard hits; (B) locations by note. Space=Reveal, N/P=Next/Prev.",
-      tempoTrainer:"Tempo Trainer: Italian tempo flashcards with optional voice call-outs.",
-      tempoTester:"Tempo Tester: 60-second 4-choice quiz. End screen offers “Review Misses”.",
-      snapshot:"Snapshot Core: quick flash of the four base notes on one string/position; then answer one.",
-      interval:"Interval Sprint: judge 1–2, 2–3, 3–4 distances (Half/Whole) inside a position.",
-      locator:"Note Locator: Given a pitch, choose a valid position+finger on a specified string.",
-      bielerLab:"Bieler Method Lab: vocabulary → concept checks → applied scenarios.",
-      bingo:"Positions Bingo: 5×5 practice tasks; tap to mark; reshuffle anytime; saved locally.",
-      dice:"Dice of Destiny: press Roll for a focused practice challenge; avoids immediate repeats."
-    };
-
-    /* ================= Header: Level capsule ================= */
-    const ScoreHeader=()=>{
-      const [sb,setSb]=useState(loadJSON(SCORE_KEY,{xp:0,level:1,next:120}));
-      useEffect(()=>{
-        const id=setInterval(()=>setSb(loadJSON(SCORE_KEY,{xp:0,level:1,next:120})),700);
-        const onStorage=e=>{if(e.key===SCORE_KEY) setSb(loadJSON(SCORE_KEY,{xp:0,level:1,next:120}))};
-        addEventListener('storage',onStorage); return()=>{clearInterval(id); removeEventListener('storage',onStorage)};
       },[]);
-      const level=sb.level||1, xp=sb.xp||0, nextT=sb.next||nextLevelXP(level), prevT=level>1?nextLevelXP(level-1):0;
-      const num=Math.max(0,xp-prevT), den=Math.max(1,nextT-prevT); const pct=Math.min(100,Math.round(num/den*100));
-      return (
-        <div className="card rounded-xl p-4 mb-3" aria-label="Player progress">
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-2">
-              <span className="inline-block px-2.5 py-1 rounded-full text-white font-bold" style={{background:'var(--accent)'}}>Level {level}</span>
-            </span>
-            <div className="text-sm muted" aria-hidden>{num} / {den} XP</div>
-          </div>
-          <div className="mt-2 xpbar"
-               role="progressbar" aria-valuemin={0} aria-valuemax={den} aria-valuenow={num}
-               aria-label={`${num} of ${den} XP to next level`}>
-            <div style={{width:`${pct}%`}}></div>
-          </div>
-          <div className="text-xs muted mt-1">XP to next level</div>
-        </div>
-      );
-    };
 
-    /* ================= Filters ================= */
-    const ChipsRow=({items,on,isOn,toggle,summaryLabel})=>{
-      return (
-        <div className="mb-1">
-          <div className="flex items-center justify-between mb-1">
-            <div className="font-semibold text-sm">{summaryLabel}</div>
-            <div className="flex gap-1">
-              <button className="chip px-2 py-1 rounded-full text-xs border" onClick={()=>items.forEach(k=>isOn(k)||toggle(k))} aria-label="Select all">All</button>
-              <button className="chip px-2 py-1 rounded-full text-xs border" onClick={()=>items.forEach(k=>isOn(k)&&toggle(k))} aria-label="Select none">None</button>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-6">
-            {items.map(k=>{
-              const onState=isOn(k);
-              return (
-                <button key={k} className="chip px-3 py-1 rounded-full text-sm border"
-                        style={onState?{background:'var(--accent)',color:'#fff',borderColor:'transparent'}:{background:'transparent',color:'var(--ink-800)',borderColor:'var(--hairline)'}}
-                        aria-pressed={onState} onClick={()=>toggle(k)}>
-                  {k}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      );
-    };
-
-    const CompactFilters=({prefs,setPrefs})=>{
-      const [open,setOpen]=useState(false);
-      const f=prefs.filters;
-      const toggle=(group,key)=>{
-        setPrefs(p=>{
-          const prev=p.filters; const g={...prev[group]}; const on= g[key]!==false;
-          if(on) g[key]=false; else delete g[key];
-          const nx={...p, filters:{...prev, [group]:g}}; savePrefs(nx); return nx;
-        });
-      };
-      const isOnGroup=(group)=>k=>f[group]?.[k]!==false;
-      const summary=`${STRINGS.filter(isOnGroup('strings')).join(' ')} · Pos ${POSITIONS.filter(isOnGroup('positions')).join('–')} · F${FINGERS.filter(isOnGroup('fingers')).join('–')}`;
-      return (
-        <div className="card rounded-xl p-4">
-          <button className="w-full text-left flex items-center justify-between"
-                  onClick={()=>setOpen(x=>!x)} aria-expanded={open}>
-            <div className="text-lg font-semibold">Filters</div>
-            <div className="text-sm muted">{summary}</div>
-          </button>
-          {open && (
-            <div className="mt-3">
-              <ChipsRow items={STRINGS}  summaryLabel="Strings"  isOn={isOnGroup('strings')}  toggle={(k)=>toggle('strings',k)} />
-              <ChipsRow items={POSITIONS.map(String)} summaryLabel="Positions" isOn={isOnGroup('positions')} toggle={(k)=>toggle('positions',k)} />
-              <ChipsRow items={FINGERS.map(f=>'F'+f)} summaryLabel="Fingers"
-                        isOn={k=>isOnGroup('fingers')(+k.slice(1))}
-                        toggle={k=>toggle('fingers',+k.slice(1))} />
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    /* ================= Heatmaps ================= */
-    const AccuracyHeatmap=({stats})=>{
-      return (
-        <div className="card rounded-xl p-4">
-          <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {DISPLAY_STRINGS.map(s=>(
-              <div key={s} className="rounded-lg border" style={{borderColor:'var(--hairline)'}}>
-                <div className="px-3 py-2 font-semibold" style={{background:'var(--surface-subtle)'}}>{s} string</div>
-                <div className="p-2">
-                  <div className="fb-strip">
-                    {POSITIONS.map(p=>(
-                      <div key={p} className="fb-pos">
-                        <div className="pos-chip" aria-hidden>Pos {p}</div>
-                        <span className="sr-only">Position {p}</span>
-                        <div className="fb-grid">
-                          <div className="fb-colhdr">{FINGERS.map(f=><div key={f} className="text-center">F{f}</div>)}</div>
-                          {FINGERS.map(f=>{
-                            const k=`${s}:${p}:${f}`; const st=stats[k]||{correct:0,total:0};
-                            const style=evidenceStyle(st);
-                            return (
-                              <div key={k} className="fb-tile" title={`${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0}`}
-                                   aria-label={`${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Accuracy ${Math.round(style.acc*100)} percent.`}>
-                                {style.dot && <span className="lowdot" title="Low data (under 3)"></span>}
-                                <div className="fb-pct">{st.total?`${Math.round(style.acc*100)}%`:'—'}</div>
-                                <div className="fb-band acc" style={{background:style.accColor}}></div>
-                                <div className="fb-band lb"  style={{background:style.lbColor}}></div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="text-xs muted mt-2"><b>Legend:</b> Top band = Accuracy · Bottom = Confidence (95% LB). Red &lt;65% · Yellow 65–85% · Green ≥85%. Opacity ↑ with attempts.</div>
-        </div>
-      );
-    };
-
-    /* ================= Visual hint ================= */
-    const FingerboardHint=({active})=>(
-      <svg width="100%" height="180" viewBox="0 0 680 180" className="mt-3" aria-hidden="true">
-        {['G','D','A','E'].map((s,i)=>{
-          const y=30+ i*38;
-          return (
-            <g key={s}>
-              <text x="10" y={y+4} fontSize="12" fill="currentColor">{s}</text>
-              <line x1="48" x2="660" y1={y} y2={y} stroke="var(--gridline)" />
-              {[1,2,3,4,5].map(p=>[1,2,3,4].map(f=>{
-                const x=60+(p-1)*120 + [15,40,65,90][f-1]; const on=active&&active.s===s&&active.p===p&&active.f===f;
-                return <circle key={`${s}:${p}:${f}`} cx={x} cy={y} r={10}
-                               fill={on?'var(--accent)':'rgba(255,255,255,.06)'}
-                               stroke={on?'#fff':'rgba(0,0,0,.25)'} strokeWidth={on?2:1}/>;
-              }))}
-            </g>
-          );
-        })}
-      </svg>
-    );
-
-    /* ================= Tempo data ================= */
-    const TEMPOS = [
-      {it:'Prestissimo', en:'super fast',          bpm:[200, Infinity]},
-      {it:'Presto',      en:'very fast',           bpm:[168, 200]},
-      {it:'Allegro',     en:'fast / lively',       bpm:[120, 168]},
-      {it:'Allegretto',  en:'moderately fast',     bpm:[112, 120]},
-      {it:'Andante',     en:'walking tempo',       bpm:[76, 108]},
-      {it:'Andantino',   en:'slightly faster than Andante (modern)', bpm:[80, 112]},
-      {it:'Adagio',      en:'slow / majestic',     bpm:[66, 76]},
-      {it:'Largo',       en:'broad, slow',         bpm:[40, 60]},
-      {it:'Lento',       en:'very slow',           bpm:[40, 60]}
-    ];
-
-    /* ================= Speed Ladder (Core + Full) ================= */
-    const SpeedLadderGame=({onBack,baseOnly=false})=>{
-      const [stats,setStats]=useState(loadJSON(STATS_KEY,{}));
-      const {time:timer,setTime,paused}=useGameTimer(90);
-      const [score,setScore]=useState(0);
-      const [answered,setAnswered]=useState(0);
-      const [q,setQ]=useState(null);
-      const beeps=useBeeps(loadPrefs().sound);
-      const optionsRef=useRef([]);
-      const adaptive=!!loadPrefs().adaptive;
-
-      const pick=()=>{
-        const pool=[];
-        for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){
-          if(isAllowed(s,p,f) && validCell(s,p,f)) pool.push({s,p,f});
-        }
-        const chosen = pool.length
-          ? (adaptive ? pickWeighted(pool, it=> weaknessWeight(stats[`${it.s}:${it.p}:${it.f}`]||{})) : getRandom(pool))
-          : {s:'A',p:1,f:1};
-
-        const baseOpts=baseNamesFor(chosen.s,chosen.p,chosen.f);
-        const correct = baseOnly ? CANON_PC_NAME[pc(baseOpts[0])] : getRandom(validCell(chosen.s,chosen.p,chosen.f));
-        const choices = baseOnly ? ALL_BASE_CANON : ALL_NOTES_UNIQUE;
-        const distract=shuffle(choices.filter(n=>pc(n)!==pc(correct))).slice(0,3);
-        const options=shuffle([correct,...distract]); optionsRef.current=options;
-        setQ({...chosen, correct, options});
-        localStorage.setItem(LAST_MODE_KEY, baseOnly?'speedbase':'speed');
-      };
-      useEffect(()=>{pick()},[]);
-      useEffect(()=>{
-        const onKey=e=>{
-          if(!q || timer===0) return;
-          if(['1','2','3','4'].includes(e.key)){
-            const ch=optionsRef.current[+e.key-1]; if(ch) answer(ch);
-          }
-          if(e.key==='Escape') onBack();
-        };
-        addEventListener('keydown',onKey); return()=>removeEventListener('keydown',onKey);
-      },[q,timer]);
-
-      const answer=(note)=>{
-        if(!q||timer===0) return;
-        const ok=(pc(note)===pc(q.correct)); beeps[ok?'good':'bad']();
-        setAnswered(a=>a+1); if(ok) setScore(s=>s+1);
-        const k=`${q.s}:${q.p}:${q.f}`; const st=stats[k]||{correct:0,total:0};
-        const next={...stats,[k]:{correct:st.correct+(ok?1:0), total:st.total+1}}; setStats(next); saveJSON(STATS_KEY,next);
-        saveJSON(SCORE_KEY,(s=>{const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120}); const xp=prev.xp+xpAdd({type: ok?'normal':'retry'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}})());
-        setSR(ok?'Correct':'Incorrect');
-        setTimeout(pick, ok?360:680);
+      // Save stats & XP after each answer
+      const updateStats=(key,correct)=>{
+        const st = stats[key] || {correct:0,total:0};
+        const next = {...stats, [key]:{correct: st.correct + (correct?1:0), total: st.total+1}};
+        setStats(next);
+        saveJSON(STATS_KEY,next);
+        // XP
+        const xp = loadJSON(XP_KEY,0);
+        const gain = correct?10:2;
+        const newXP = xp + gain;
+        saveJSON(XP_KEY, newXP);
       };
 
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <PausedBanner show={paused}/>
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">{baseOnly?'Speed Ladder — Core':'Speed Ladder'}</h2>
-            <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-            {q && <>
-              <div className="text-center mb-3">
-                <div className="text-lg font-bold">What note can you play at <b>{fullLoc(q.s,q.p,q.f)}</b>?</div>
-                <div className="text-xs muted mt-1">Press 1–4 to answer quickly.</div>
-              </div>
-              <FingerboardHint active={{s:q.s,p:q.p,f:q.f}} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-                {q.options.map((n,i)=><button key={i} className="btn btn-blue" onClick={()=>answer(n)}><span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{norm(n)}</button>)}
-              </div>
-            </>}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ================= Flashcards ================= */
-    const Flashcards=({onBack})=>{
-      const deckA=useMemo(()=>{
-        const cards=[]; for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){
-          const cell=validCell(s,p,f); if(cell && isAllowed(s,p,f)) cards.push({q:`What note(s) at ${fullLoc(s,p,f)}?`, a: cell.map(norm).join(' or ')});
-        } return cards;
-      },[]);
-      const uniq=[...new Set(ALL_NOTES_UNIQUE)].sort();
-      const groupByString=n=>{
-        const by=new Map(STRINGS.map(s=>[s,[]]));
-        for(const loc of allLocationsForNote(n)) if(isAllowed(loc.s,loc.p,loc.f)) by.get(loc.s).push(loc);
-        const lines=[]; for(const s of STRINGS){const arr=(by.get(s)||[]).sort((a,b)=>a.p-b.p||a.f-b.f); if(arr.length) lines.push(`${s}: ${arr.map(x=>`${posLabel(x.p)} (${fingerLabel(x.f)})`).join(', ')}`)}
-        return lines.join('  |  ');
-      };
-      const deckB=uniq.map(n=>({q:`Where can you play ${norm(n)} (Pos 1–5)?`, a:groupByString(n)}));
-      const [mode,setMode]=useState('A'); const deck=mode==='A'?deckA:deckB;
-      const [i,setI]=useState(0), [show,setShow]=useState(false);
-      const next=()=>{setShow(false); setI((i+1)%deck.length); localStorage.setItem(LAST_MODE_KEY,'flash')}; const prev=()=>{setShow(false); setI((i-1+deck.length)%deck.length)};
-      useEffect(()=>{const onKey=e=>{const k=e.key.toLowerCase(); if(k===' '){e.preventDefault(); setShow(true)} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='escape') onBack()}; addEventListener('keydown',onKey); return()=>removeEventListener('keydown',onKey)},[i,show]);
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">Flashcards</h2>
-            <div className="flex gap-2 mb-3">
-              <button className={`btn ${mode==='A'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('A'); setI(0); setShow(false)}}>Deck A</button>
-              <button className={`btn ${mode==='B'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('B'); setI(0); setShow(false)}}>Deck B</button>
-            </div>
-            <div className="rounded-xl border-2 p-6 text-center">
-              <div className="text-lg font-bold">{deck[i]?.q}</div>
-              {show ? <div className="mt-2 ink700 whitespace-pre-wrap">{deck[i]?.a}</div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
-            </div>
-            <div className="flex gap-2 mt-4 justify-center">
-              <button className="btn btn-blue" onClick={()=>{setShow(true); localStorage.setItem(LAST_MODE_KEY,'flash')}}>Reveal</button>
-              <button className="btn btn-gray" onClick={prev}>Previous</button>
-              <button className="btn btn-purple" onClick={next}>Next</button>
-            </div>
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ================= Snapshot Core ================= */
-    const SnapshotCore = ({ onBack }) => {
-      const [stats, setStats] = React.useState(loadJSON(SNAPSHOT_STATS_KEY, {}));
-      const {time:timer,setTime,paused}=useGameTimer(90);
-      const [score, setScore] = React.useState(0);
-      const [answered, setAnswered] = React.useState(0);
-      const [flash, setFlash] = React.useState(null);
-      const [q, setQ] = React.useState(null);
-      const beeps = useBeeps(loadPrefs().sound);
-      const optionsRef = React.useRef([]);
-
-      const canonBase = (s,p,f) => CANON_PC_NAME[pc(baseNamesFor(s,p,f)[0])];
-
-      const pick = () => {
-        const s = getRandom(STRINGS.filter(ss=>Object.keys(loadPrefs().filters.strings).includes(ss) && loadPrefs().filters.strings[ss]!==false));
-        const p = getRandom(POSITIONS.filter(pp=>loadPrefs().filters.positions[pp]!==false));
-        const labels = {1:canonBase(s,p,1), 2:canonBase(s,p,2), 3:canonBase(s,p,3), 4:canonBase(s,p,4)};
-        setFlash({ s, p, labels });
-        setQ(null);
-        localStorage.setItem(LAST_MODE_KEY,'snapshot');
-
-        setTimeout(() => {
-          const f = getRandom(FINGERS.filter(ff=>loadPrefs().filters.fingers[ff]!==false));
-          const correct = labels[f];
-          const distract = shuffle(ALL_BASE_CANON.filter(n => pc(n)!==pc(correct))).slice(0,3);
-          const options = shuffle([correct, ...distract]);
-          optionsRef.current = options;
-          setFlash(null);
-          setQ({ s, p, f, correct, options });
-        }, 1100);
-      };
-
-      React.useEffect(() => { pick(); }, []);
-      React.useEffect(()=>{
-        const onKey = (e)=>{
-          if(!q || timer===0) return;
-          if(['1','2','3','4'].includes(e.key)){
-            const idx = +e.key - 1;
-            const ch = optionsRef.current[idx];
-            if (ch) answer(ch);
-          }
-          if(e.key==='Escape') onBack();
-        };
-        addEventListener('keydown', onKey);
-        return ()=>removeEventListener('keydown', onKey);
-      }, [q, timer]);
-
-      const answer = (choice) => {
-        if(!q || timer===0) return;
-        const ok = pc(choice) === pc(q.correct);
-        beeps[ok?'good':'bad']();
+      // Answer selection
+      const answer = opt => {
+        if(!cell) return;
+        const ok = opt===cell.canon;
         setAnswered(a=>a+1);
         if(ok) setScore(s=>s+1);
-
-        const k = `${q.s}:${q.p}:${q.f}`;
-        const st = stats[k] || { correct:0, total:0 };
-        const next = { ...stats, [k]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveJSON(SNAPSHOT_STATS_KEY, next);
-
-        saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
-          const xp=prev.xp+xpAdd({type:'review'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
-
-        const log = loadJSON(SESSIONLOG_KEY, []);
-        log.push({ mode:'snapshot', date: nowISO(), correct: ok?1:0, total:1 });
-        saveJSON(SESSIONLOG_KEY, log);
-
-        setSR(ok ? 'Correct' : 'Incorrect');
-        setTimeout(pick, ok?360:720);
+        updateStats(`${cell.s}:${cell.p}:${cell.f}`, ok);
+        pickCell();
       };
 
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <PausedBanner show={paused}/>
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">Snapshot Core</h2>
-            <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-
-            {flash && (
-              <div className="rounded-xl border-2 p-5 text-center">
-                <div className="text-lg font-semibold">Memorize these base notes:</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                  {FINGERS.map(f=>(
-                    <div key={f} className="rounded border p-3">
-                      <div className="text-xs muted">F{f}</div>
-                      <div className="font-bold text-lg">{flash.labels[f]}</div>
-                    </div>
-                  ))}
-                </div>
-                <FingerboardHint active={{ s:flash.s, p:flash.p, f:null }}/>
-              </div>
-            )}
-
-            {q && (
-              <>
-                <div className="text-center mb-3">
-                  <div className="text-lg font-bold">
-                    Which base note is <b>F{q.f}</b> at {posLabel(q.p)} on the {stringLabel(q.s)}?
-                  </div>
-                  <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
-                </div>
-                <FingerboardHint active={{ s:q.s, p:q.p, f:q.f }}/>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-                  {q.options.map((n,i)=>
-                    <button key={i} className="btn btn-blue" onClick={()=>answer(n)}>
-                      <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{n}
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ================= Interval Sprint ================= */
-    const IntervalSprint = ({ onBack }) => {
-      const [stats, setStats] = React.useState(loadJSON(INTERVAL_STATS_KEY, {}));
-      const {time:timer,setTime,paused}=useGameTimer(90);
-      const [score, setScore] = React.useState(0);
-      const [answered, setAnswered] = React.useState(0);
-      const [q, setQ] = React.useState(null);
-      const beeps = useBeeps(loadPrefs().sound);
-      const adaptive = !!loadPrefs().adaptive;
-
-      const basePC = (s,p,f)=> OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-
-      const pick = ()=>{
-        const cand=[];
-        for(const s of STRINGS) for(const p of POSITIONS){
-          for(const [a,b] of [[1,2],[2,3],[3,4]]){
-            if(!(isAllowed(s,p,a)||isAllowed(s,p,b))) continue;
-            cand.push({s,p,a,b});
-          }
-        }
-        const chosen = cand.length
-          ? (adaptive ? pickWeighted(cand, it=> weaknessWeight(stats[`${it.s}:${it.p}:${it.a}-${it.b}`]||{})) : getRandom(cand))
-          : {s:'A',p:1,a:1,b:2};
-
-        const d = Math.abs((basePC(chosen.s,chosen.p,chosen.b) - basePC(chosen.s,chosen.p,chosen.a) + 12) % 12);
-        const type = (d===1) ? 'half' : 'whole';
-        setQ({ ...chosen, type });
-        localStorage.setItem(LAST_MODE_KEY,'interval');
-      };
-
-      React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(()=>{
-        const onKey=(e)=>{
-          if(!q || timer===0) return;
-          const k=e.key.toLowerCase();
-          if(k==='1' || k==='h') answer('half');
-          if(k==='2' || k==='w') answer('whole');
-          if(k==='escape') onBack();
-        };
-        addEventListener('keydown',onKey);
-        return ()=>removeEventListener('keydown',onKey);
-      },[q,timer]);
-
-      const answer=(choice)=>{
-        if(!q || timer===0) return;
-        const ok = (choice===q.type);
-        beeps[ok?'good':'bad']();
-        setAnswered(a=>a+1);
-        if(ok) setScore(s=>s+1);
-
-        const k = `${q.s}:${q.p}:${q.a}-${q.b}`;
-        const st = stats[k] || { correct:0, total:0 };
-        const next = { ...stats, [k]:{ correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveJSON(INTERVAL_STATS_KEY, next);
-
-        saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
-          const xp=prev.xp+xpAdd({type: ok?'normal':'retry'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
-        const log = loadJSON(SESSIONLOG_KEY, []);
-        log.push({ mode:'interval', date: nowISO(), correct: ok?1:0, total:1 });
-        saveJSON(SESSIONLOG_KEY, log);
-
-        setSR(ok ? 'Correct' : 'Incorrect');
-        setTimeout(pick, ok?320:680);
-      };
-
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <PausedBanner show={paused}/>
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">Interval Sprint</h2>
-            <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-            {q && (
-              <>
-                <div className="text-center mb-3">
-                  <div className="text-lg font-bold">
-                    In {posLabel(q.p)} on the {stringLabel(q.s)}, between <b>F{q.a}</b> and <b>F{q.b}</b> — Half Step or Whole Step?
-                  </div>
-                  <div className="text-xs muted mt-1">Shortcuts: <b>1/H</b>=Half, <b>2/W</b>=Whole</div>
-                </div>
-                <FingerboardHint active={{ s:q.s, p:q.p, f:q.a }}/>
-                <FingerboardHint active={{ s:q.s, p:q.p, f:q.b }}/>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-                  <button className="btn btn-blue" onClick={()=>answer('half')}>
-                    <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">1</span>Half Step
-                  </button>
-                  <button className="btn btn-green" onClick={()=>answer('whole')}>
-                    <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">2</span>Whole Step
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ================= Note Locator ================= */
-    const NoteLocator = ({ onBack }) => {
-      const [stats, setStats] = React.useState(loadJSON(LOCATOR_STATS_KEY, {}));
-      const {time:timer,setTime,paused}=useGameTimer(90);
-      const [score, setScore] = React.useState(0);
-      const [answered, setAnswered] = React.useState(0);
-      const [q, setQ] = React.useState(null);
-      const beeps = useBeeps(loadPrefs().sound);
-      const optionsRef = React.useRef([]);
-      const adaptive = !!loadPrefs().adaptive;
-
-      const allValidCellsOnString = (s, respectFilters=true) => {
-        const out = [];
-        for (const p of POSITIONS) for (const f of FINGERS) {
-          const ok = validCell(s,p,f) && (!respectFilters || isAllowed(s,p,f));
-          if (ok) out.push({s,p,f});
-        }
-        return out;
-      };
-
-      const pick = () => {
-        // Build candidate cells (respect filters)
-        const cells=[];
-        for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){
-          if(isAllowed(s,p,f) && validCell(s,p,f)) cells.push({s,p,f});
-        }
-        const chosenCell = cells.length
-          ? (adaptive ? pickWeighted(cells, it=> weaknessWeight(stats[`${it.s}:${it.p}:${it.f}`]||{})) : getRandom(cells))
-          : ({s:'A',p:1,f:3});
-
-        const s = chosenCell.s;
-        // pick a playable note at that exact cell
-        const noteChoices = (validCell(chosenCell.s,chosenCell.p,chosenCell.f)||[]).map(norm);
-        const note = noteChoices.length? getRandom(noteChoices) : 'A';
-
-        // options: correct cell + 3 distractors on same string
-        const correct = {p:chosenCell.p, f:chosenCell.f};
-        const wrongPool = allValidCellsOnString(s,true).filter(c => !(c.p===correct.p && c.f===correct.f));
-        let distract = shuffle(wrongPool).slice(0,3);
-        if(distract.length<3){ // relax filters if needed to keep 4 options
-          const fallback = allValidCellsOnString(s,false).filter(c =>
-            !(c.p===correct.p && c.f===correct.f) &&
-            !distract.some(d=>d.p===c.p && d.f===c.f)
-          );
-          distract = [...distract, ...shuffle(fallback).slice(0, 3-distract.length)];
-        }
-        const options = shuffle([{p:correct.p,f:correct.f}, ...distract.map(d=>({p:d.p,f:d.f}))]);
-        optionsRef.current = options;
-        setQ({ s, note: norm(note), correct, options });
-        localStorage.setItem(LAST_MODE_KEY,'locator');
-      };
-
-      React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(()=>{
-        const onKey=(e)=>{
-          if(!q || timer===0) return;
-          if(['1','2','3','4'].includes(e.key)){
-            const ch = optionsRef.current[+e.key-1];
-            if (ch) answer(ch);
-          }
-          if(e.key==='Escape') onBack();
-        };
-        addEventListener('keydown', onKey);
-        return ()=>removeEventListener('keydown', onKey);
-      }, [q, timer]);
-
-      const label = (p,f)=>`Pos ${p} — F${f}`;
-      const answer = (choice) => {
-        if(!q || timer===0) return;
-        const ok = (choice.p===q.correct.p && choice.f===q.correct.f);
-        beeps[ok?'good':'bad']();
-        setAnswered(a=>a+1);
-        if(ok) setScore(s=>s+1);
-
-        const k = `${q.s}:${q.correct.p}:${q.correct.f}`;
-        const st = stats[k] || { correct:0, total:0 };
-        const next = { ...stats, [k]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveJSON(LOCATOR_STATS_KEY, next);
-
-        saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
-          const xp=prev.xp+xpAdd({type: ok?'normal':'retry'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
-        const log = loadJSON(SESSIONLOG_KEY, []);
-        log.push({ mode:'locator', date: nowISO(), correct: ok?1:0, total:1 });
-        saveJSON(SESSIONLOG_KEY, log);
-
-        setSR(ok ? 'Correct' : 'Incorrect');
-        setTimeout(pick, ok?340:720);
-      };
-
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <PausedBanner show={paused}/>
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">Note Locator</h2>
-            <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-            {q && (
-              <>
-                <div className="text-center mb-3">
-                  <div className="text-lg font-bold">
-                    On the <b>{q.s}</b> string, where can you play <b>{q.note}</b> (Pos 1–5)?
-                  </div>
-                  <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-                  {q.options.map((o,i)=>
-                    <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
-                      <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{label(o.p,o.f)}
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ================= Bieler Method Lab ================= */
-    const BIELER_VOCAB = [
-      { term:'Hand Frame', def:'Stable spacing of fingers (semitone/whole-tone patterns) that travels as a unit while shifting.' },
-      { term:'Three-Dimensional Positioning', def:'Height, depth, and angle of violin set to free both hands.' },
-      { term:'Contact Point', def:'Soundpoint between bridge and fingerboard chosen by speed/pressure/tilt.' },
-      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
-    ];
-    const BIELER_CONCEPT_QA = [
-      { q:'Why build the hand frame before speed?', a:'It stabilizes spacing so motion stays accurate at tempo.', wrong:['It makes vibrato louder','It avoids all shifts','Player height decides positions'] },
-      { q:'Best cue for contact point?', a:'Match bow speed/pressure/tilt to desired tone color.', wrong:['Finger curvature only','String brand','Player arm length'] },
-      { q:'Spiccato vs Sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['They are identical','Sautillé is always loud','Spiccato is legato only'] },
-    ];
-    const BIELER_APPLY = [
-      { scenario:'Bright forte, clear projection on A string', a:'Move soundpoint toward bridge; higher speed with supportive index; stable hand frame.', wrong:['Over-fingerboard with light bow','Only vibrato faster','Tighten thumb and press'] },
-      { scenario:'Clean off-string at MM=100, 8ths', a:'Spiccato near balance point with small vertical energy; consistent levels.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Ricochet near bridge'] },
-      { scenario:'Dolce line in 3rd position', a:'More fingerboard soundpoint, lower pressure, seamless legato; frame glides in shifts.', wrong:['Firm staccato','Stiff wrist collé','Always sul ponticello'] },
-    ];
-
-    const BielerLab = ({ onBack }) => {
-      const [tab, setTab] = React.useState('vocab'); // vocab | concept | apply
-      const [i, setI] = React.useState(0);
-      const [show, setShow] = React.useState(false);
-      const [score, setScore] = React.useState(0);
-      const [answered, setAnswered] = React.useState(0);
-      const [q, setQ] = React.useState(null);
-      const beeps = useBeeps(true);
-
-      React.useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'bielerLab'); }, []);
-
-      const nextVocab = ()=>{ setShow(false); setI((i+1)%BIELER_VOCAB.length); };
-      const prevVocab = ()=>{ setShow(false); setI((i-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
-      React.useEffect(()=>{
-        const onKey=(e)=>{
-          const k=e.key.toLowerCase();
-          if(tab==='vocab'){
-            if(k===' '){ e.preventDefault(); setShow(true); }
-            if(k==='arrowright'||k==='n') nextVocab();
-            if(k==='arrowleft'||k==='p')  prevVocab();
-          }else if(tab==='concept' || tab==='apply'){
-            if(['1','2','3','4'].includes(k)){
-              const idx=+k-1; const ch=q?.options?.[idx]; if(ch) answer(ch);
-            }
-          }
-          if(k==='escape') onBack();
-        };
-        addEventListener('keydown', onKey);
-        return ()=>removeEventListener('keydown', onKey);
-      }, [tab, i, q, show]);
-
-      const makeMCQ = (bank, type) => {
-        const item = getRandom(bank);
-        const distract = shuffle(item.wrong).slice(0,3);
-        const options = shuffle([item.a, ...distract]);
-        setQ({ stem: type==='concept' ? item.q : item.scenario, correct:item.a, options, type });
-      };
-
-      React.useEffect(()=>{ if(tab==='concept') makeMCQ(BIELER_CONCEPT_QA,'concept'); }, [tab]);
-      React.useEffect(()=>{ if(tab==='apply')   makeMCQ(BIELER_APPLY,'apply'); },   [tab]);
-
-      const answer = (choice)=>{
-        if(!q) return;
-        const ok = choice===q.correct;
-        beeps[ok?'good':'bad']();
-        setAnswered(a=>a+1);
-        if(ok){ setScore(s=>s+1);
-          saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
-            const xp=prev.xp+xpAdd({type:'review'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
-        }
-        setSR(ok ? 'Correct' : 'Try again');
-        setTimeout(()=>makeMCQ(q.type==='concept'?BIELER_CONCEPT_QA:BIELER_APPLY, q.type), ok?340:720);
-      };
-
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">Bieler Method Lab</h2>
-            <div className="flex gap-2 mb-3">
-              <button className={`btn ${tab==='vocab'?'btn-purple':'btn-gray'}`} onClick={()=>setTab('vocab')}>Vocabulary</button>
-              <button className={`btn ${tab==='concept'?'btn-purple':'btn-gray'}`} onClick={()=>setTab('concept')}>Concept Checks</button>
-              <button className={`btn ${tab==='apply'?'btn-purple':'btn-gray'}`} onClick={()=>setTab('apply')}>Applied</button>
-            </div>
-
-            {tab==='vocab' && (
-              <div className="rounded-xl border-2 p-6 text-center">
-                <div className="text-xl font-bold">{BIELER_VOCAB[i].term}</div>
-                {show ? <div className="mt-2 ink700">{BIELER_VOCAB[i].def}</div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
-                <div className="flex gap-2 mt-4 justify-center">
-                  <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
-                  <button className="btn btn-gray" onClick={prevVocab}>Previous</button>
-                  <button className="btn btn-purple" onClick={nextVocab}>Next</button>
-                </div>
-              </div>
-            )}
-
-            {(tab==='concept' || tab==='apply') && q && (
-              <>
-                <div className="muted text-sm mb-2">Score: <b>{score}</b> / {answered}</div>
-                <div className="text-center mb-3">
-                  <div className="text-lg font-bold">{q.stem}</div>
-                  <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {q.options.map((opt,i)=>
-                    <button key={i} className="btn btn-blue" onClick={()=>answer(opt)}>
-                      <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{opt}
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ================= Tempo Trainer (flashcards with voice) ================= */
-    const TempoTrainer = ({ onBack }) => {
-      const [i,setI]=useState(0);
-      const [show,setShow]=useState(false);
-      const [prefs,setPrefs]=useState(loadPrefs());
-      useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'tempo-trainer'); },[]);
-      const next=()=>{ setShow(false); setI((i+1)%TEMPOS.length); };
-      const prev=()=>{ setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
-      const t=TEMPOS[i];
-      const say=()=>{ if(prefs.callouts) speak(`${t.it}. ${t.en}.`); };
-      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault(); setShow(true)} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='s') say(); if(k==='escape') onBack(); }; addEventListener('keydown',onKey); return()=>removeEventListener('keydown',onKey);});
-      const bpmText = Array.isArray(t.bpm) ? (t.bpm[1]===Infinity ? `${t.bpm[0]}+` : `${t.bpm[0]}–${t.bpm[1]}`) : '—';
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">Tempo Trainer</h2>
-            <div className="text-xs muted mb-2">Shortcuts: Space=Reveal · N/P=Next/Prev · S=Speak</div>
-            <div className="rounded-xl border-2 p-6 text-center">
-              <div className="text-3xl font-black">{t.it}</div>
-              {show ? (
-                <div className="mt-2 ink700">
-                  <div className="font-semibold">{t.en}</div>
-                  <div className="text-sm muted">Typical BPM: {bpmText}</div>
-                </div>
-              ) : <div className="muted italic">Press Space or tap “Reveal”.</div>}
-            </div>
-            <div className="flex gap-2 mt-4 justify-center">
-              <button className="btn btn-blue" onClick={()=>{setShow(true); say();}}>Reveal</button>
-              <button className="btn btn-gray" onClick={prev}>Previous</button>
-              <button className="btn btn-purple" onClick={next}>Next</button>
-              <button className="btn btn-green" onClick={say}>Speak</button>
-            </div>
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ================= Tempo Tester (timed quiz) ================= */
-    const TempoTester=({onBack})=>{
-      const {time:timer,setTime,paused}=useGameTimer(60);
-      const [score,setScore]=useState(0);
-      const [answered,setAnswered]=useState(0);
-      const [q,setQ]=useState(null);
-      const [misses,setMisses]=useState([]);
-      const beeps=useBeeps(loadPrefs().sound);
-      const optionsRef=useRef([]);
-      useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'tempo-tester'); },[]);
-
-      const pick=()=>{
-        const t=getRandom(TEMPOS);
-        const correct=t.en;
-        const distract=shuffle(TEMPOS.map(x=>x.en).filter(x=>x!==correct)).slice(0,3);
-        const options=shuffle([correct,...distract]); optionsRef.current=options;
-        setQ({term:t.it, correct, options});
-      };
-
-      useEffect(()=>{ pick(); },[]);
-      useEffect(()=>{
-        const onKey=e=>{
-          if(!q || timer===0) return;
-          if(['1','2','3','4'].includes(e.key)){
-            const ch=optionsRef.current[+e.key-1]; if(ch) answer(ch);
-          }
-          if(e.key==='Escape') onBack();
-        };
-        addEventListener('keydown',onKey);
-        return ()=>removeEventListener('keydown',onKey);
-      },[q,timer]);
-
-      const answer=(choice)=>{
-        if(!q||timer===0) return;
-        const ok=(choice===q.correct);
-        beeps[ok?'good':'bad']();
-        setAnswered(a=>a+1);
-        if(ok) setScore(s=>s+1); else setMisses(m=>[...m,{term:q.term,correct:q.correct}]);
-        const stat=loadJSON(TEMPO_STATS_KEY,{correct:0,total:0});
-        const next={correct:stat.correct+(ok?1:0), total:(stat.total||0)+1};
-        saveJSON(TEMPO_STATS_KEY,next);
-        saveJSON(SCORE_KEY,(()=>{const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120}); const xp=prev.xp+xpAdd({type: ok?'review':'retry'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}})());
-        setSR(ok ? 'Correct' : 'Incorrect');
-        setTimeout(pick, ok?260:600);
-      };
-
-      if(timer===0){
-        const best=loadJSON(TEMPO_BEST_KEY,{bestScore:0,bestStreak:0});
+      if(time===0){
+        // show results
         return (
-          <div className="p-4 max-w-3xl mx-auto min-h-screen">
-            <div className="card rounded-xl p-6">
-              <h2 className="text-2xl font-bold">Tempo Tester — Results</h2>
-              <div className="mt-2 text-lg">Score: <b>{score}</b> / {answered}</div>
-              {misses.length>0 && (
-                <div className="mt-4">
-                  <div className="font-semibold mb-2">Review Misses</div>
-                  <ul className="list-disc pl-6 text-sm">
-                    {misses.map((m,i)=><li key={i}><b>{m.term}</b> — {m.correct}</li>)}
-                  </ul>
-                </div>
-              )}
-              <div className="flex gap-2 mt-4">
-                <button className="btn btn-purple" onClick={()=>{ setTime(60); setScore(0); setAnswered(0); setMisses([]); pick(); }}>Play again</button>
-                <button className="btn btn-gray" onClick={onBack}>Back</button>
-              </div>
-            </div>
+          <div className="card">
+            <h2>Drill Complete</h2>
+            <p>Score: {score} / {answered}</p>
+            <button className="btn btn-primary" onClick={()=>onBack()}>Back to Home</button>
           </div>
         );
       }
 
       return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <PausedBanner show={paused}/>
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold">Tempo Tester</h2>
-            <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-            {q && (
-              <>
-                <div className="text-center mb-3">
-                  <div className="text-lg font-bold">What does <b>{q.term}</b> mean?</div>
-                  <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
+        <div>
+          <div className="card" style={{marginBottom:'1rem'}}>
+            <h2>Speed Drill (Base Notes)</h2>
+            <p>Time: {time}s | Score: {score}/{answered}</p>
+            {cell && (
+              <div style={{textAlign:'center'}}>
+                <p>What is the base note at <strong>{ordinal(cell.p)} Position</strong>, <strong>{ordinal(cell.f)} finger</strong> on <strong>{cell.s} string</strong>?</p>
+                <div className="grid grid-cols-2" style={{gap:'0.5rem'}}>
+                  {options.map(opt=>(<button key={opt} className="btn btn-blue" onClick={()=>answer(opt)}>{opt}</button>))}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {q.options.map((opt,i)=>
-                    <button key={i} className="btn btn-blue" onClick={()=>answer(opt)}>
-                      <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{opt}
-                    </button>
-                  )}
-                </div>
-              </>
+              </div>
             )}
           </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+          <button className="btn btn-gray" onClick={()=>onBack()}>Back</button>
         </div>
       );
-    };
+    }
 
-    /* ================= Positions Bingo ================= */
-    const BINGO_KEY='positionsQuest.bingo.v1';
-    const bingoTasksBase = [
-      'Speed Ladder (core) — 3 min',
-      'Speed Ladder (full) — 3 min',
-      'Snapshot Core — 2 rounds',
-      'Interval Sprint — 2 rounds',
-      'Note Locator — 2 rounds',
-      'Flashcards — Deck A (10 cards)',
-      'Flashcards — Deck B (10 cards)',
-      'Play F1–F2 half steps in Pos 2 (all strings)',
-      'Détaché in your “middle” — 3 min',
-      'Martelé in upper half — Kreutzer 7 (8 bars)',
-      'Collé landings — 16 clean starts',
-      'String crossings — Kreutzer 2 (8 bars)',
-      'Tempo Trainer — Allegro family',
-      'Tempo Trainer — Slow family',
-      'Bieler vocab — 5 cards',
-      'Vibrato starts on head of note — scale one octave',
-      'Hand frame check — Pos 1 (G & D strings)',
-      'Shift blocks up & down (A string) — 1st↔3rd',
-      'Contact point survey — E string',
-      'Record one passage and self-critique',
-      'Slow scales with drones — 5 min',
-      'Arpeggio intonation — 5 min',
-      'Chord voicing — 3-note rolls (slow)',
-      'Sautillé 8ths at MM=100 — 1 min',
-      'Spiccato 8ths at MM=100 — 1 min'
-    ];
-    const makeBoard=()=>shuffle(bingoTasksBase).slice(0,25).map(t=>({t,done:false}));
-    const Bingo=({onBack})=>{
-      const [board,setBoard]=useState(loadJSON(BINGO_KEY, makeBoard()));
-      const toggle=i=>{const nx=[...board]; nx[i]={...nx[i],done:!nx[i].done}; setBoard(nx); saveJSON(BINGO_KEY,nx)};
-      const reset=()=>{const nx=makeBoard(); setBoard(nx); saveJSON(BINGO_KEY,nx)};
-      useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'bingo'); },[]);
-      return (
-        <div className="p-4 max-w-5xl mx-auto min-h-screen">
-          <div className="card rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-3">Positions Bingo</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-              {board.map((c,i)=>(
-                <button key={i} className="card rounded-lg p-3 text-left border" style={{borderColor:'var(--hairline)', background:c.done?'rgba(16,185,129,.15)':'var(--card)'}} onClick={()=>toggle(i)}>
-                  <div className="text-sm">{c.t}</div>
-                  {c.done && <div className="text-xs mt-2 font-bold text-green-700">✔ Done</div>}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button className="btn btn-purple" onClick={reset}>Reshuffle</button>
-              <button className="btn btn-gray" onClick={onBack}>Back</button>
-            </div>
-          </div>
-        </div>
-      );
-    };
+    // Simple flashcards with spaced repetition scheduling. Each card knows its next review time.
+    function Flashcards({onBack}){
+      const [cards,setCards] = React.useState(()=>{
+        const saved = loadJSON('violinQuest.flashcards', null);
+        if(saved) return saved;
+        // build initial deck: one card per unique note and one per cell
+        const deck=[];
+        for(const c of CELLS){ deck.push({type:'cell',question:`Note at ${ordinal(c.p)} Pos, ${ordinal(c.f)} finger on ${c.s}`, answer:c.canon, interval:1, due:Date.now()}); }
+        const uniqueNotes=[...new Set(CELLS.map(c=>c.canon))];
+        for(const n of uniqueNotes){ deck.push({type:'note',question:`Where can you play ${n}?`, answer: n, interval:1, due:Date.now()}); }
+        saveJSON('violinQuest.flashcards', deck);
+        return deck;
+      });
+      const [card,setCard]=React.useState(null);
+      const [revealed,setRevealed]=React.useState(false);
 
-    /* ================= Dice of Destiny ================= */
-    const Dice=({onBack})=>{
-      const [last,setLast]=useState(null);
-      const [task,setTask]=useState('Roll to get a focused challenge!');
-      const roll=()=>{
-        const choices=bingoTasksBase.filter(t=>t!==last);
-        const pick=getRandom(choices);
-        setTask(pick); setLast(pick);
-        localStorage.setItem(LAST_MODE_KEY,'dice');
-      };
-      return (
-        <div className="p-4 max-w-3xl mx-auto min-h-screen">
-          <div className="card rounded-xl p-6 text-center">
-            <h2 className="text-2xl font-bold">Dice of Destiny</h2>
-            <div className="mt-3 text-lg">{task}</div>
-            <div className="flex gap-2 justify-center mt-4">
-              <button className="btn btn-purple" onClick={roll}>Roll</button>
-              <button className="btn btn-gray" onClick={onBack}>Back</button>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    /* ================= Tabs ================= */
-    const Tabs=({tab,setTab})=>(
-      <nav className="tabs" role="tablist" aria-label="Main">
-        {[
-          ['home','Home','🏠'],
-          ['stats','Stats','📈'],
-          ['settings','Settings','⚙️']
-        ].map(([id,label,ico])=>(
-          <button key={id} className="tab" role="tab" aria-selected={tab===id} onClick={()=>setTab(id)}>
-            <div aria-hidden>{ico}</div>
-            <div className="text-xs">{label}</div>
-          </button>
-        ))}
-      </nav>
-    );
-
-    const StatsScreen=()=>{
-      return (
-        <div className="p-4 max-w-5xl mx-auto pb-24">
-          <h2 className="text-2xl font-bold mb-2">Stats</h2>
-          <ScoreHeader/>
-          <AccuracyHeatmap stats={loadJSON(STATS_KEY,{})}/>
-          <div className="mt-4 card rounded-xl p-4">
-            <div className="text-sm muted">Recent sessions:</div>
-            <ul className="text-sm mt-2">
-              {loadJSON(SESSIONLOG_KEY,[]).slice(-10).reverse().map((s,i)=><li key={i}>• {new Date(s.date).toLocaleString()} — {s.mode} {s.correct}/{s.total}</li>)}
-            </ul>
-          </div>
-        </div>
-      );
-    };
-
-    const SettingsScreen=()=>{
-      const [prefs,setPrefs]=useState(loadPrefs());
-      return (
-        <div className="p-4 max-w-5xl mx-auto pb-24">
-          <h2 className="text-2xl font-bold mb-2">Settings</h2>
-          <div className="card rounded-xl p-4 grid gap-3">
-            <label className="flex items-center gap-3">
-              <input type="checkbox" checked={!!prefs.sound} onChange={e=>{const nx={...prefs,sound:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
-              Sounds
-            </label>
-            <label className="flex items-center gap-3">
-              <input type="checkbox" checked={!!prefs.confetti} onChange={e=>{const nx={...prefs,confetti:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
-              Confetti on correct
-            </label>
-            <label className="flex items-center gap-3">
-              <input type="checkbox" checked={!!prefs.adaptive} onChange={e=>{const nx={...prefs,adaptive:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
-              Adaptive question weighting
-            </label>
-            <label className="flex items-center gap-3">
-              <input type="checkbox" checked={!!prefs.callouts} onChange={e=>{const nx={...prefs,callouts:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
-              Voice call-outs in Tempo Trainer
-            </label>
-          </div>
-        </div>
-      );
-    };
-
-    /* ================= Home ================= */
-    const Home=({openScreen})=>{
-      const [helpKey,setHelpKey]=useState(null);
-      const [sheet,setSheet]=useState(false);
-      const [confirmReset,setConfirmReset]=useState(false);
-      const [prefs,setPrefs]=useState(loadPrefs());
-      const lastMode=localStorage.getItem(LAST_MODE_KEY);
-
-      const resetAll=()=>{
-        saveJSON(STATS_KEY,{});
-        saveJSON(TEMPO_STATS_KEY,{});
-        saveJSON(TEMPO_BEST_KEY,{bestScore:0,bestStreak:0});
-        saveJSON(HEIGHT_STATS_KEY,{});
-        saveJSON(LOCATOR_STATS_KEY,{});
-        saveJSON(SHIFT_STATS_KEY,{});
-        saveJSON(HARM_STATS_KEY,{});
-        saveJSON(SNAPSHOT_STATS_KEY,{});
-        saveJSON(INTERVAL_STATS_KEY,{});
-        saveJSON(SESSIONLOG_KEY,[]);
-        saveJSON(BINGO_KEY, makeBoard());
-        setConfirmReset(false);
-        setSR('All stats reset');
+      // pick next due card (spaced repetition). If none, pick random.
+      const pickCard = () => {
+        const now=Date.now();
+        const dueCards = cards.filter(c=>c.due<=now);
+        const next = dueCards.length? dueCards[0] : getRandom(cards);
+        setCard(next);
+        setRevealed(false);
       };
 
-      const lastLabel = (m=>{
-        if(m==='speed') return 'Speed Ladder';
-        if(m==='speedbase') return 'Speed Ladder — Core';
-        if(m==='flash') return 'Flashcards';
-        if(m==='snapshot') return 'Snapshot Core';
-        if(m==='interval') return 'Interval Sprint';
-        if(m==='locator') return 'Note Locator';
-        if(m==='bielerLab') return 'Bieler Method Lab';
-        if(m==='tempo-trainer') return 'Tempo Trainer';
-        if(m==='tempo-tester') return 'Tempo Tester';
-        if(m==='bingo') return 'Positions Bingo';
-        if(m==='dice') return 'Dice of Destiny';
-        return m||'';
-      })(lastMode);
+      React.useEffect(()=>{ pickCard(); },[]);
+
+      // Mark correct: increase interval and schedule next review
+      const markCorrect=()=>{
+        const updated=cards.map(c=>{
+          if(c===card){
+            const newInterval = c.interval * 2;
+            const due=Date.now()+newInterval*24*60*60*1000; // days in ms
+            return {...c, interval:newInterval, due};
+          }
+          return c;
+        });
+        setCards(updated);
+        saveJSON('violinQuest.flashcards', updated);
+        pickCard();
+      };
+      const markIncorrect=()=>{
+        const updated=cards.map(c=>{
+          if(c===card){ return {...c, interval:1, due: Date.now()+24*60*60*1000}; }
+          return c;
+        });
+        setCards(updated);
+        saveJSON('violinQuest.flashcards', updated);
+        pickCard();
+      };
 
       return (
-        <div className="p-4 max-w-5xl mx-auto pb-24">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold">Violin Positions Quest</h1>
-            <button className="btn btn-gray" aria-label="More actions" onClick={()=>setSheet(true)}>⋯</button>
+        <div>
+          <div className="card">
+            <h2>Flashcards</h2>
+            {card && (
+              <div style={{textAlign:'center'}}>
+                <p>{card.question}</p>
+                {revealed ? (<p style={{fontWeight:'bold',fontSize:'1.5rem'}}>{card.answer}</p>) : (<button className="btn btn-primary" onClick={()=>setRevealed(true)}>Reveal</button>)}
+                {revealed && (
+                  <div style={{marginTop:'1rem'}}>
+                    <button className="btn btn-green" onClick={markCorrect}>I knew it</button>
+                    <button className="btn btn-gray" onClick={markIncorrect}>I forgot</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+          <button className="btn btn-gray" style={{marginTop:'1rem'}} onClick={()=>onBack()}>Back</button>
+        </div>
+      );
+    }
 
-          <ScoreHeader/>
+    // Stats page: show heatmap of accuracy per cell and progress (level)
+    function Stats(){
+      const stats=loadJSON(STATS_KEY, {});
+      const xp=loadJSON(XP_KEY,0);
+      const level=levelForXP(xp);
+      const nextXP=nextLevelXP(level);
+      const prevXP=level>1?nextLevelXP(level-1):0;
+      const progress=(xp-prevXP)/(nextXP-prevXP);
 
-          {lastMode && (
-            <div className="mb-3">
-              <CardButton
-                title="Continue"
-                description={`Jump back into your last activity (${lastLabel})`}
-                icon="▶️"
-                verb="Resume"
-                onClick={()=>openScreen(lastMode)}
-                onHelp={()=>setHelpKey('speed')}
-              />
+      return (
+        <div>
+          <div className="card">
+            <h2>Your Progress</h2>
+            <p>Level {level} (XP {xp-prevXP}/{nextXP-prevXP})</p>
+            <div style={{background:'#e5e7eb', borderRadius:'6px', overflow:'hidden', height:'8px'}}>
+              <div style={{height:'8px', width:`${progress*100}%`, background: 'var(--accent)'}}></div>
+            </div>
+          </div>
+          <div className="card" style={{marginTop:'1rem'}}>
+            <h2>Fingerboard Accuracy</h2>
+            <div className="grid" style={{gridTemplateColumns:'repeat(4, 1fr)', gap:'0.5rem'}}>
+              {CELLS.map(c=>{
+                const key=`${c.s}:${c.p}:${c.f}`;
+                const st=stats[key]||{correct:0,total:0};
+                const acc = st.total? st.correct/st.total : 0;
+                const color = acc<0.5? 'rgba(239,68,68,0.5)' : acc<0.8? 'rgba(234,179,8,0.5)' : 'rgba(16,185,129,0.5)';
+                return (
+                  <div key={key} className="heat-tile" style={{background:color}} title={`Pos ${c.p}, F${c.f} on ${c.s}: ${st.correct}/${st.total}` }>
+                    {st.total? `${Math.round(acc*100)}%` : '-'}
+                    {st.total<3 && <span className="heat-dot"></span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Home component: menu & router
+    function App(){
+      const [page,setPage]=React.useState('home');
+      const open = (p) => setPage(p);
+      return (
+        <div className="container">
+          {page==='home' && (
+            <div>
+              <h1>Violin Mastery Quest</h1>
+              <p className="muted">Practice violin positions, notes and techniques with drills built on evidence‑based learning: retrieval practice, spaced repetition and adaptive feedback.</p>
+              <div className="grid grid-cols-2">
+                <div className="card">
+                  <h2>Drills</h2>
+                  <button className="btn btn-primary" style={{marginBottom:'0.5rem'}} onClick={()=>open('drill')}>Speed Drill</button>
+                  <button className="btn btn-primary" style={{marginBottom:'0.5rem'}} onClick={()=>open('flash')}>Flashcards</button>
+                </div>
+                <div className="card">
+                  <h2>Stats</h2>
+                  <button className="btn btn-primary" onClick={()=>open('stats')}>View Stats</button>
+                </div>
+              </div>
             </div>
           )}
-
-          <div className="section">
-            <div className="section-title"><span className="label">Drills</span></div>
-            <div className="grid-cards">
-              <CardButton title="Speed Ladder" icon="🎯" verb="Play" description="Full fingerboard drill"
-                onClick={()=>openScreen('speed')} onHelp={()=>setHelpKey('speed')} />
-              <CardButton title="Speed Ladder — Core" icon="🎯" verb="Play" description="Base notes only"
-                onClick={()=>openScreen('speedbase')} onHelp={()=>setHelpKey('speedbase')} />
-              <CardButton title="Snapshot Core" icon="📸" verb="Play" description="Flash base notes, answer one"
-                onClick={()=>openScreen('snapshot')} onHelp={()=>setHelpKey('snapshot')} />
-              <CardButton title="Interval Sprint" icon="↔️" verb="Play" description="Half vs Whole (1–2, 2–3, 3–4)"
-                onClick={()=>openScreen('interval')} onHelp={()=>setHelpKey('interval')} />
-              <CardButton title="Note Locator" icon="📍" verb="Play" description="Find a pitch’s location on a string"
-                onClick={()=>openScreen('locator')} onHelp={()=>setHelpKey('locator')} />
-            </div>
-          </div>
-
-          <div className="mt-4 section">
-            <div className="section-title"><span className="label">Study</span></div>
-            <div className="grid-cards">
-              <CardButton title="Flashcards" icon="🧠" verb="Study" description="By location or by note"
-                onClick={()=>openScreen('flash')} onHelp={()=>setHelpKey('cards')} />
-              <CardButton title="Tempo Trainer" icon="🎼" verb="Study" description="Tempo flashcards with call-outs"
-                onClick={()=>openScreen('tempo-trainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
-              <CardButton title="Tempo Tester" icon="📝" verb="Quiz" description="Timed multiple choice"
-                onClick={()=>openScreen('tempo-tester')} onHelp={()=>setHelpKey('tempoTester')} />
-              <CardButton title="Bieler Method Lab" icon="🎻" verb="Open" description="Vocabulary • Concept checks • Applied"
-                onClick={()=>openScreen('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
-            </div>
-          </div>
-
-          <div className="mt-4 section">
-            <div className="section-title"><span className="label">Play</span></div>
-            <div className="grid-cards">
-              <CardButton title="Positions Bingo" icon="🎲" verb="Play" description="5×5 practice board"
-                onClick={()=>openScreen('bingo')} onHelp={()=>setHelpKey('bingo')} />
-              <CardButton title="Dice of Destiny" icon="🎲" verb="Roll" description="Random focused challenge"
-                onClick={()=>openScreen('dice')} onHelp={()=>setHelpKey('dice')} />
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <CompactFilters prefs={prefs} setPrefs={setPrefs} />
-            <AccuracyHeatmap stats={loadJSON(STATS_KEY,{})} />
-          </div>
-
-          <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How it works">
-            {HELP[helpKey] || 'No help available.'}
-          </Modal>
-
-          <ActionSheet open={sheet} onClose={()=>setSheet(false)}>
-            <div className="mb-2 text-center font-semibold">More</div>
-            <div className="grid gap-2">
-              <button className="btn btn-amber w-full" onClick={()=>{
-                const s=loadJSON(STATS_KEY,{});
-                const rows=[['string','position','finger','correct','total','accuracy']];
-                Object.entries(s).forEach(([k,v])=>{
-                  const [str,p,f]=k.split(':'); const c=v.correct||0, t=v.total||0, acc=t?(c/t).toFixed(3):'0';
-                  rows.push([str,p,f,c,t,acc]);
-                });
-                const csv=rows.map(r=>r.join(',')).join('\n');
-                const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
-                const a=document.createElement('a'); a.href=url; a.download='vpq-stats.csv'; a.click(); URL.revokeObjectURL(url);
-                setSheet(false);
-              }}>Export CSV</button>
-
-              <button className="btn btn-rose w-full" onClick={()=>setConfirmReset(true)}>Reset Stats...</button>
-              <button className="btn btn-gray w-full" onClick={()=>setSheet(false)}>Close</button>
-            </div>
-            {confirmReset && (
-              <div className="mt-3 p-3 rounded-lg border" style={{borderColor:'var(--hairline)'}}>
-                <div className="font-semibold mb-2">Really reset all stats?</div>
-                <div className="flex gap-2">
-                  <button className="btn btn-rose" onClick={resetAll}>Yes, reset</button>
-                  <button className="btn btn-gray" onClick={()=>setConfirmReset(false)}>Cancel</button>
-                </div>
-              </div>
-            )}
-          </ActionSheet>
+          {page==='drill' && <SpeedDrill onBack={()=>open('home')}/>}
+          {page==='flash' && <Flashcards onBack={()=>open('home')}/>}
+          {page==='stats' && <div><Stats/><button className="btn btn-gray" style={{marginTop:'1rem'}} onClick={()=>open('home')}>Back</button></div>}
         </div>
       );
-    };
+    }
 
-    /* ================= Root app (router) ================= */
-    const App=()=>{
-      const [route,setRoute]=useState({screen:'tabs', tab:'home'});
-      const openScreen=(screen)=>setRoute({screen, tab:null});
+    // Helper: shuffle array
+    function shuffleArray(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+    // Helper: ordinal suffix
+    function ordinal(n){ const s=['th','st','nd','rd'], v=n%100; return n + (s[(v-20)%10]||s[v]||s[0]); }
 
-      let page=null;
-      if(route.screen==='tabs'){
-        page=(
-          <>
-            {route.tab==='home'    && <Home openScreen={openScreen} />}
-            {route.tab==='stats'   && <StatsScreen />}
-            {route.tab==='settings'&& <SettingsScreen />}
-            <Tabs tab={route.tab} setTab={tab=>setRoute({screen:'tabs', tab})}/>
-          </>
-        );
-      }else{
-        if(route.screen==='speed') page=<SpeedLadderGame onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='speedbase') page=<SpeedLadderGame baseOnly onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='flash') page={<Flashcards onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='snapshot') page={<SnapshotCore onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='interval') page={<IntervalSprint onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='locator') page={<NoteLocator onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='bielerLab') page={<BielerLab onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='tempo-trainer') page={<TempoTrainer onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='tempo-tester')  page={<TempoTester  onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='bingo') page={<Bingo onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-        else if(route.screen==='dice')  page={<Dice  onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
-      }
-      return page;
-    };
     ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
 </body>
