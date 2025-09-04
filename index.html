@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Customizable Trainer</title>
+  <title>Violin Mastery Quest – Customizable Trainer (v2)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <style>
-    :root { --bg:#f8fafc; --card:#fff; --ink:#0f172a; --ink-light:#475569; --primary:#6d28d9; --primary-dark:#5b21b6; --success:#16a34a; --warning:#f59e0b; --danger:#dc2626; --border:rgba(0,0,0,0.1); }
-    :root.dark { --bg:#0b1426; --card:#0f1f3d; --ink:#e2e8f0; --ink-light:#94a3b8; --primary:#a78bfa; --primary-dark:#7c3aed; --success:#22c55e; --warning:#fbbf24; --danger:#ef4444; --border:rgba(255,255,255,0.15); }
+    :root { --bg:#f8fafc; --card:#fff; --ink:#0f172a; --ink-light:#475569; --primary:#6d28d9; --primary-dark:#5b21b6; --success:#16a34a; --warning:#fbbf24; --danger:#dc2626; --neutral:#9ca3af; --border:rgba(0,0,0,0.1); }
+    :root.dark { --bg:#0b1426; --card:#0f1f3d; --ink:#e2e8f0; --ink-light:#94a3b8; --primary:#a78bfa; --primary-dark:#7c3aed; --success:#22c55e; --warning:#facc15; --danger:#ef4444; --neutral:#6b7280; --border:rgba(255,255,255,0.15); }
     body { margin:0; font-family: Inter, system-ui; background:var(--bg); color:var(--ink); padding-bottom:60px; }
     .container { max-width: 960px; margin:auto; padding:1rem; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; box-shadow:0 4px 20px rgba(0,0,0,0.05); }
@@ -21,11 +21,8 @@
     .btn-danger { background:var(--danger); }
     .grid { display:grid; gap:1rem; }
     @media(min-width:640px){ .grid-cols-2 { grid-template-columns: repeat(2,1fr); } }
-    @media(min-width:1024px){ .grid-cols-3 { grid-template-columns: repeat(3,1fr); } }
-    .progress-bar { width:100%; height:8px; background:var(--border); border-radius:9999px; overflow:hidden; margin-top:0.3rem; }
-    .progress-bar>div { height:100%; background:var(--primary); }
-    .heat-grid { display:grid; grid-template-columns: repeat(4,1fr); gap:0.25rem; }
-    .heat-cell { height:2rem; display:flex; align-items:center; justify-content:center; font-size:0.75rem; color:#fff; border-radius:6px; }
+    .heat-cell { height:2rem; display:flex; align-items:center; justify-content:center; font-size:0.7rem; color:#fff; border-radius:4px; }
+    .option-btn { width:100%; padding:0.6rem; border-radius:9999px; margin:0.2rem 0; color:#fff; border:none; cursor:pointer; font-weight:600; }
   </style>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -34,9 +31,9 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    // Storage helpers
-    const loadJSON=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? fb; }catch{return fb;} };
-    const saveJSON=(k,v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); } catch{} };
+    // Utils for storage
+    const loadJSON=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? fb; }catch{return fb; } };
+    const saveJSON=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
     // Constants
     const STRINGS=['G','D','A','E'];
     const POSITIONS=[1,2,3,4,5];
@@ -46,30 +43,25 @@
     const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
     const NOTE_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
     const canonicalBase=(s,p,f)=>{ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return NOTE_NAME[((semi%12)+12)%12]; };
-
-    // Build cell list
-    const CELLS=[];
-    for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f, canon: canonicalBase(s,p,f)}); }
-
-    // Stats & XP
-    const XP_KEY='vmq.custom.xp';
-    const STATS_KEY='vmq.custom.stats';
-    const PREFS_KEY='vmq.custom.prefs';
+    const CELLS=[]; for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f,canon:canonicalBase(s,p,f)}); }
+    const XP_KEY='vmq.v2.xp'; const STATS_KEY='vmq.v2.stats'; const PREFS_KEY='vmq.v2.prefs';
     const levelForXP=(xp)=>Math.floor(Math.pow(xp/250,0.75))+1;
     const nextLevelXP=(lvl)=>Math.round(250*Math.pow(lvl,1.4));
     const addXP=(amt)=>{ const xp=loadJSON(XP_KEY,0)+amt; saveJSON(XP_KEY,xp); return xp; };
-    const updateStat=(k,correct)=>{ const stats=loadJSON(STATS_KEY,{}); const st=stats[k]||{correct:0,total:0}; st.total+=1; if(correct) st.correct+=1; stats[k]=st; saveJSON(STATS_KEY,stats); };
+    const updateStat=(key,ok)=>{ const stats=loadJSON(STATS_KEY,{}); const st=stats[key]||{correct:0,total:0}; st.total+=1; if(ok) st.correct+=1; stats[key]=st; saveJSON(STATS_KEY,stats); };
     const shuffle=a=>{ const arr=[...a]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
     const getRandom=a=>a[Math.floor(Math.random()*a.length)];
     const ordinal=n=>{ const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
-
-    // Load or default preferences (filters). Default: all true
     const defaultPrefs={strings:Object.fromEntries(STRINGS.map(s=>[s,true])), positions:Object.fromEntries(POSITIONS.map(p=>[p,true]))};
+    const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
+    
+    // Reusable OptionButton component to retain last selection highlight
+    function OptionButton({label, selected, onClick}){
+      const style={ background:selected? 'var(--primary-dark)':'var(--primary)', width:'100%', padding:'0.6rem', borderRadius:'9999px', margin:'0.25rem 0', color:'#fff', border:'none', cursor:'pointer', fontWeight:600 };
+      return <button style={style} onClick={onClick}>{label}</button>;
+    }
 
-    // Filtered cells based on prefs
-    const filteredCells=(prefs)=>CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p]);
-
-    // Components
+    // SpeedDrill
     function SpeedDrill({prefs,onBack}){
       const cells=filteredCells(prefs);
       const stats=loadJSON(STATS_KEY,{});
@@ -77,37 +69,42 @@
       const [score,setScore]=React.useState(0);
       const [answered,setAnswered]=React.useState(0);
       const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
       const pick=()=>{
-        // Weighted pick among filtered cells
-        const weight=c=>{ const key=`${c.s}:${c.p}:${c.f}`; const st=stats[key]||{correct:0,total:0}; const acc=st.total? st.correct/st.total:0; return 1-acc+0.05; };
+        const weight=c=>{ const k=`${c.s}:${c.p}:${c.f}`; const st=stats[k]||{correct:0,total:0}; const acc=st.total? st.correct/st.total:0; return 1-acc+0.05; };
         const total=cells.reduce((sum,c)=>sum+weight(c),0);
         let r=Math.random()*total; let chosen=cells[cells.length-1];
-        for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break;} }
+        for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break; } }
         const correct=chosen.canon;
         const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
-        setQ({cell:chosen, options:opts});
+        setQ({cell:chosen, options:opts}); setSelected(null);
       };
-      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return()=>clearInterval(id); },[]);
-      const answer=(opt)=>{
-        const ok= opt===q.cell.canon;
-        setAnswered(a=>a+1); if(ok) setScore(s=>s+1);
-        updateStat(`${q.cell.s}:${q.cell.p}:${q.cell.f}`, ok);
-        addXP(ok?8:2);
-        pick();
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const answer=(opt, idx)=>{
+        setSelected(idx);
+        const ok=opt===q.cell.canon;
+        setTimeout(()=>{
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          updateStat(`${q.cell.s}:${q.cell.p}:${q.cell.f}`, ok);
+          addXP(ok?8:2);
+          pick();
+        },200); // brief delay so user can see selection
       };
-      if(time===0){ return (<div className="card"><h2>Speed Drill Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
-      return (<div><div className="card"><h2>Speed Drill</h2><p>Time: {time}s | Score: {score}/{answered}</p>{q && (<><p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p><div className="grid grid-cols-2">{q.options.map(opt=>(<button key={opt} className="btn btn-primary" onClick={()=>answer(opt)}>{opt}</button>))}</div></>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      if(time===0) return <div className="card"><h2>Speed Drill Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (<div><div className="card"><h2>Speed Drill</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
+    // Note: We'll apply selection highlight across other quizzes as well
     function Flashcards({prefs,onBack}){
       const [deck,setDeck]=React.useState(()=>{
-        const saved=loadJSON('vmq.custom.flashcards',null);
+        const saved=loadJSON('vmq.v2.flashcards',null);
         if(saved) return saved;
         const cards=[];
-        filteredCells(prefs).forEach(c=>{ cards.push({type:'cell',q:`Note at ${ordinal(c.p)} pos, ${ordinal(c.f)} finger on ${c.s}`, a:c.canon, interval:1, due:Date.now()}); });
+        filteredCells(prefs).forEach(c=>{ cards.push({type:'cell',q:`Note at ${ordinal(c.p)} pos, ${ordinal(c.f)} finger on ${c.s}`,a:c.canon,interval:1,due:Date.now()}); });
         const unique=[...new Set(filteredCells(prefs).map(c=>c.canon))];
         unique.forEach(n=>{ cards.push({type:'note',q:`Locations for note ${n}?`,a:n,interval:1,due:Date.now()}); });
-        saveJSON('vmq.custom.flashcards',cards);
+        saveJSON('vmq.v2.flashcards',cards);
         return cards;
       });
       const [card,setCard]=React.useState(null);
@@ -115,20 +112,19 @@
       const pick=()=>{
         const now=Date.now();
         const due=deck.filter(c=>c.due<=now);
-        const next= due.length? due[0]: getRandom(deck);
-        setCard(next);
-        setShow(false);
+        const next=due.length? due[0] : getRandom(deck);
+        setCard(next); setShow(false);
       };
       React.useEffect(()=>{ pick(); },[]);
       const mark=(known)=>{
         setDeck(prev=>{
           const upd=prev.map(c=>{
-            if(c===card){ const newInt=known? c.interval*2 :1; return {...c, interval:newInt, due: Date.now()+newInt*24*3600*1000}; } return c; }); saveJSON('vmq.custom.flashcards',upd); return upd;
+            if(c===card){ const newInt= known? c.interval*2 :1; return {...c, interval:newInt, due: Date.now()+newInt*24*3600*1000}; } return c; }); saveJSON('vmq.v2.flashcards',upd); return upd;
         });
         addXP(known?5:1);
         pick();
       };
-      return (<div><div className="card"><h2>Flashcards</h2>{card && (<><p>{card.q}</p>{show ? (<p style={{fontWeight:'bold',fontSize:'1.4rem'}}>{card.a}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}{show && (<div style={{marginTop:'0.5rem'}}><button className="btn btn-success" onClick={()=>mark(true)}>I knew it</button><button className="btn btn-secondary" onClick={()=>mark(false)}>I forgot</button></div>)}</>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      return (<div><div className="card"><h2>Flashcards</h2>{card && (<div><p>{card.q}</p>{show ? (<p style={{fontWeight:'bold',fontSize:'1.4rem'}}>{card.a}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}{show && (<div style={{marginTop:'0.5rem'}}><button className="btn btn-success" onClick={()=>mark(true)}>I knew it</button><button className="btn btn-secondary" onClick={()=>mark(false)}>I forgot</button></div>)}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
     function Snapshot({prefs,onBack}){
@@ -139,71 +135,103 @@
       const [state,setState]=React.useState('flash');
       const [flash,setFlash]=React.useState(null);
       const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
       const pick=()=>{
         const s=getRandom(STRINGS.filter(s=>prefs.strings[s]));
         const p=getRandom(POSITIONS.filter(p=>prefs.positions[p]));
-        const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); }); setFlash({s,p,labels}); setState('flash'); setTimeout(()=>{
+        const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); }); setFlash({s,p,labels}); setState('flash'); setSelected(null);
+        setTimeout(()=>{
           const f=getRandom(FINGERS);
           const correct=labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
-          setQ({s,p,f,correct,options:opts}); setState('question'); },1400);
+          setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
+        },1400);
       };
-      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return()=>clearInterval(id); },[]);
-      const answer=(opt)=>{
-        const ok= opt===q.correct; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.p}:${q.f}`, ok); addXP(ok?6:2); pick(); };
-      if(time===0){ return (<div className="card"><h2>Snapshot Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
-      return (<div><div className="card"><h2>Snapshot</h2><p>Time: {time}s | Score {score}/{answered}</p>{state==='flash' && flash && (<div><p>Memorize {flash.s} string {ordinal(flash.p)} pos base notes:</p><div className="grid grid-cols-2">{FINGERS.map(f=>(<div key={f} className="card" style={{padding:'0.5rem',textAlign:'center'}}><small>F{f}</small><br/><strong>{flash.labels[f]}</strong></div>))}</div></div>)}{state==='question' && q && (<div><p>Which base note is F{q.f} at {ordinal(q.p)} pos on {q.s}?</p><div className="grid grid-cols-2">{q.options.map(opt=>(<button key={opt} className="btn btn-primary" onClick={()=>answer(opt)}>{opt}</button>))}</div></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const ans=(opt,idx)=>{
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok= opt===q.correct; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.p}:${q.f}`, ok); addXP(ok?6:2); pick();
+        },200);
+      };
+      if(time===0) return <div className="card"><h2>Snapshot Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (<div><div className="card"><h2>Snapshot</h2><p>Time {time}s | Score {score}/{answered}</p>{state==='flash' && flash && (<div><p>Memorize {flash.s} string, {ordinal(flash.p)} pos base notes:</p><div className="grid grid-cols-2">{FINGERS.map(f=>(<div key={f} className="card" style={{padding:'0.5rem',textAlign:'center'}}><small>F{f}</small><br/><strong>{flash.labels[f]}</strong></div>))}</div></div>)}{state==='question' && q && (<div><p>Which base note is F{q.f} at {ordinal(q.p)} pos on {q.s}?</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>ans(opt,i)}/>))}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
     function IntervalSprint({prefs,onBack}){
-      const [time,setTime]=React.useState(60); const [score,setScore]=React.useState(0); const [answered,setAnswered]=React.useState(0); const [q,setQ]=React.useState(null);
+      const [time,setTime]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
       const pick=()=>{
         const s=getRandom(STRINGS.filter(s=>prefs.strings[s]));
         const p=getRandom(POSITIONS.filter(p=>prefs.positions[p]));
         const pair=getRandom([[1,2],[2,3],[3,4]]);
-        const [a,b]=pair; const semi=(s,p,f)=>OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; const diff=Math.abs((semi(s,p,b)-semi(s,p,a)+12)%12); const type= diff===1? 'half':'whole'; setQ({s,p,a,b,type}); };
-      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return()=>clearInterval(id); },[]);
-      const ans=(c)=>{ const ok=c===q.type; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.p}:${q.a}-${q.b}`, ok); addXP(ok?4:1); pick(); };
-      if(time===0){ return (<div className="card"><h2>Interval Sprint Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
-      return (<div><div className="card"><h2>Interval Sprint</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>In {ordinal(q.p)} pos on {q.s} string, between F{q.a} and F{q.b}: half or whole step?</p><div className="grid grid-cols-2"><button className="btn btn-primary" onClick={()=>ans('half')}>Half Step</button><button className="btn btn-primary" onClick={()=>ans('whole')}>Whole Step</button></div></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+        const [a,b]=pair; const semi=(s,p,f)=>OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; const diff=Math.abs((semi(s,p,b)-semi(s,p,a)+12)%12); const type= diff===1? 'half':'whole'; setQ({s,p,a,b,type}); setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const ans=(choice,idx)=>{
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok= choice===q.type; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.p}:${q.a}-${q.b}`, ok); addXP(ok?4:1); pick();
+        },200);
+      };
+      if(time===0) return <div className="card"><h2>Interval Sprint Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (<div><div className="card"><h2>Interval Sprint</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>In {ordinal(q.p)} pos on {q.s} string, between F{q.a} and F{q.b}: Half or Whole Step?</p><OptionButton label="Half Step" selected={selected===0} onClick={()=>ans('half',0)}/><OptionButton label="Whole Step" selected={selected===1} onClick={()=>ans('whole',1)}/></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
     function NoteLocator({prefs,onBack}){
-      const [time,setTime]=React.useState(60); const [score,setScore]=React.useState(0); const [answered,setAnswered]=React.useState(0); const [q,setQ]=React.useState(null);
+      const [time,setTime]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
       const pick=()=>{
         const s=getRandom(STRINGS.filter(s=>prefs.strings[s]));
         const cells=CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p] && c.s===s);
-        const chosen=getRandom(cells); const note=chosen.canon; const correct={p:chosen.p,f:chosen.f}; const distract=shuffle(cells.filter(c=>c.p!==correct.p || c.f!==correct.f)).slice(0,3); const opts=shuffle([correct,...distract.map(c=>({p:c.p,f:c.f}))]); setQ({s,note,correct,options:opts}); };
-      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return()=>clearInterval(id); },[]);
-      const ans=(opt)=>{ const ok=opt.p===q.correct.p && opt.f===q.correct.f; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.correct.p}:${q.correct.f}`, ok); addXP(ok?4:1); pick(); };
-      if(time===0){ return (<div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
-      return (<div><div className="card"><h2>Note Locator</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>On the {q.s} string, where can you play {q.note}?</p><div className="grid grid-cols-2">{q.options.map((o,i)=>(<button key={i} className="btn btn-primary" onClick={()=>ans(o)}>Pos {o.p} — F{o.f}</button>))}</div></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+        const chosen=getRandom(cells); const note=chosen.canon; const correct={p:chosen.p,f:chosen.f}; const distract=shuffle(cells.filter(c=>c.p!==correct.p || c.f!==correct.f)).slice(0,3); const opts=shuffle([correct,...distract.map(c=>({p:c.p,f:c.f}))]); setQ({s,note,correct,options:opts}); setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const ans=(opt,idx)=>{
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok= opt.p===q.correct.p && opt.f===q.correct.f; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.correct.p}:${q.correct.f}`, ok); addXP(ok?4:1); pick();
+        },200);
+      };
+      if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (<div><div className="card"><h2>Note Locator</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>On {q.s} string, where can you play {q.note}?</p>{q.options.map((o,i)=>(<OptionButton key={i} label={`Pos ${o.p} — F${o.f}`} selected={selected===i} onClick={()=>ans(o,i)}/>))}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
-    // Settings page: toggle strings and positions
     function Settings({prefs,setPrefs,onBack}){
       const toggle=(type,key)=>{
         setPrefs(prev=>{
           const copy={...prev,[type]:{...prev[type],[key]:!prev[type][key]}};
           saveJSON(PREFS_KEY,copy);
           return copy;
-        }); };
-      return (<div><div className="card"><h2>Settings</h2><h3>Strings</h3><div>{STRINGS.map(s=>(<button key={s} className="btn" style={{background:prefs.strings[s]? 'var(--primary)': 'var(--ink-light)'}} onClick={()=>toggle('strings',s)}>{s}</button>))}</div><h3>Positions</h3><div>{POSITIONS.map(p=>(<button key={p} className="btn" style={{background:prefs.positions[p]? 'var(--primary)': 'var(--ink-light)'}} onClick={()=>toggle('positions',p)}>{p}</button>))}</div><p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select which strings and positions to include in fingerboard-related drills and flashcards. All selected by default.</p></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+        });
+      };
+      return (<div><div className="card"><h2>Settings</h2><h3>Strings</h3><div>{STRINGS.map(s=>(<button key={s} className="btn" style={{background:prefs.strings[s]? 'var(--primary)': 'var(--ink-light)'}} onClick={()=>toggle('strings',s)}>{s}</button>))}</div><h3>Positions</h3><div>{POSITIONS.map(p=>(<button key={p} className="btn" style={{background:prefs.positions[p]? 'var(--primary)': 'var(--ink-light)'}} onClick={()=>toggle('positions',p)}>{p}</button>))}</div><p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions to include in fingerboard drills.</p></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
     function StatsPage({onBack}){
-      const stats=loadJSON(STATS_KEY,{}); const xp=loadJSON(XP_KEY,0); const level=levelForXP(xp); const prev=level>1? nextLevelXP(level-1):0; const next=nextLevelXP(level); const pct=(xp-prev)/(next-prev);
-      return (<div><div className="card"><h2>Your Progress</h2><p>Level {level} (XP {xp-prev}/{next-prev})</p><div className="progress-bar"><div style={{width:`${Math.min(100,pct*100)}%`}}></div></div></div><div className="card"><h2>Fingerboard Accuracy</h2><div className="heat-grid">{CELLS.map(c=>{ const k=`${c.s}:${c.p}:${c.f}`; const st=stats[k]||{correct:0,total:0}; const acc=st.total?st.correct/st.total:0; let col; if(st.total===0) col='var(--danger)'; else if(acc<0.5) col='var(--warning)'; else if(acc<0.8) col='#facc15'; else col='var(--success)'; const label=st.total? `${Math.round(acc*100)}%` : '-'; return <div key={k} className="heat-cell" style={{background:col}}>{label}</div>; })}</div></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      const stats=loadJSON(STATS_KEY,{});
+      const xp=loadJSON(XP_KEY,0);
+      const lvl=levelForXP(xp);
+      const prev=lvl>1? nextLevelXP(lvl-1):0;
+      const next=nextLevelXP(lvl);
+      const pct=(xp-prev)/(next-prev);
+      return (<div><div className="card"><h2>Your Progress</h2><p>Level {lvl} (XP {xp-prev}/{next-prev})</p><div className="progress-bar" style={{height:'8px', background:'var(--border)', borderRadius:'9999px', overflow:'hidden'}}><div style={{height:'100%', width:`${Math.min(100,pct*100)}%`, background:'var(--primary)'}}></div></div></div>{STRINGS.map(s=>(<div className="card" key={s}><h3>{s} string</h3><div className="grid" style={{gridTemplateColumns:'repeat(5, 1fr)', gap:'0.3rem'}}>{POSITIONS.map(p=>(<div key={p} style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'2px'}}>{FINGERS.map(f=>{ const key=`${s}:${p}:${f}`; const st=stats[key]||{correct:0,total:0}; const acc= st.total? st.correct/st.total:0; let col; if(st.total===0) col='var(--neutral)'; else if(acc<0.5) col='var(--danger)'; else if(acc<0.75) col='var(--warning)'; else col='var(--success)'; const label=st.total? `${Math.round(acc*100)}%` : ''; return <div key={f} className="heat-cell" style={{background:col, fontSize:'0.65rem'}} title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label||''}</div>; })}</div>))}</div></div>))}<button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
-    // Simple Tempo Trainer & Tester components (no prefs needed)
+    // Tempo Trainer & Tester (unchanged selection highlight not required)
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
     function TempoTrainer({onBack}){ const [i,setI]=React.useState(0); const [show,setShow]=React.useState(false); const next=()=>{ setShow(false); setI((i+1)%TEMPOS.length); }; const prev=()=>{ setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); }; const t=TEMPOS[i]; const speak=(txt)=>{ try{ const u=new SpeechSynthesisUtterance(txt); u.rate=0.9; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch{} }; return (<div><div className="card"><h2>Tempo Trainer</h2><p><strong>{t.it}</strong></p>{show? (<p>{t.en} — {t.range}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}<div style={{marginTop:'0.5rem'}}><button className="btn btn-secondary" onClick={prev}>Prev</button><button className="btn btn-primary" onClick={next}>Next</button><button className="btn btn-success" onClick={()=>{speak(t.it); speak(t.en);}}>Speak</button></div></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
-    function TempoTester({onBack}){ const [time,setTime]=React.useState(60); const [score,setScore]=React.useState(0); const [answered,setAnswered]=React.useState(0); const [q,setQ]=React.useState(null); const pick=()=>{ const term=getRandom(TEMPOS); const correct=term.en; const opts=shuffle([correct,...shuffle(TEMPOS.map(x=>x.en).filter(x=>x!==correct)).slice(0,3)]); setQ({term:term.it, correct, options:opts}); }; React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return()=>clearInterval(id); },[]); const ans=(opt)=>{ const ok=opt===q.correct; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); addXP(ok?5:2); pick(); }; if(time===0) return (<div className="card"><h2>Tempo Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); return (<div><div className="card"><h2>Tempo Tester</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>What does {q.term} mean?</p><div className="grid grid-cols-2">{q.options.map((opt,i)=>(<button key={i} className="btn btn-primary" onClick={()=>ans(opt)}>{opt}</button>))}</div></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
+    function TempoTester({onBack}){ const [time,setTime]=React.useState(60); const [score,setScore]=React.useState(0); const [answered,setAnswered]=React.useState(0); const [q,setQ]=React.useState(null); const [selected,setSelected]=React.useState(null); const pick=()=>{ const term=getRandom(TEMPOS); const correct=term.en; const opts=shuffle([correct,...shuffle(TEMPOS.map(x=>x.en).filter(x=>x!==correct)).slice(0,3)]); setQ({term:term.it, correct, options:opts}); setSelected(null); }; React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]); const ans=(opt,idx)=>{ setSelected(idx); setTimeout(()=>{ const ok=opt===q.correct; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); addXP(ok?5:2); pick(); },200); }; if(time===0) return (<div className="card"><h2>Tempo Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); return (<div><div className="card"><h2>Tempo Tester</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>What does {q.term} mean?</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>ans(opt,i)}/>))}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
 
     function App(){
       const [page,setPage]=React.useState('home');
       const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY, defaultPrefs));
-      return (<div className="container">{page==='home' && (<div><h1>Violin Mastery Quest</h1><p style={{color:'var(--ink-light)'}}>Customize your learning: choose strings & positions, then practice with drills and study tools.</p><div className="grid grid-cols-2"><div className="card"><h2>Drills</h2><button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button><button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button><button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button><button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button></div><div className="card"><h2>Study & Tests</h2><button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button><button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button><button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button><button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button></div><div className="card"><h2>More</h2><button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button></div></div></div>)}{page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>} {page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>} {page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>} {page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>} {page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>} {page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>} {page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>} {page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>} {page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>}</div>);
+      return (<div className="container">{page==='home' && (<div><h1>Violin Mastery Quest</h1><p style={{color:'var(--ink-light)'}}>Tailor your practice by selecting strings & positions. Engage with drills, study tools and track your progress.</p><div className="grid grid-cols-2"><div className="card"><h2>Drills</h2><button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button><button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button><button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button><button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button></div><div className="card"><h2>Study & Tests</h2><button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button><button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button><button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button><button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button></div><div className="card"><h2>More</h2><button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button></div></div></div>)}{page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>}{page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>}{page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>}{page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>}{page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>}{page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>}{page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>}{page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>}{page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>}</div>);
     }
     ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
