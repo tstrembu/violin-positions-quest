@@ -201,14 +201,14 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
         const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
         setQ({cell:chosen,options:opts}); setSelected(null);
       },[cells,stats]);
-      // Start a question when component mounts or available cells change
-      React.useEffect(()=>{ pick(); },[cells.length]);
+      // Start a question when component mounts; depend on pick function
+      React.useEffect(()=>{ pick(); },[pick]);
       React.useEffect(()=>{ const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
       const answer=(opt,idx)=>{
         setSelected(idx);
         setTimeout(()=>{
           const ok= opt===q.cell.canon;
-          document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
+          document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           setStats(prev=>{
@@ -264,7 +264,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
             if(c===card){ const newInt= known? Math.min(28,c.interval*2) : 1; return {...c, interval:newInt, due: Date.now()+newInt*24*3600*1000}; } return c; }); saveJSON(FLASH_KEY,upd); return upd;
         });
         addXP(known?5:1);
-        document.getElementById('sr').textContent = known ? 'Correct' : 'Try again';
+        document.getElementById('sr').textContent = known ? 'Correct' : 'Incorrect';
         pick();
       };
       if(!deck.length) return <div className="card"><h2>No cards</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
@@ -308,7 +308,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
+          document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.s}:${q.p}:${q.f}`, ok);
@@ -381,7 +381,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
         setSelected(idx);
         setTimeout(()=>{
           const ok=choice===q.type;
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Try again';
+          document.getElementById('sr').textContent = ok? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.s}:${q.p}:${q.a}-${q.b}`, ok);
@@ -432,7 +432,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
         setSelected(idx);
         setTimeout(()=>{
           const ok= opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Try again';
+          document.getElementById('sr').textContent = ok? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           // log correct cell (not chosen) for mastery
@@ -635,7 +635,7 @@ const TIME_SIGNATURES=[
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Try again';
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
@@ -706,7 +706,7 @@ const TIME_SIGNATURES=[
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Try again';
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
@@ -767,7 +767,7 @@ const TIME_SIGNATURES=[
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Try again';
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
