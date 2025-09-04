@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Enhanced Trainer (v4)</title>
+  <title>Violin Mastery Quest – Enhanced Trainer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -372,16 +372,15 @@ const FLASH_DURATIONS={
             <h3>Theme</h3>
             <button className="btn btn-primary" onClick={()=>{ const dark=!document.documentElement.classList.contains('dark'); window.__setTheme(dark); }}>Toggle Dark Mode</button>
             <h3>Strings</h3>
-            <div>{STRINGS.map(s=>(<button key={s} className="btn" style={{background:prefs.strings[s]? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>toggle('strings',s)}>{s}</button>))}</div>
+            <div>{STRINGS.map(s=>(<OptionButton key={s} label={s} selected={prefs.strings[s]} onClick={()=>toggle('strings',s)}/>))}</div>
             <h3>Positions</h3>
-            <div>{POSITIONS.map(p=>(<button key={p} className="btn" style={{background:prefs.positions[p]? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>toggle('positions',p)}>{p}</button>))}</div>
+            <div>{POSITIONS.map(p=>(<OptionButton key={p} label={p} selected={prefs.positions[p]} onClick={()=>toggle('positions',p)}/>))}</div>
             <h3>Snapshot Flash Duration</h3>
-            <div>{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>{
-              const msMap={Beginner:3000,Intermediate:2000,Advanced:1200,Professional:800,Master:500};
-              return (<button key={level} className="btn" style={{background:prefs.flashLevel===level? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>{
+            <div>{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>(
+              <OptionButton key={level} label={level} selected={prefs.flashLevel===level} onClick={()=>{
                 setPrefs(prev=>{ const next={...prev,flashLevel:level}; saveJSON(PREFS_KEY,next); return next; });
-              }}>{level}</button>);
-            })}</div>
+              }}/>
+            ))}</div>
             <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
           </div>
           <button className="btn btn-secondary" onClick={onBack}>Back</button>
@@ -475,6 +474,8 @@ const TIME_SIGNATURES=[
       const [index,setIndex]=React.useState(0);
       const next=()=>setIndex((index+1)%INTERVALS.length);
       const i=INTERVALS[index];
+      const total=INTERVALS.length;
+      const progress=(index+1)/total;
       return (
         <div>
           <div className="card">
@@ -482,6 +483,10 @@ const TIME_SIGNATURES=[
             <p><strong>{i.name}</strong> — {i.semitones} semitone{i.semitones>1?'s':''}</p>
             <p><em>Feel:</em> {i.feel}</p>
             <p><em>Song cue:</em> {i.cue}</p>
+            <div style={{margin:'0.5rem 0'}}>
+              <small>Card {index+1} of {total}</small>
+              <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}><div style={{width:`${progress*100}%`,height:'100%',background:'var(--primary)'}}></div></div>
+            </div>
             <button className="btn btn-primary" onClick={next}>Next</button>
           </div>
           <button className="btn btn-secondary" onClick={onBack}>Back</button>
@@ -539,12 +544,18 @@ const TIME_SIGNATURES=[
       const [index,setIndex]=React.useState(0);
       const next=()=>setIndex((index+1)%KEY_SIGNATURES.length);
       const k=KEY_SIGNATURES[index];
+      const total=KEY_SIGNATURES.length;
+      const progress=(index+1)/total;
       return (
         <div>
           <div className="card">
             <h2>Key Signatures Trainer</h2>
             <p><strong>{k.key}</strong></p>
             {k.type==='none'? <p>No sharps or flats.</p> : <p>{k.count} {k.type}{k.count>1?'s':''}.</p>}
+            <div style={{margin:'0.5rem 0'}}>
+              <small>Card {index+1} of {total}</small>
+              <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}><div style={{width:`${progress*100}%`,height:'100%',background:'var(--primary)'}}></div></div>
+            </div>
             <button className="btn btn-primary" onClick={next}>Next</button>
           </div>
           <button className="btn btn-secondary" onClick={onBack}>Back</button>
@@ -604,12 +615,18 @@ const TIME_SIGNATURES=[
       const [index,setIndex]=React.useState(0);
       const next=()=>setIndex((index+1)%TIME_SIGNATURES.length);
       const t=TIME_SIGNATURES[index];
+      const total=TIME_SIGNATURES.length;
+      const progress=(index+1)/total;
       return (
         <div>
           <div className="card">
             <h2>Time Sig Trainer</h2>
             <p><strong>{t.sig}</strong></p>
             <p>{t.description}</p>
+            <div style={{margin:'0.5rem 0'}}>
+              <small>Card {index+1} of {total}</small>
+              <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}><div style={{width:`${progress*100}%`,height:'100%',background:'var(--primary)'}}></div></div>
+            </div>
             <button className="btn btn-primary" onClick={next}>Next</button>
           </div>
           <button className="btn btn-secondary" onClick={onBack}>Back</button>
@@ -673,18 +690,18 @@ const TIME_SIGNATURES=[
                   <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
                 </div>
                 <div className="card">
-                  <h2>Study & Tests</h2>
+                  <h2>Theory & Study</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Theory</button>
                   <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
+                </div>
+                <div className="card">
+                  <h2>Progress</h2>
                   <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
                 </div>
                 <div className="card">
-                  <h2>Theory</h2>
-                  <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Theory & Concepts</button>
-                </div>
-                <div className="card">
-                  <h2>More</h2>
+                  <h2>Settings</h2>
                   <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
                 </div>
               </div>
