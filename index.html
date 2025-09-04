@@ -437,8 +437,17 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
       React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
       const answer=(opt,idx)=>{
         setSelected(idx);
+        const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
+        // Paint chosen + correct before advancing
+        setQ(prev => prev && {
+          ...prev,
+          feedback: prev.options.map(o => {
+            const isCorrect = (o.s===prev.correct.s && o.p===prev.correct.p && o.f===prev.correct.f);
+            const isChosen  = (o.s===opt.s && o.p===opt.p && o.f===opt.f);
+            return {...o, kind: isCorrect ? 'correct' : isChosen ? 'chosen' : 'distractor'};
+          })
+        });
         setTimeout(()=>{
-          const ok= opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
           document.getElementById('sr').textContent = ok? 'Correct' : 'Incorrect';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
@@ -446,7 +455,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
           addXP(ok?4:1);
           pick();
-        },200);
+        },450);
       };
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack);
       if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
@@ -458,7 +467,10 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
             <p>Time {time}s | Score {score}/{answered}</p>
             <p>Where can you play {q.note}? Click the fingerboard:</p>
             <VisualFingerboard
-              highlight={q.options.map(o=>({s:o.s,p:o.p,f:o.f,kind:'distractor'}))}
+              highlight={(q.feedback || q.options).map(o=>({
+                s:o.s, p:o.p, f:o.f, kind:o.kind || 'distractor'
+              }))}
+              disabled={!!q.feedback}
               onSelect={(cell)=>answer(cell,0)}
             />
             <details style={{marginTop:'0.5rem'}}>
