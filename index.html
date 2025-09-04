@@ -2,415 +2,579 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest</title>
-
-  <!-- Responsive layout & dark-mode support -->
+  <title>Violin Mastery Quest — Comprehensive Trainer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-
-  <!-- Short description for sharing -->
-  <meta name="description" content="Master violin positions, notes, theory and technique with evidence‑based drills and games." />
-
-  <!-- Base styles: modern look with light/dark variables -->
+  <meta name="description" content="A professional, comprehensive violin training app with drills, flashcards, interval sprints, note locator, snapshot memorization and Bieler method lab." />
   <style>
     :root {
-      --bg: #f6f7fb;
-      --card: #fff;
-      --ink-900: #0b1220;
-      --ink-700: #374151;
-      --ink-600: #6b7280;
-      --accent: #6d28d9;
-      --shadow: 0 8px 20px rgba(0,0,0,.08);
-      --hairline: rgba(0,0,0,.12);
-      --gridline: rgba(0,0,0,.2);
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --ink: #111827;
+      --ink-light: #6b7280;
+      --primary: #7e22ce;
+      --primary-dark: #5b21b6;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --border: rgba(0,0,0,0.1);
     }
     :root.dark {
-      --bg:#0b1020;
-      --card:#0f172a;
-      --ink-900:#e5e7eb;
-      --ink-700:#cbd5e1;
-      --ink-600:#94a3b8;
-      --accent:#a78bfa;
-      --shadow:0 14px 28px rgba(0,0,0,.34);
-      --hairline: rgba(255,255,255,.14);
-      --gridline: rgba(255,255,255,.2);
+      --bg: #0b1020;
+      --card: #0f172a;
+      --ink: #e2e8f0;
+      --ink-light: #94a3b8;
+      --primary: #a78bfa;
+      --primary-dark: #7e22ce;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #fbbf24;
+      --border: rgba(255,255,255,0.15);
     }
-    html,body { height: 100%; margin:0; }
     body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin:0;
+      font-family: Inter, system-ui, sans-serif;
       background: var(--bg);
-      color: var(--ink-900);
+      color: var(--ink);
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      padding-bottom: 60px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 1rem;
     }
     .card {
       background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      box-shadow: var(--shadow);
-      padding: 1rem;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
     }
+    h1, h2 { margin-top:0; }
+    h2 { margin-bottom: 0.5rem; }
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.6rem 1rem;
-      border-radius: 9999px;
-      color: white;
-      font-weight: bold;
-      text-decoration: none;
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.1s;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn-primary { background: var(--accent); }
-    .btn-gray { background: #4b5563; }
-    .btn-green { background: #10b981; }
-    .container { max-width: 860px; margin:auto; padding: 1rem; }
-    h1,h2 { margin: 0 0 0.5rem 0; }
-    h1 { font-size: 1.8rem; }
-    h2 { font-size: 1.4rem; margin-top:1rem; }
-    .grid { display: grid; gap: 1rem; }
-    @media(min-width: 640px){ .grid-cols-2 { grid-template-columns: repeat(2, 1fr);} }
-    @media(min-width: 1024px){ .grid-cols-3 { grid-template-columns: repeat(3, 1fr);} }
-    /* Badge for progress */
-    .badge { font-size: 0.8rem; padding: 0.1rem 0.5rem; border-radius: 6px; background: var(--accent); color:#fff; }
-    /* Heatmap style for stats grid */
-    .heat-tile {
-      display:flex;
-      flex-direction:column;
+      display:inline-flex;
       align-items:center;
       justify-content:center;
-      padding: 0.5rem;
-      border-radius:6px;
-      height:3rem;
-      position:relative;
+      padding: 0.6rem 1rem;
+      border-radius: 9999px;
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      cursor:pointer;
+      text-decoration:none;
+      transition: background 0.1s, transform 0.1s;
+      margin: 0.2rem;
     }
-    .heat-dot { position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:#9ca3af; }
+    .btn-primary { background: var(--primary); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--ink-light); }
+    .btn-secondary:hover { background: var(--ink); }
+    .btn-success { background: var(--success); }
+    .btn-danger { background: var(--danger); }
+    .btn-warning { background: var(--warning); }
+    .btn:active { transform: scale(0.97); }
+    .grid { display:grid; gap:1rem; }
+    @media(min-width:640px){ .grid-cols-2 { grid-template-columns: repeat(2, 1fr);} }
+    @media(min-width:1024px){ .grid-cols-3 { grid-template-columns: repeat(3, 1fr);} }
+    .tabs {
+      display:flex;
+      margin-bottom:1rem;
+      border-bottom:1px solid var(--border);
+    }
+    .tab {
+      flex:1;
+      text-align:center;
+      padding:0.6rem 0;
+      cursor:pointer;
+      border-bottom:3px solid transparent;
+      color: var(--ink-light);
+    }
+    .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
+    .progress-bar {
+      width:100%; height: 8px; background: var(--border); border-radius:9999px;
+    }
+    .progress-bar > div { height:100%; background: var(--primary); border-radius:9999px; }
+    .heat-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:0.25rem; }
+    .heat-cell {
+      height:2rem;
+      border-radius:6px;
+      font-size:0.75rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: #fff;
+    }
   </style>
-
-  <!-- React & Babel via CDN -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="app"></div>
+
   <script type="text/babel">
-    // Evidence-based helpers
-    // These functions implement spaced repetition and retrieval practice basics. For simplicity, spaced repetition uses
-    // exponential review intervals and retrieval practice uses repeated testing in drills.
+    // Helper functions for localStorage persistence
+    const loadJSON=(k, fb)=>{try{const v=JSON.parse(localStorage.getItem(k)); return v??fb;}catch{return fb;}};
+    const saveJSON=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 
-    // Save and load JSON safely
-    const saveJSON = (key, value) => {
-      try { localStorage.setItem(key, JSON.stringify(value)); } catch {};
-    };
-    const loadJSON = (key, fallback = {}) => {
-      try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch { return fallback; };
-    };
-
-    // Gamification: convert XP to level (superlinear growth) and next level requirement
-    const levelForXP = xp => Math.floor(Math.pow(xp/120, 0.75)) + 1;
-    const nextLevelXP = lvl => Math.round(120 * Math.pow(lvl, 1.33));
-
-    // Weighted random selection: used to pick weaker notes for drills (retrieval practice on weakest items)
-    function pickWeighted(items, weightFn){
-      if(!items.length) return null;
-      const weights = items.map(weightFn);
-      const total = weights.reduce((a,b)=>a+b,0);
-      let r = Math.random() * total;
-      for(let i=0;i<items.length;i++){ r -= weights[i]; if(r <= 0) return items[i]; }
-      return items[items.length-1];
-    }
-
-    // Wilson lower bound for accuracy (confidence interval) to drive adaptive weighting
-    const wilsonLB = (c,t,z=1.96) => {
-      if(!t) return 0;
-      const p = c/t;
-      const denom = 1 + z*z/t;
-      const centre = p + z*z/(2*t);
-      const adj = z * Math.sqrt((p*(1-p)+z*z/(4*t))/t);
-      return Math.max(0, (centre - adj)/denom);
-    };
-
-    // Components and app logic
+    // Violin constants
     const STRINGS=['G','D','A','E'];
     const POSITIONS=[1,2,3,4,5];
     const FINGERS=[1,2,3,4];
-
-    // Build model of fingerboard: base note per cell using semitone math
     const OPEN_PC={G:7,D:2,A:9,E:4};
     const BASE_OFF={1:2,2:4,3:5,4:7};
     const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
-    const pc = n => ((n % 12)+12)%12;
-    const names=(k)=>{
-      const arr = {
-        0:['C'],1:['C#','Db'],2:['D'],3:['D#','Eb'],4:['E'],5:['F'],6:['F#','Gb'],7:['G'],8:['G#','Ab'],9:['A'],10:['A#','Bb'],11:['B']
-      };
-      return arr[pc(k)];
-    };
-    const baseNamesFor=(s,p,f)=>{
-      const k = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-      return names(k);
-    };
-    const CANON_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
+    const CANON={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
+    const noteName=(k)=>CANON[((k%12)+12)%12];
+    function canonicalBase(s,p,f){ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return noteName(semi); }
 
-    // Build valid cells and notes list
-    const buildCells = () => {
-      const cells=[];
-      for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){
-        // base names (for reference)
-        const bname = baseNamesFor(s,p,f);
-        // build canonical base (first element of names set) as label
-        const canon = CANON_NAME[pc(baseNamesFor(s,p,f)[0])];
-        cells.push({s,p,f,canon});
-      }
-      return cells;
-    };
-    const CELLS=buildCells();
+    // Build cell array
+    const CELLS=[];
+    for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f, canon:canonicalBase(s,p,f)}); }
 
-    // Stats keys
-    const STATS_KEY='violinQuest.stats';
-    const XP_KEY='violinQuest.xp';
+    // XP and stats keys
+    const XP_KEY='vmq.xp';
+    const STATS_KEY='vmq.stats';
 
-    // Drills: Speed Ladder simplified (only base notes). Weighted selection on weaker stats.
+    const levelForXP=(xp)=>Math.floor(Math.pow(xp/200,0.75))+1;
+    const nextLevelXP=(lvl)=>Math.round(200*Math.pow(lvl,1.4));
+    function addXP(amount){ const xp=loadJSON(XP_KEY,0)+amount; saveJSON(XP_KEY,xp); return xp; }
+    function updateStat(key, correct){ const stats=loadJSON(STATS_KEY,{}); const st=stats[key]||{correct:0,total:0}; st.total+=1; if(correct) st.correct+=1; stats[key]=st; saveJSON(STATS_KEY,stats); }
+
+    // Shuffle helper
+    function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+    function getRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    const ordinal=(n)=>{const s=['th','st','nd','rd'],v=n%100; return n + (s[(v-20)%10]||s[v]||s[0]); };
+
+    // Drill components
     function SpeedDrill({onBack}){
-      const [stats,setStats] = React.useState(loadJSON(STATS_KEY, {}));
-      const [cell,setCell] = React.useState(null);
-      const [options,setOptions] = React.useState([]);
-      const [time,setTime]=React.useState(60);
+      const [timer,setTimer]=React.useState(90);
       const [score,setScore]=React.useState(0);
       const [answered,setAnswered]=React.useState(0);
+      const [cell,setCell]=React.useState(null);
+      const [options,setOptions]=React.useState([]);
+      const stats=loadJSON(STATS_KEY,{});
+      const xp=loadJSON(XP_KEY,0);
 
-      // Build weighting: 1 - Wilson lower bound encourages weaker items
-      const cellWeight = key => {
-        const st = stats[key] || {correct:0,total:0};
-        const lb = wilsonLB(st.correct, st.total);
-        return 1 - lb + 0.1; // constant to avoid zero
-      };
-
-      // Pick a new cell
-      const pickCell = () => {
-        const chosen = pickWeighted(CELLS, c => cellWeight(`${c.s}:${c.p}:${c.f}`));
-        // correct answer canonical
-        const correct = chosen.canon;
-        // distractors
-        const allCanon = [...new Set(CELLS.map(c=>c.canon))];
-        const distract = allCanon.filter(n=>n!==correct);
-        const randDistr = shuffleArray(distract).slice(0,3);
-        const opts = shuffleArray([correct,...randDistr]);
+      // Weighted pick: lower accuracy yields higher weight
+      const pickCell=()=>{
+        const weight = (c)=>{
+          const k=`${c.s}:${c.p}:${c.f}`;
+          const st=stats[k]||{correct:0,total:0};
+          const acc=st.total? st.correct/st.total : 0;
+          return 1-acc+0.05;
+        };
+        const pool=CELLS;
+        const total=pool.reduce((sum,c)=>sum+weight(c),0);
+        let r=Math.random()*total;
+        let chosen=pool[pool.length-1];
+        for(const c of pool){ r-=weight(c); if(r<=0){ chosen=c; break; } }
+        const correct=chosen.canon;
+        const distract=[...new Set(CELLS.map(x=>x.canon))].filter(n=>n!==correct);
+        const opts=shuffle([correct, ...shuffle(distract).slice(0,3)]);
         setCell(chosen);
         setOptions(opts);
       };
 
-      // On mount: start timer and pick first
-      React.useEffect(()=>{
-        pickCell();
-        const id = setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
-        return ()=>clearInterval(id);
-      },[]);
+      React.useEffect(()=>{ pickCell(); const id=setInterval(()=>setTimer(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
 
-      // Save stats & XP after each answer
-      const updateStats=(key,correct)=>{
-        const st = stats[key] || {correct:0,total:0};
-        const next = {...stats, [key]:{correct: st.correct + (correct?1:0), total: st.total+1}};
-        setStats(next);
-        saveJSON(STATS_KEY,next);
-        // XP
-        const xp = loadJSON(XP_KEY,0);
-        const gain = correct?10:2;
-        const newXP = xp + gain;
-        saveJSON(XP_KEY, newXP);
-      };
-
-      // Answer selection
-      const answer = opt => {
-        if(!cell) return;
-        const ok = opt===cell.canon;
+      const answer=(opt)=>{
+        const correct=opt===cell.canon;
         setAnswered(a=>a+1);
-        if(ok) setScore(s=>s+1);
-        updateStats(`${cell.s}:${cell.p}:${cell.f}`, ok);
+        if(correct) setScore(s=>s+1);
+        updateStat(`${cell.s}:${cell.p}:${cell.f}`, correct);
+        addXP(correct?8:2);
         pickCell();
       };
 
-      if(time===0){
-        // show results
-        return (
-          <div className="card">
-            <h2>Drill Complete</h2>
-            <p>Score: {score} / {answered}</p>
-            <button className="btn btn-primary" onClick={()=>onBack()}>Back to Home</button>
-          </div>
-        );
+      if(timer===0){
+        return (<div className="card"><h2>Time's up!</h2><p>Score: {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
       }
 
       return (
         <div>
-          <div className="card" style={{marginBottom:'1rem'}}>
+          <div className="card">
             <h2>Speed Drill (Base Notes)</h2>
-            <p>Time: {time}s | Score: {score}/{answered}</p>
-            {cell && (
-              <div style={{textAlign:'center'}}>
-                <p>What is the base note at <strong>{ordinal(cell.p)} Position</strong>, <strong>{ordinal(cell.f)} finger</strong> on <strong>{cell.s} string</strong>?</p>
-                <div className="grid grid-cols-2" style={{gap:'0.5rem'}}>
-                  {options.map(opt=>(<button key={opt} className="btn btn-blue" onClick={()=>answer(opt)}>{opt}</button>))}
-                </div>
+            <p>Time: {timer}s | Score: {score}/{answered}</p>
+            {cell && (<>
+              <p>What is the base note at <strong>{ordinal(cell.p)} position, {ordinal(cell.f)} finger on {cell.s} string</strong>?</p>
+              <div className="grid grid-cols-2">
+                {options.map(opt=>(<button key={opt} className="btn btn-primary" onClick={()=>answer(opt)}>{opt}</button>))}
               </div>
-            )}
+            </>)}
           </div>
-          <button className="btn btn-gray" onClick={()=>onBack()}>Back</button>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
       );
     }
 
-    // Simple flashcards with spaced repetition scheduling. Each card knows its next review time.
+    // Flashcards with simple spaced repetition intervals
     function Flashcards({onBack}){
-      const [cards,setCards] = React.useState(()=>{
-        const saved = loadJSON('violinQuest.flashcards', null);
-        if(saved) return saved;
-        // build initial deck: one card per unique note and one per cell
-        const deck=[];
-        for(const c of CELLS){ deck.push({type:'cell',question:`Note at ${ordinal(c.p)} Pos, ${ordinal(c.f)} finger on ${c.s}`, answer:c.canon, interval:1, due:Date.now()}); }
+      const [deck,setDeck]=React.useState(()=>{
+        const stored=loadJSON('vmq.flashcards',null);
+        if(stored) return stored;
+        const initial=[];
+        CELLS.forEach(c=>{
+          initial.push({type:'cell',question:`Note at ${ordinal(c.p)} position, ${ordinal(c.f)} finger on ${c.s}`,answer:c.canon,interval:1,due:Date.now()});
+        });
         const uniqueNotes=[...new Set(CELLS.map(c=>c.canon))];
-        for(const n of uniqueNotes){ deck.push({type:'note',question:`Where can you play ${n}?`, answer: n, interval:1, due:Date.now()}); }
-        saveJSON('violinQuest.flashcards', deck);
-        return deck;
+        uniqueNotes.forEach(n=>{ initial.push({type:'note',question:`Locations for note ${n}?`,answer:n,interval:1,due:Date.now()}); });
+        saveJSON('vmq.flashcards',initial);
+        return initial;
       });
       const [card,setCard]=React.useState(null);
-      const [revealed,setRevealed]=React.useState(false);
-
-      // pick next due card (spaced repetition). If none, pick random.
-      const pickCard = () => {
+      const [show,setShow]=React.useState(false);
+      // pick next due card
+      const pickCard=()=>{
         const now=Date.now();
-        const dueCards = cards.filter(c=>c.due<=now);
-        const next = dueCards.length? dueCards[0] : getRandom(cards);
+        const dueCards=deck.filter(c=>c.due<=now);
+        const next= dueCards.length? dueCards[0] : deck[Math.floor(Math.random()*deck.length)];
         setCard(next);
-        setRevealed(false);
+        setShow(false);
       };
-
       React.useEffect(()=>{ pickCard(); },[]);
-
-      // Mark correct: increase interval and schedule next review
-      const markCorrect=()=>{
-        const updated=cards.map(c=>{
-          if(c===card){
-            const newInterval = c.interval * 2;
-            const due=Date.now()+newInterval*24*60*60*1000; // days in ms
-            return {...c, interval:newInterval, due};
-          }
-          return c;
+      const mark=(known)=>{
+        setDeck(prev=>{
+          const updated=prev.map(c=>{
+            if(c===card){
+              const newInt= known? c.interval*2 : 1;
+              return {...c,interval:newInt,due: Date.now()+newInt*24*3600*1000};
+            }
+            return c;
+          });
+          saveJSON('vmq.flashcards',updated);
+          return updated;
         });
-        setCards(updated);
-        saveJSON('violinQuest.flashcards', updated);
+        addXP(known?5:1);
         pickCard();
       };
-      const markIncorrect=()=>{
-        const updated=cards.map(c=>{
-          if(c===card){ return {...c, interval:1, due: Date.now()+24*60*60*1000}; }
-          return c;
-        });
-        setCards(updated);
-        saveJSON('violinQuest.flashcards', updated);
-        pickCard();
-      };
-
       return (
         <div>
           <div className="card">
             <h2>Flashcards</h2>
             {card && (
-              <div style={{textAlign:'center'}}>
+              <>
                 <p>{card.question}</p>
-                {revealed ? (<p style={{fontWeight:'bold',fontSize:'1.5rem'}}>{card.answer}</p>) : (<button className="btn btn-primary" onClick={()=>setRevealed(true)}>Reveal</button>)}
-                {revealed && (
-                  <div style={{marginTop:'1rem'}}>
-                    <button className="btn btn-green" onClick={markCorrect}>I knew it</button>
-                    <button className="btn btn-gray" onClick={markIncorrect}>I forgot</button>
+                {show ? (<p style={{fontWeight:'bold',fontSize:'1.5rem'}}>{card.answer}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}
+                {show && (
+                  <div style={{marginTop:'0.5rem'}}>
+                    <button className="btn btn-success" onClick={()=>mark(true)}>I knew it</button>
+                    <button className="btn btn-secondary" onClick={()=>mark(false)}>I forgot</button>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </div>
-          <button className="btn btn-gray" style={{marginTop:'1rem'}} onClick={()=>onBack()}>Back</button>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
       );
     }
 
-    // Stats page: show heatmap of accuracy per cell and progress (level)
-    function Stats(){
-      const stats=loadJSON(STATS_KEY, {});
+    // Snapshot drill: memorize 4 notes quickly, then ask one
+    function Snapshot({onBack}){
+      const [state,setState]=React.useState('flash'); // flash or question
+      const [flashData,setFlashData]=React.useState(null);
+      const [question,setQuestion]=React.useState(null);
+      const [timer,setTimer]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+
+      const pick=()=>{
+        // pick string & position
+        const s=getRandom(STRINGS);
+        const p=getRandom(POSITIONS);
+        // gather base notes for fingers
+        const labels={};
+        FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); });
+        setFlashData({s,p,labels});
+        setState('flash');
+        // after 1.5s, ask one finger
+        setTimeout(()=>{
+          const f=getRandom(FINGERS);
+          const correct=labels[f];
+          const options=shuffle([correct,...shuffle([...new Set(CELLS.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
+          setQuestion({s,p,f,correct,options});
+          setState('question');
+        },1500);
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTimer(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const answer=(opt)=>{
+        const ok= question && opt===question.correct;
+        setAnswered(a=>a+1);
+        if(ok) setScore(s=>s+1);
+        addXP(ok?6:2);
+        updateStat(`${question.s}:${question.p}:${question.f}`, ok);
+        pick();
+      };
+      if(timer===0){
+        return (<div className="card"><h2>Snapshot Complete</h2><p>Score: {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      }
+      return (
+        <div>
+          <div className="card">
+            <h2>Snapshot</h2>
+            <p>Time: {timer}s | Score: {score}/{answered}</p>
+            {state==='flash' && flashData && (
+              <div>
+                <p>Memorize these base notes at {flashData.s} string, {ordinal(flashData.p)} position:</p>
+                <div className="grid grid-cols-2">
+                  {FINGERS.map(f=>(<div key={f} className="card" style={{padding:'0.5rem',textAlign:'center'}}><small>F{f}</small><br/><strong>{flashData.labels[f]}</strong></div>))}
+                </div>
+              </div>
+            )}
+            {state==='question' && question && (
+              <div>
+                <p>Which base note is <strong>F{question.f}</strong> at {ordinal(question.p)} position on {question.s} string?</p>
+                <div className="grid grid-cols-2">
+                  {question.options.map(opt=>(<button key={opt} className="btn btn-primary" onClick={()=>answer(opt)}>{opt}</button>))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    // Interval Sprint: identify half vs whole step between adjacent fingers in a given position
+    function IntervalSprint({onBack}){
+      const [timer,setTimer]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [question,setQuestion]=React.useState(null);
+      const pick=()=>{
+        const s=getRandom(STRINGS);
+        const p=getRandom(POSITIONS);
+        const pair=getRandom([[1,2],[2,3],[3,4]]);
+        const [a,b]=pair;
+        // compute semitone difference: difference between canonical semitone values
+        const semi=(s,p,f)=>OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f];
+        const d=Math.abs((semi(s,p,b)-semi(s,p,a)+12)%12);
+        const type=d===1?'half':'whole';
+        setQuestion({s,p,a,b,type});
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTimer(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const answer=(opt)=>{
+        const ok= question && opt===question.type;
+        setAnswered(a=>a+1);
+        if(ok) setScore(s=>s+1);
+        addXP(ok?4:1);
+        updateStat(`${question.s}:${question.p}:${question.a}-${question.b}`, ok);
+        pick();
+      };
+      if(timer===0){ return (<div className="card"><h2>Interval Sprint Complete</h2><p>Score: {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
+      return (
+        <div>
+          <div className="card">
+            <h2>Interval Sprint</h2>
+            <p>Time: {timer}s | Score: {score}/{answered}</p>
+            {question && (
+              <div>
+                <p>At {ordinal(question.p)} position on {question.s} string, between F{question.a} and F{question.b}: is it a half step or a whole step?</p>
+                <div className="grid grid-cols-2">
+                  <button className="btn btn-primary" onClick={()=>answer('half')}>Half Step</button>
+                  <button className="btn btn-primary" onClick={()=>answer('whole')}>Whole Step</button>
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    // Note Locator: given a note and string, select the correct position/finger
+    function NoteLocator({onBack}){
+      const [timer,setTimer]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [question,setQuestion]=React.useState(null);
+      const pick=()=>{
+        // pick string and a random cell on that string
+        const s=getRandom(STRINGS);
+        const cellsOnString=CELLS.filter(c=>c.s===s);
+        const chosen=getRandom(cellsOnString);
+        // pick note from chosen cell's canon; plus distractor cells
+        const note=chosen.canon;
+        const correct={p:chosen.p,f:chosen.f};
+        const distract=shuffle(cellsOnString.filter(c=>c.p!==correct.p || c.f!==correct.f)).slice(0,3);
+        const options=shuffle([correct,...distract.map(c=>({p:c.p,f:c.f}))]);
+        setQuestion({s,note,correct,options});
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTimer(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const answer=(choice)=>{
+        const ok= choice.p===question.correct.p && choice.f===question.correct.f;
+        setAnswered(a=>a+1);
+        if(ok) setScore(s=>s+1);
+        addXP(ok?4:1);
+        updateStat(`${question.s}:${question.correct.p}:${question.correct.f}`, ok);
+        pick();
+      };
+      if(timer===0){ return (<div className="card"><h2>Note Locator Complete</h2><p>Score: {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
+      return (
+        <div>
+          <div className="card">
+            <h2>Note Locator</h2>
+            <p>Time: {timer}s | Score: {score}/{answered}</p>
+            {question && (
+              <div>
+                <p>On the {question.s} string, where can you play the note <strong>{question.note}</strong> (positions 1–5)?</p>
+                <div className="grid grid-cols-2">
+                  {question.options.map((opt,i)=>(
+                    <button key={i} className="btn btn-primary" onClick={()=>answer(opt)}>Pos {opt.p}, F{opt.f}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    // Bieler Method Lab: vocabulary and MCQ
+    const BIELER_VOCAB=[
+      {term:'Hand Frame',def:'Stable spacing of fingers that moves as a unit when shifting.'},
+      {term:'Contact Point',def:'Place on the string between bridge and fingerboard chosen by bow speed, pressure and tilt.'},
+      {term:'Collé',def:'Pinch-and-release articulation from the bow fingers.'},
+      {term:'Three-Dimensional Positioning',def:'Height, depth and angle of the violin set to free both hands.'}
+    ];
+    const BIELER_CONCEPT=[
+      {q:'Why establish the hand frame before speed?', a:'It stabilizes finger spacing so motion stays accurate at tempo.', wrong:['To make vibrato louder','To avoid all shifts','Because hand size decides positions']},
+      {q:'Best cue for adjusting contact point?', a:'Match bow speed, pressure and tilt to tone color.', wrong:['Finger curvature only','String brand','Arm length']},
+      {q:'Difference between spiccato and sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['They are identical','Sautillé is always loud','Spiccato is legato only']}
+    ];
+    const BIELER_APPLY=[
+      {scenario:'Bright forte on A string', a:'Move soundpoint toward bridge; faster bow with supportive index; stable frame.', wrong:['Play over fingerboard with light bow','Only vibrato faster','Press harder with thumb']},
+      {scenario:'Clean off-string at MM=100 (8ths)', a:'Spiccato near balance point with small vertical motion; even sound.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Ricochet near bridge']},
+      {scenario:'Dolce line in 3rd position', a:'More over-the-fingerboard soundpoint, lower pressure, seamless legato; frame glides in shifts.', wrong:['Firm staccato','Stiff collé','Always sul ponticello']}
+    ];
+    function BielerLab({onBack}){
+      const [tab,setTab]=React.useState('vocab');
+      const [index,setIndex]=React.useState(0);
+      const [show,setShow]=React.useState(false);
+      const [mcq,setMcq]=React.useState(null);
+
+      const pickMCQ=(type)=>{
+        const bank= type==='concept'? BIELER_CONCEPT : BIELER_APPLY;
+        const item=getRandom(bank);
+        const opts=shuffle([item.a,...shuffle(item.wrong).slice(0,3)]);
+        setMcq({stem: type==='concept'? item.q : item.scenario, correct:item.a, options:opts, type});
+      };
+      React.useEffect(()=>{ if(tab==='concept'||tab==='apply'){ pickMCQ(tab==='concept'?'concept':'apply'); } },[tab]);
+      const answer=(choice)=>{
+        const ok= choice===mcq.correct;
+        addXP(ok?3:1);
+        setMcq(null);
+        setTimeout(()=>pickMCQ(mcq.type),100);
+      };
+      return (
+        <div>
+          <div className="card">
+            <h2>Bieler Method Lab</h2>
+            <div className="tabs">
+              {['vocab','concept','apply'].map(t=>{
+                const labels={vocab:'Vocabulary',concept:'Concept',apply:'Apply'};
+                return <div key={t} className={`tab ${tab===t?'active':''}`} onClick={()=>{setTab(t); setShow(false);}}>{labels[t]}</div>;
+              })}
+            </div>
+            {tab==='vocab' && (
+              <div style={{textAlign:'center'}}>
+                <h3>{BIELER_VOCAB[index].term}</h3>
+                {show ? (<p>{BIELER_VOCAB[index].def}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}
+                <div style={{marginTop:'0.5rem'}}>
+                  <button className="btn btn-secondary" onClick={()=>{setShow(false); setIndex((index-1+BIELER_VOCAB.length)%BIELER_VOCAB.length);}}>Prev</button>
+                  <button className="btn btn-primary" onClick={()=>{setShow(false); setIndex((index+1)%BIELER_VOCAB.length);}}>Next</button>
+                </div>
+              </div>
+            )}
+            {(tab==='concept' || tab==='apply') && mcq && (
+              <div style={{textAlign:'center'}}>
+                <p><strong>{mcq.stem}</strong></p>
+                <div className="grid grid-cols-2">
+                  {mcq.options.map((opt,i)=>(<button key={i} className="btn btn-primary" onClick={()=>answer(opt)}>{opt}</button>))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    // Stats page: progress bar and heatmap
+    function Stats({onBack}){
+      const stats=loadJSON(STATS_KEY,{});
       const xp=loadJSON(XP_KEY,0);
       const level=levelForXP(xp);
-      const nextXP=nextLevelXP(level);
-      const prevXP=level>1?nextLevelXP(level-1):0;
-      const progress=(xp-prevXP)/(nextXP-prevXP);
-
+      const prevXp = level>1? nextLevelXP(level-1):0;
+      const nextXp = nextLevelXP(level);
+      const pct=(xp-prevXp)/(nextXp-prevXp);
       return (
         <div>
           <div className="card">
             <h2>Your Progress</h2>
-            <p>Level {level} (XP {xp-prevXP}/{nextXP-prevXP})</p>
-            <div style={{background:'#e5e7eb', borderRadius:'6px', overflow:'hidden', height:'8px'}}>
-              <div style={{height:'8px', width:`${progress*100}%`, background: 'var(--accent)'}}></div>
-            </div>
+            <p>Level {level} (XP {xp-prevXp}/{nextXp-prevXp})</p>
+            <div className="progress-bar"><div style={{width: `${Math.min(100,pct*100)}%`}}></div></div>
           </div>
-          <div className="card" style={{marginTop:'1rem'}}>
+          <div className="card">
             <h2>Fingerboard Accuracy</h2>
-            <div className="grid" style={{gridTemplateColumns:'repeat(4, 1fr)', gap:'0.5rem'}}>
+            <div className="heat-grid">
               {CELLS.map(c=>{
-                const key=`${c.s}:${c.p}:${c.f}`;
-                const st=stats[key]||{correct:0,total:0};
-                const acc = st.total? st.correct/st.total : 0;
-                const color = acc<0.5? 'rgba(239,68,68,0.5)' : acc<0.8? 'rgba(234,179,8,0.5)' : 'rgba(16,185,129,0.5)';
-                return (
-                  <div key={key} className="heat-tile" style={{background:color}} title={`Pos ${c.p}, F${c.f} on ${c.s}: ${st.correct}/${st.total}` }>
-                    {st.total? `${Math.round(acc*100)}%` : '-'}
-                    {st.total<3 && <span className="heat-dot"></span>}
-                  </div>
-                );
+                const k=`${c.s}:${c.p}:${c.f}`;
+                const st=stats[k]||{correct:0,total:0};
+                const acc= st.total? st.correct/st.total : 0;
+                const color= acc===0? 'var(--danger)' : acc<0.5? 'var(--warning)' : acc<0.8? '#fbbf24' : 'var(--success)';
+                const label= st.total? `${Math.round(acc*100)}%` : '-';
+                return <div key={k} className="heat-cell" style={{background:color}}>{label}</div>;
               })}
             </div>
           </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
       );
     }
 
-    // Home component: menu & router
+    // Main App with navigation
     function App(){
       const [page,setPage]=React.useState('home');
-      const open = (p) => setPage(p);
       return (
         <div className="container">
           {page==='home' && (
             <div>
               <h1>Violin Mastery Quest</h1>
-              <p className="muted">Practice violin positions, notes and techniques with drills built on evidence‑based learning: retrieval practice, spaced repetition and adaptive feedback.</p>
+              <p className="ink-light">Practice violin positions, notes and techniques with evidence-based drills, spaced repetition and adaptive feedback.</p>
               <div className="grid grid-cols-2">
                 <div className="card">
                   <h2>Drills</h2>
-                  <button className="btn btn-primary" style={{marginBottom:'0.5rem'}} onClick={()=>open('drill')}>Speed Drill</button>
-                  <button className="btn btn-primary" style={{marginBottom:'0.5rem'}} onClick={()=>open('flash')}>Flashcards</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
                 </div>
                 <div className="card">
-                  <h2>Stats</h2>
-                  <button className="btn btn-primary" onClick={()=>open('stats')}>View Stats</button>
+                  <h2>Study</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Bieler Lab</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
                 </div>
               </div>
             </div>
           )}
-          {page==='drill' && <SpeedDrill onBack={()=>open('home')}/>}
-          {page==='flash' && <Flashcards onBack={()=>open('home')}/>}
-          {page==='stats' && <div><Stats/><button className="btn btn-gray" style={{marginTop:'1rem'}} onClick={()=>open('home')}>Back</button></div>}
+          {page==='speed'    && <SpeedDrill onBack={()=>setPage('home')}/>}
+          {page==='flash'    && <Flashcards onBack={()=>setPage('home')}/>}
+          {page==='snapshot' && <Snapshot onBack={()=>setPage('home')}/>}
+          {page==='interval' && <IntervalSprint onBack={()=>setPage('home')}/>}
+          {page==='locator'  && <NoteLocator onBack={()=>setPage('home')}/>}
+          {page==='bieler'   && <BielerLab onBack={()=>setPage('home')}/>}
+          {page==='stats'    && <Stats onBack={()=>setPage('home')}/>}
         </div>
       );
     }
-
-    // Helper: shuffle array
-    function shuffleArray(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-    // Helper: ordinal suffix
-    function ordinal(n){ const s=['th','st','nd','rd'], v=n%100; return n + (s[(v-20)%10]||s[v]||s[0]); }
-
-    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+    ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
   </script>
 </body>
 </html>
