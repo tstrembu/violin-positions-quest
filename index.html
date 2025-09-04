@@ -146,38 +146,37 @@ const FLASH_DURATIONS={
     }
 
 // Visual fingerboard component: renders a 4x5 grid with finger sub-cells
-function VisualFingerboard({highlight=[],onSelect,disabled}){
-  // compute cell positions; strings E A D G from left to right; positions 1-5 horizontally; fingers 1-4 vertically (top to bottom)
-  const svgW=300, svgH=120; const posW=svgW/5; const fingerH=svgH/4;
-  const getColor=(kind)=>{
-    switch(kind){
-      case 'correct': return 'var(--success)';
-      case 'chosen': return 'var(--primary)';
-      case 'distractor': return 'var(--warning)';
-      default: return 'var(--border)';
-    }
-  };
-  // build highlight map
-  const map={}; highlight.forEach(h=>{ map[`${h.s}:${h.p}:${h.f}`]=h.kind; });
-  const strings=['G','D','A','E'];
-  const handleClick=(s,p,f)=>{ if(disabled) return; onSelect && onSelect({s,p,f}); };
+// Visual fingerboard component: renders 5 positions and 4 strings with finger lanes.
+function VisualFingerboard({highlight=[],onSelect,disabled}) {
+  const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
+  const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
+  const color = k => k==='correct' ? 'var(--success)'
+                : k==='chosen' ? 'var(--primary)'
+                : k==='distractor' ? 'var(--warning)'
+                : 'var(--card)';
   return (
-    <svg width={svgW} height={svgH} style={{maxWidth:'100%'}} role="group" aria-label="Fingerboard">
-      {strings.map((s,si)=>{
-        return POSITIONS.map((p,pi)=>{
-          return FINGERS.map((f,fi)=>{
-            const x=pi*posW; const y=(3-si)*fingerH + (4-f)*0; // invert to have G string bottom? fudge
-            const key=`${s}:${p}:${f}`;
-            const kind=map[key]; const fill=getColor(kind);
-            return (
-              <rect key={key} x={x+2} y={fi*fingerH+2} width={posW-4} height={fingerH-4} rx="3" ry="3"
-                    fill={fill} stroke="var(--border)" strokeWidth="1"
-                    tabIndex={disabled? -1:0} role="button" aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
-                    onClick={()=>handleClick(s,p,f)} onKeyDown={(e)=>{ if(e.key==='Enter'||e.key===' ') handleClick(s,p,f); }}/>
-            );
-          });
-        });
-      })}
+    <svg width={W} height={H} style={{maxWidth:'100%'}} aria-label="Fingerboard">
+      {['G','D','A','E'].map((s,si)=>(
+        <g key={s} transform={`translate(0,${(3-si)*strH})`}>
+          {POSITIONS.map(p=>(
+            <g key={p} transform={`translate(${(p-1)*posW},0)`}>
+              {FINGERS.map((f,fi)=>{
+                const key=`${s}:${p}:${f}`;
+                const kind=hiMap[key];
+                return (
+                  <rect key={key}
+                    x={4} y={fi*fingerH+4} width={posW-8} height={fingerH-8} rx="3"
+                    fill={color(kind)} stroke="var(--border)"
+                    tabIndex={disabled?-1:0} role="button"
+                    aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
+                    onClick={()=>!disabled && onSelect?.({s,p,f})}
+                    onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}/>
+                );
+              })}
+            </g>
+          ))}
+        </g>
+      ))}
     </svg>
   );
 }
@@ -200,6 +199,10 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
         const pool=[...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct);
         const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
         setQ({cell:chosen,options:opts}); setSelected(null);
+        try {
+          const midi=MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f];
+          audioEngine.playNote({midi});
+        }catch{}
       },[cells,stats]);
       // Start a question when component mounts; depend on pick function
       React.useEffect(()=>{ pick(); },[pick]);
@@ -294,6 +297,10 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
           const f=getRandom(FINGERS);
           const correct=labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
           setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
+          try {
+            const midi=MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[f];
+            audioEngine.playNote({midi});
+          }catch{}
         },delay);
       };
       React.useEffect(()=>{
@@ -444,7 +451,24 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack);
       if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div><div className="card"><h2>Note Locator</h2><p>Time {time}s | Score {score}/{answered}</p><p>Where can you play {q.note}?</p>{q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={selected===i} onClick={()=>answer(o,i)}/>))}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      return (
+        <div>
+          <div className="card">
+            <h2>Note Locator</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <p>Where can you play {q.note}? Click the fingerboard:</p>
+            <VisualFingerboard
+              highlight={q.options.map(o=>({s:o.s,p:o.p,f:o.f,kind:'distractor'}))}
+              onSelect={(cell)=>answer(cell,0)}
+            />
+            <details style={{marginTop:'0.5rem'}}>
+              <summary>List options</summary>
+              {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
+            </details>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     function Settings({prefs,setPrefs,onBack}){
@@ -523,7 +547,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}){
 const INTERVALS=[
   {name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},
   {name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},
-  {name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahm\'s Lullaby'},
+  {name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},
   {name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},
   {name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},
   {name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},
@@ -629,6 +653,9 @@ const TIME_SIGNATURES=[
           setQ({prompt:`Which interval matches the cue “${cue}”?`,correct,options:opts});
         }
         setSelected(null);
+        // Play interval audio
+        const rootMidi=64+Math.floor(Math.random()*6);
+        try{ audioEngine.playInterval({rootMidi,semitones:item.semitones}); }catch{}
       };
       React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
       const answer=(opt,idx)=>{
@@ -797,27 +824,24 @@ const TIME_SIGNATURES=[
             <div>
               <h1>Violin Mastery Quest</h1>
               <p style={{color:'var(--ink-light)'}}>Tailor your practice by choosing strings & positions. Enjoy drills, study tools and track progress.</p>
-              <div className="grid grid-cols-2">
+              <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'1rem'}}>
                 <div className="card">
-                  <h2>Drills</h2>
+                  <h2>🎻 Play</h2>
                   <button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button>
                   <button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button>
                   <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
                   <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
                 </div>
                 <div className="card">
-                  <h2>Theory & Study</h2>
+                  <h2>📘 Study</h2>
                   <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Theory</button>
                   <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
                 </div>
                 <div className="card">
-                  <h2>Progress</h2>
+                  <h2>📊 Progress & Settings</h2>
                   <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
-                </div>
-                <div className="card">
-                  <h2>Settings</h2>
                   <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
                 </div>
               </div>
