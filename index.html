@@ -75,7 +75,21 @@
     const shuffle=a=>{ const arr=[...a]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
     const getRandom=a=>a[Math.floor(Math.random()*a.length)];
     const ordinal=n=>{ const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
-    const defaultPrefs={strings:Object.fromEntries(STRINGS.map(s=>[s,true])),positions:Object.fromEntries(POSITIONS.map(p=>[p,true]))};
+// Default preferences including flash duration level for Snapshot (Beginner→Master)
+const defaultPrefs={
+  strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
+  positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
+  flashLevel:'Professional' // options: Beginner, Intermediate, Advanced, Professional, Master
+};
+
+// Mapping from flash level to milliseconds for Snapshot memorization duration
+const FLASH_DURATIONS={
+  Beginner:3000,
+  Intermediate:2000,
+  Advanced:1200,
+  Professional:800,
+  Master:500
+};
     const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
 
     // Hook for keyboard shortcuts
@@ -117,7 +131,8 @@
         const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
         setQ({cell:chosen,options:opts}); setSelected(null);
       },[cells,stats]);
-      React.useEffect(()=>{ pick(); },[pick]);
+      // Start a question when component mounts or available cells change
+      React.useEffect(()=>{ pick(); },[cells.length]);
       React.useEffect(()=>{ const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
       const answer=(opt,idx)=>{
         setSelected(idx);
@@ -195,16 +210,21 @@
       const [flash,setFlash]=React.useState(null);
       const [q,setQ]=React.useState(null);
       const [selected,setSelected]=React.useState(null);
+      const flashRef=React.useRef(null);
       const pick=()=>{
         if(!cells.length){ setState('none'); return; }
         const s=getRandom(STRINGS.filter(s=>prefs.strings[s]));
         const p=getRandom(POSITIONS.filter(p=>prefs.positions[p]));
-        const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); }); setFlash({s,p,labels}); setState('flash'); setSelected(null);
-        setTimeout(()=>{
+        const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); });
+        setFlash({s,p,labels}); setState('flash'); setSelected(null);
+        // schedule question reveal after flash duration based on preferences
+        if(flashRef.current) clearTimeout(flashRef.current);
+        const delay=FLASH_DURATIONS[prefs.flashLevel] || 1000;
+        flashRef.current=setTimeout(()=>{
           const f=getRandom(FINGERS);
           const correct=labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
           setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
-        },1400);
+        },delay);
       };
       React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
       const answer=(opt,idx)=>{
@@ -222,7 +242,44 @@
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack);
       if(time===0) return <div className="card"><h2>Snapshot Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(state==='none') return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div><div className="card"><h2>Snapshot</h2><p>Time {time}s | Score {score}/{answered}</p>{state==='flash' && flash && (<div><p>Memorize {flash.s} string {ordinal(flash.p)} pos:</p><div className="grid grid-cols-2">{FINGERS.map(f=>(<div key={f} className="card" style={{padding:'0.5rem',textAlign:'center',borderRadius:'8px'}}><small>F{f}</small><br/><strong>{flash.labels[f]}</strong></div>))}</div><button className="btn btn-primary" onClick={()=>{ /* skip flash? not implemented yet */ }}>Ready</button></div>)}{state==='question' && q && (<div><p>Which base note is F{q.f} at {ordinal(q.p)} pos on {q.s}?</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      return (
+        <div>
+          <div className="card">
+            <h2>Snapshot</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            {state==='flash' && flash && (
+              <div>
+                <p>Memorize {flash.s} string {ordinal(flash.p)} pos:</p>
+                <div className="grid grid-cols-2">
+                  {FINGERS.map(f=>(
+                    <div key={f} className="card" style={{padding:'0.5rem',textAlign:'center',borderRadius:'8px'}}>
+                      <small>F{f}</small><br/>
+                      <strong>{flash.labels[f]}</strong>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn btn-primary" onClick={()=>{
+                  // skip flash: clear timeout and immediately show question
+                  if(flashRef.current){ clearTimeout(flashRef.current); flashRef.current=null; }
+                  const s=flash.s; const p=flash.p;
+                  const f=getRandom(FINGERS);
+                  const correct=flash.labels[f];
+                  // get candidate notes from filtered cells
+                  const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
+                  setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
+                }}>Ready</button>
+              </div>
+            )}
+            {state==='question' && q && (
+              <div>
+                <p>Which base note is F{q.f} at {ordinal(q.p)} pos on {q.s}?</p>
+                {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     function IntervalSprint({prefs,onBack}){
@@ -308,7 +365,28 @@
           return copy;
         });
       };
-      return (<div><div className="card"><h2>Settings</h2><h3>Theme</h3><button className="btn btn-primary" onClick={()=>{ const dark=!document.documentElement.classList.contains('dark'); window.__setTheme(dark); }}>Toggle Dark Mode</button><h3>Strings</h3><div>{STRINGS.map(s=>(<button key={s} className="btn" style={{background:prefs.strings[s]? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>toggle('strings',s)}>{s}</button>))}</div><h3>Positions</h3><div>{POSITIONS.map(p=>(<button key={p} className="btn" style={{background:prefs.positions[p]? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>toggle('positions',p)}>{p}</button>))}</div><p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Dark mode toggle changes theme.</p></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      return (
+        <div>
+          <div className="card">
+            <h2>Settings</h2>
+            <h3>Theme</h3>
+            <button className="btn btn-primary" onClick={()=>{ const dark=!document.documentElement.classList.contains('dark'); window.__setTheme(dark); }}>Toggle Dark Mode</button>
+            <h3>Strings</h3>
+            <div>{STRINGS.map(s=>(<button key={s} className="btn" style={{background:prefs.strings[s]? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>toggle('strings',s)}>{s}</button>))}</div>
+            <h3>Positions</h3>
+            <div>{POSITIONS.map(p=>(<button key={p} className="btn" style={{background:prefs.positions[p]? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>toggle('positions',p)}>{p}</button>))}</div>
+            <h3>Snapshot Flash Duration</h3>
+            <div>{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>{
+              const msMap={Beginner:3000,Intermediate:2000,Advanced:1200,Professional:800,Master:500};
+              return (<button key={level} className="btn" style={{background:prefs.flashLevel===level? 'var(--primary)' : 'var(--ink-light)'}} onClick={()=>{
+                setPrefs(prev=>{ const next={...prev,flashLevel:level}; saveJSON(PREFS_KEY,next); return next; });
+              }}>{level}</button>);
+            })}</div>
+            <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     function StatsPage({onBack}){
@@ -325,16 +403,311 @@
     }
 
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
+
+// Interval, key signature and time signature data for theory trainers/testers
+const INTERVALS=[
+  {name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},
+  {name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},
+  {name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahm\'s Lullaby'},
+  {name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},
+  {name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},
+  {name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},
+  {name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},
+  {name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},
+  {name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},
+  {name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},
+  {name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},
+  {name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}
+];
+
+const KEY_SIGNATURES=[
+  {key:'C Major', type:'none', count:0},
+  {key:'G Major', type:'sharp', count:1},
+  {key:'D Major', type:'sharp', count:2},
+  {key:'A Major', type:'sharp', count:3},
+  {key:'E Major', type:'sharp', count:4},
+  {key:'B Major', type:'sharp', count:5},
+  {key:'F# Major', type:'sharp', count:6},
+  {key:'C# Major', type:'sharp', count:7},
+  {key:'F Major', type:'flat', count:1},
+  {key:'Bb Major', type:'flat', count:2},
+  {key:'Eb Major', type:'flat', count:3},
+  {key:'Ab Major', type:'flat', count:4},
+  {key:'Db Major', type:'flat', count:5},
+  {key:'Gb Major', type:'flat', count:6},
+  {key:'Cb Major', type:'flat', count:7}
+];
+
+const TIME_SIGNATURES=[
+  {sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},
+  {sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},
+  {sig:'4/4', description:'4 quarter-note beats per measure (common time)'},
+  {sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},
+  {sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},
+  {sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}
+];
     function TempoTrainer({onBack}){ const [i,setI]=React.useState(0); const [show,setShow]=React.useState(false); const next=()=>{ setShow(false); setI((i+1)%TEMPOS.length); }; const prev=()=>{ setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); }; const t=TEMPOS[i]; const speak=(txt)=>{ try{ const u=new SpeechSynthesisUtterance(txt); u.rate=0.9; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch{} }; return (<div><div className="card"><h2>Tempo Trainer</h2><p><strong>{t.it}</strong></p>{show? (<p>{t.en} — {t.range}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}<div style={{marginTop:'0.5rem'}}><button className="btn btn-secondary" onClick={prev}>Prev</button><button className="btn btn-primary" onClick={next}>Next</button><button className="btn btn-success" onClick={()=>{ speak(t.it); speak(t.en); }}>Speak</button></div></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
     function TempoTester({onBack}){ const [time,setTime]=React.useState(60); const [score,setScore]=React.useState(0); const [answered,setAnswered]=React.useState(0); const [q,setQ]=React.useState(null); const [selected,setSelected]=React.useState(null); const pick=()=>{ const term=getRandom(TEMPOS); const correct=term.en; const opts=shuffle([correct,...shuffle(TEMPOS.map(x=>x.en).filter(x=>x!==correct)).slice(0,3)]); setQ({term:term.it,correct,options:opts}); setSelected(null); }; React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]); const answer=(opt,idx)=>{ setSelected(idx); setTimeout(()=>{ const ok=opt===q.correct; document.getElementById('sr').textContent = ok? 'Correct' : 'Try again'; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); addXP(ok?5:2); pick(); },200); }; useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack);
       if(time===0) return <div className="card"><h2>Tempo Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       return (<div><div className="card"><h2>Tempo Tester</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>What does {q.term} mean?</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
+    // ===== Theory modules =====
+    function TheoryHome({onBack,onNavigate}){
+      return (
+        <div>
+          <div className="card">
+            <h2>Theory & Concepts</h2>
+            <p>Explore intervals, key signatures and time signatures.</p>
+            <button className="btn btn-primary" onClick={()=>onNavigate('intervalTrainer')}>Intervals Trainer</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('intervalTester')}>Intervals Tester</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('keyTrainer')}>Key Sig Trainer</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('keyTester')}>Key Sig Tester</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('timeTrainer')}>Time Sig Trainer</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('timeTester')}>Time Sig Tester</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function IntervalTrainer({onBack}){
+      const [index,setIndex]=React.useState(0);
+      const next=()=>setIndex((index+1)%INTERVALS.length);
+      const i=INTERVALS[index];
+      return (
+        <div>
+          <div className="card">
+            <h2>Intervals Trainer</h2>
+            <p><strong>{i.name}</strong> — {i.semitones} semitone{i.semitones>1?'s':''}</p>
+            <p><em>Feel:</em> {i.feel}</p>
+            <p><em>Song cue:</em> {i.cue}</p>
+            <button className="btn btn-primary" onClick={next}>Next</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function IntervalTester({onBack}){
+      const [time,setTime]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const item=getRandom(INTERVALS);
+        if(Math.random()<0.5){
+          const correct=item.name;
+          const opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
+          setQ({prompt:`Which interval has ${item.semitones} semitone${item.semitones>1?'s':''}?`,correct,options:opts});
+        } else {
+          const correct=item.name;
+          const cue=item.cue.split(',')[0];
+          const opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
+          setQ({prompt:`Which interval matches the cue “${cue}”?`,correct,options:opts});
+        }
+        setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const answer=(opt,idx)=>{
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Try again';
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          addXP(ok?4:1);
+          pick();
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack);
+      if(time===0) return <div className="card"><h2>Intervals Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Intervals Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            {q && (<div><p>{q.prompt}</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function KeyTrainer({onBack}){
+      const [index,setIndex]=React.useState(0);
+      const next=()=>setIndex((index+1)%KEY_SIGNATURES.length);
+      const k=KEY_SIGNATURES[index];
+      return (
+        <div>
+          <div className="card">
+            <h2>Key Signatures Trainer</h2>
+            <p><strong>{k.key}</strong></p>
+            {k.type==='none'? <p>No sharps or flats.</p> : <p>{k.count} {k.type}{k.count>1?'s':''}.</p>}
+            <button className="btn btn-primary" onClick={next}>Next</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function KeyTester({onBack}){
+      const [time,setTime]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const item=getRandom(KEY_SIGNATURES);
+        if(Math.random()<0.5){
+          const correct=item.key;
+          const desc=item.count===0? 'no sharps or flats' : `${item.count} ${item.type}${item.count>1?'s':''}`;
+          const opts=shuffle([correct,...shuffle(KEY_SIGNATURES.map(x=>x.key).filter(k=>k!==correct)).slice(0,3)]);
+          setQ({prompt:`Which major key has ${desc}?`,correct,options:opts});
+        } else {
+          const correct=item.count===0? 'no sharps or flats' : `${item.count} ${item.type}${item.count>1?'s':''}`;
+          // build unique list of descriptions
+          const descList=[...new Set(KEY_SIGNATURES.map(x=> x.count===0? 'no sharps or flats' : `${x.count} ${x.type}${x.count>1?'s':''}`))];
+          const opts=shuffle([correct,...shuffle(descList.filter(v=>v!==correct)).slice(0,3)]);
+          setQ({prompt:`How many sharps/flats does ${item.key} have?`,correct,options:opts});
+        }
+        setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const answer=(opt,idx)=>{
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Try again';
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          addXP(ok?4:1);
+          pick();
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack);
+      if(time===0) return <div className="card"><h2>Key Sig Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Key Sig Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            {q && (<div><p>{q.prompt}</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function TimeTrainer({onBack}){
+      const [index,setIndex]=React.useState(0);
+      const next=()=>setIndex((index+1)%TIME_SIGNATURES.length);
+      const t=TIME_SIGNATURES[index];
+      return (
+        <div>
+          <div className="card">
+            <h2>Time Sig Trainer</h2>
+            <p><strong>{t.sig}</strong></p>
+            <p>{t.description}</p>
+            <button className="btn btn-primary" onClick={next}>Next</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function TimeTester({onBack}){
+      const [time,setTime]=React.useState(60);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const item=getRandom(TIME_SIGNATURES);
+        const correct=item.sig;
+        const opts=shuffle([correct,...shuffle(TIME_SIGNATURES.map(x=>x.sig).filter(s=>s!==correct)).slice(0,3)]);
+        setQ({prompt:item.description,correct,options:opts}); setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      const answer=(opt,idx)=>{
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Try again';
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          addXP(ok?4:1);
+          pick();
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack);
+      if(time===0) return <div className="card"><h2>Time Sig Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Time Sig Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            {q && (<div><p>{q.prompt}</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
     function App(){
       const [page,setPage]=React.useState('home');
       const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY,defaultPrefs));
-      return (<div className="container">{page==='home' && (<div><h1>Violin Mastery Quest</h1><p style={{color:'var(--ink-light)'}}>Tailor your practice by choosing strings & positions. Enjoy drills, study tools and track progress.</p><div className="grid grid-cols-2"><div className="card"><h2>Drills</h2><button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button><button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button><button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button><button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button></div><div className="card"><h2>Study & Tests</h2><button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button><button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button><button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button><button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button></div><div className="card"><h2>More</h2><button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button></div></div></div>)}{page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>}{page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>}{page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>}{page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>}{page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>}{page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>}{page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>}{page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>}{page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>}</div>);
+      return (
+        <div className="container">
+          {page==='home' && (
+            <div>
+              <h1>Violin Mastery Quest</h1>
+              <p style={{color:'var(--ink-light)'}}>Tailor your practice by choosing strings & positions. Enjoy drills, study tools and track progress.</p>
+              <div className="grid grid-cols-2">
+                <div className="card">
+                  <h2>Drills</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
+                </div>
+                <div className="card">
+                  <h2>Study & Tests</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
+                </div>
+                <div className="card">
+                  <h2>Theory</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Theory & Concepts</button>
+                </div>
+                <div className="card">
+                  <h2>More</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>}
+          {page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>}
+          {page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>}
+          {page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>}
+          {page==='theoryHome'&&<TheoryHome onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>}
+          {page==='intervalTrainer'&&<IntervalTrainer onBack={()=>setPage('theoryHome')}/>}
+          {page==='intervalTester'&&<IntervalTester onBack={()=>setPage('theoryHome')}/>}
+          {page==='keyTrainer'&&<KeyTrainer onBack={()=>setPage('theoryHome')}/>}
+          {page==='keyTester'&&<KeyTester onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>}
+        </div>
+      );
     }
     ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
