@@ -781,20 +781,21 @@
     );
 
    const CardButton = ({ title, description, onClick, onHelp }) => (
-      <div className="card rounded-xl p-5 relative">
-        <button
-          className="help-dot absolute right-3 top-3"
-          aria-label={`How to play: ${title}`}
-          onClick={onHelp}
-        >
-          ?
-        </button>
-        <div className="text-xl font-bold ink800">{title}</div>
-        <div className="muted text-sm mt-1">{description}</div>
-        <div className="mt-4">
-          <button className="btn btn-purple" onClick={onClick}>Open</button>
+      <button className="card rounded-xl p-5 relative text-left w-full" onClick={onClick}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xl font-bold ink800">{title}</div>
+            <div className="muted text-sm mt-1">{description}</div>
+          </div>
+          <button
+            type="button"
+            className="help-dot"
+            aria-label={`How to play: ${title}`}
+            onClick={(e)=>{ e.stopPropagation(); onHelp(); }}
+          >i</button>
         </div>
-      </div>
+        <span className="absolute right-4 bottom-4 text-2xl" aria-hidden="true">›</span>
+      </button>
     );
 
     const Toast = ({ open, text, action, onAction }) => !open ? null : (
@@ -1112,10 +1113,10 @@
                 <div className="text-xs muted mt-1">Say the feel out loud, then tap Next.</div>
               </div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
             </div>
-            <div className="flex gap-2 mt-6 justify-center">
-              <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
-              <button className="btn btn-gray" onClick={prev}>Previous</button>
-              <button className="btn btn-purple" onClick={next}>Next</button>
+            <div className="flex gap-2 items-center">
+              <div className="font-semibold text-sm">Strings</div>
+              <button className="btn btn-gray" onClick={()=>setAll('strings', true)}>All</button>
+              <button className="btn btn-gray" onClick={()=>setAll('strings', false)}>None</button>
             </div>
             <div className="text-xs muted mt-3 text-center">Shortcuts: Space, ←/→ or P/N</div>
           </div>
