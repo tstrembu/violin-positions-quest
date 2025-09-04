@@ -1,804 +1,344 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Violin Positions Quest</title>
-  
-    <!-- Viewport & Theme -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#6d28d9" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
-    <meta name="color-scheme" content="light dark">
-  
-    <!-- SEO/Social -->
-    <meta name="description" content="Train violin positions, notes, and technique with timed drills, flashcards, and skill heatmaps.">
-    <link rel="canonical" href="https://tstrembu.github.io/violin-positions-quest/">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Violin Positions Quest">
-    <meta property="og:description" content="Timed drills, flashcards, heatmaps, and more for violin mastery.">
-    <meta property="og:image" content="https://tstrembu.github.io/violin-positions-quest/icons/og-image.png">
-  
-    <!-- PWA -->
-    <link rel="manifest" href="manifest.webmanifest">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="VPQ">
-  
-    <!-- CSP (compatible with Babel/Tailwind CDNs) -->
-    <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self' https:;
-               script-src 'self' https://cdn.tailwindcss.com https://unpkg.com 'unsafe-inline' 'unsafe-eval' blob:;
-               style-src 'self' 'unsafe-inline' https:;
-               img-src 'self' data: https:;
-               font-src 'self' https: data:;
-               connect-src 'self' https:;
-               base-uri 'self';
-               form-action 'self';
-               frame-ancestors 'self';">
-  
+  <meta charset="utf-8" />
+  <title>Violin Positions Quest</title>
+
+  <!-- Viewport & theme -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#6d28d9" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)" />
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- Social -->
+  <meta name="description" content="Train violin positions, notes, and technique with drills, flashcards, and heatmaps." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Violin Positions Quest" />
+  <meta property="og:description" content="Timed drills, flashcards, heatmaps, and more for violin mastery." />
+  <meta property="og:image" content="icons/og-image.png" />
+
+  <!-- PWA (optional) -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="VPQ" />
+
+  <!-- CSP (Babel-in-browser demo) -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' https:;
+                 script-src 'self' https://unpkg.com https://cdn.tailwindcss.com 'unsafe-eval' 'unsafe-inline' blob:;
+                 style-src 'self' https: 'unsafe-inline';
+                 img-src 'self' https: data:;
+                 font-src 'self' https: data:;
+                 connect-src 'self' https:;
+                 base-uri 'self'; frame-ancestors 'self'; form-action 'self'">
+
   <!-- Base styles -->
   <style>
-    :root {
-      --bg: #f3f4f6;
-      --card: #ffffff;
-      --ink-900: #111827;
-      --ink-800: #1f2937;
-      --ink-700: #374151;
-      --ink-600: #4b5563;
-      --ink-500: #6b7280;
-      --shadow: 0 10px 20px rgba(0,0,0,0.08);
-      --accent: #6d28d9; /* theme accent */
-    }
-    :root.dark {
-      --bg: #0b1020;
-      --card: #0f172a;
-      --ink-900: #e5e7eb;
-      --ink-800: #e2e8f0;
-      --ink-700: #cbd5e1;
-      --ink-600: #94a3b8;
-      --ink-500: #64748b;
-      --shadow: 0 12px 24px rgba(0,0,0,0.35);
-    }
-    /* NEW: dark-aware subtle surfaces & lines */
     :root{
-      --surface-subtle: rgba(0,0,0,.04);   /* soft panel headers, subtle fills */
-      --hairline:       rgba(0,0,0,.12);   /* borders, dividers */
-      --gridline:       rgba(0,0,0,.20);   /* SVG guidelines */
+      --bg:#f6f7fb; --card:#fff;
+      --ink-900:#0b1220; --ink-800:#1f2937; --ink-700:#374151; --ink-600:#6b7280; --ink-500:#8b94a6;
+      --accent:#6d28d9;
+      --shadow:0 8px 20px rgba(0,0,0,.08);
+      --surface-subtle: rgba(0,0,0,.04);
+      --hairline: rgba(0,0,0,.12);
+      --gridline: rgba(0,0,0,.20);
     }
-    :root.dark {
+    :root.dark{
+      --bg:#0b1020; --card:#0f172a;
+      --ink-900:#e5e7eb; --ink-800:#e2e8f0; --ink-700:#cbd5e1; --ink-600:#94a3b8; --ink-500:#7c8aa0;
+      --shadow:0 14px 28px rgba(0,0,0,.34);
       --surface-subtle: rgba(255,255,255,.06);
-      --hairline:       rgba(255,255,255,.14);
-      --gridline:       rgba(255,255,255,.16);
+      --hairline: rgba(255,255,255,.14);
+      --gridline: rgba(255,255,255,.16);
     }
-    /* Make Tailwind's generic borders readable in dark */
-    .dark .border, .dark .border-2 { border-color: var(--hairline) !important; }
-    html, body { height:100%; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--ink-900);
-      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink-900);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      padding-bottom: env(safe-area-inset-bottom);
     }
-    .card { background: var(--card); box-shadow: var(--shadow); }
-    .muted { color: var(--ink-600); }
-    .ink700 { color: var(--ink-700); }
-    .ink800 { color: var(--ink-800); }
-    .linkish { text-decoration: underline; cursor: pointer; }
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999; }
-    .modal { width:min(680px, 92vw); }
-    .pill { border-radius: 9999px; padding: 4px 10px; display:inline-block; font-size:12px; }
-    .badge { background:var(--accent); color:white; border-radius:9999px; padding:.25rem .6rem; font-weight:700; font-size:12px; }
-    .help-dot { width: 22px; height: 22px; border-radius: 9999px; display:inline-flex; align-items:center; justify-content:center; background: var(--surface-subtle); color:var(--accent); font-weight:700; }
-    .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 9998; }
-    .btn {
-      display:inline-flex; align-items:center; justify-content:center;
-      padding: .75rem 1.25rem; border-radius: 9999px; color:white; font-weight:700;
-      transition: transform .08s ease;
-    }
-    .btn:active { transform: scale(.98); }
-    .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-    .btn-purple { background:var(--accent); }
-    .btn-blue { background:#2563eb; }
-    .btn-green { background:#059669; }
-    .btn-gray { background:#4b5563; }
-    .btn-rose { background:#e11d48; }
-    .btn-amber { background:#d97706; }
-    .grid-cards { display:grid; gap: 24px; grid-template-columns: repeat(1, minmax(0,1fr)); }
-    @media(min-width:640px){ .grid-cards{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    @media(min-width:1024px){ .grid-cards{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    .card{background:var(--card); box-shadow:var(--shadow)}
+    .muted{color:var(--ink-600)}
+    .ink700{color:var(--ink-700)}
+    .ink800{color:var(--ink-800)}
+    .sr-only{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+    *,*::before,*::after{box-sizing:border-box}
 
-    /* micro-animations for answers */
-    @keyframes pulseCorrect { from{transform:scale(1)} 50%{transform:scale(1.03)} to{transform:scale(1)} }
-    @keyframes pulseWrong   { from{transform:scale(1)} 50%{transform:scale(0.97)} to{transform:scale(1)} }
-    .btn-hit.ok   { animation:pulseCorrect .25s ease; box-shadow:0 0 0 3px rgba(16,185,129,.25); }
-    .btn-hit.miss { animation:pulseWrong   .25s ease; box-shadow:0 0 0 3px rgba(239,68,68,.25); }
+    /* ============== Heatmap (mobile readable) ============== */
+    :root{ --posw:clamp(160px,46%,220px) }
+    .fb-strip{display:flex; gap:10px; overflow:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; padding-bottom:6px}
+    .fb-pos{flex:0 0 var(--posw); min-width:var(--posw); scroll-snap-align:start; border:1px solid var(--hairline); border-radius:10px; position:relative}
+    .pos-chip{position:absolute; top:6px; left:6px; font-size:11px; font-weight:700; background:var(--surface-subtle); border:1px solid var(--hairline);
+      color:var(--ink-800); padding:2px 6px; border-radius:6px}
+    .fb-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:28px 8px 10px}
+    .fb-colhdr{grid-column:1/-1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; font-size:11px; color:var(--ink-600); margin-bottom:4px}
+    .fb-tile{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; line-height:1.1;
+      aspect-ratio:1/1.08; padding:6px 4px}
+    .fb-pct{font-weight:800}
+    .fb-band{position:absolute; left:6px; right:6px; height:6px; border-radius:6px}
+    .acc{bottom:16px} .lb{bottom:6px}
+    .lowdot{position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:9999px; background:#9ca3af}
 
-    @media (prefers-reduced-motion: reduce) {
-      * { animation: none !important; transition: none !important; }
-    }
+    /* Buttons */
+    .btn{display:inline-flex; align-items:center; justify-content:center; min-height:44px; min-width:44px;
+         padding:.72rem 1.1rem; border-radius:9999px; color:#fff; font-weight:700; transition:transform .08s ease}
+    .btn:active{transform:scale(.98)}
+    .btn:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+    .btn-purple{background:var(--accent)}
+    .btn-blue{background:#2563eb}
+    .btn-green{background:#059669}
+    .btn-gray{background:#4b5563}
+    .btn-rose{background:#e11d48}
+    .btn-amber{background:#d97706}
 
-    /* A11y live region */
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
-    *, *::before, *::after { box-sizing: border-box; }
+    /* Help affordance */
+    .help-dot{width:44px; height:44px; border-radius:9999px; display:inline-flex; align-items:center; justify-content:center;
+      background:var(--surface-subtle); color:var(--accent); font-weight:800; border:1px solid var(--hairline);}
 
-    /* ---- Fingerboard heatmap layout (fixed overlap) ---- */
-    :root{
-      --posw: clamp(160px, 45%, 220px);
-    }
-    .fb-strip{
-      display:flex;
-      gap:12px;
-      overflow-x:auto;
-      -webkit-overflow-scrolling:touch;
-      padding-bottom:6px;
-      scroll-snap-type:x mandatory;
-    }
-    .fb-grid{
-      display:grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap:6px;
-    }
-    /* Make the grid clear space for the chip automatically */
-    .fb-pos .fb-grid{ 
-      padding-top: calc(8px + var(--pos-chip-clear)); /* 8px comes from your p-2 */
-    }
-    .fb-tile{
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      line-height: 1.1;
-      aspect-ratio: 1 / 1.15;
-      padding: 6px 4px;
-      min-width: 0;
-    }
-    .fb-band{
-      position: absolute;
-      left: 6px; right: 6px; bottom: 6px;
-      height: 10px; border-radius: 6px;
-    }
-    /* dual bands: top = Accuracy, bottom = Confidence (LB) */
-    .fb-band--acc { bottom: 16px; height: 6px; border-radius: 6px; }
-    .fb-band--lb  { bottom: 6px;  height: 6px; border-radius: 6px; }
-    @media (min-width: 1024px){
-      .fb-strip{
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-        overflow: visible;
-      }
-      .fb-pos{ flex: initial; min-width: 0; }
-    }
-    @supports not (aspect-ratio: 1){
-      .fb-tile { height: 72px; }
-    }
-    @media (min-width: 768px) and (max-width: 1023px){
-      .fb-strip{ flex-wrap: wrap; }
-      .fb-pos{ flex: 1 1 calc(50% - 12px); min-width: 0; }
-    }
+    /* Cards Grid */
+    .grid-cards{display:grid; gap:18px; grid-template-columns:repeat(1,minmax(0,1fr))}
+    @media(min-width:640px){.grid-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(min-width:1024px){.grid-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-    /* Avatar (simple layered SVG) */
-    .avatar { width:56px; height:56px; border-radius:12px; overflow:hidden; border:2px solid rgba(0,0,0,.08); }
-    .avatar-wrap { display:flex; align-items:center; gap:10px; }
-    .avatar-label { font-size:12px; color:var(--ink-600); }
+    /* Sections */
+    .section{position:relative}
+    .section-title{position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg), transparent 0%);
+      padding:.25rem .25rem .5rem .25rem}
+    .section-title .label{display:inline-block; background:var(--surface-subtle); color:var(--ink-800); border:1px solid var(--hairline);
+      border-radius:9999px; padding:.25rem .6rem; font-weight:700; font-size:12px; letter-spacing:.02em}
+
+    /* Toast */
+    .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(18px + env(safe-area-inset-bottom)); z-index:9999}
 
     /* XP bar */
-    .xpbar { height:10px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden; }
-    .xpbar-fill { height:100%; background:var(--accent); }
-    
-    .fb-pos{
-      flex: 0 0 var(--posw);
-      min-width: var(--posw);
-      scroll-snap-align: start;
-      overflow:hidden;
-      position: relative;          /* ensure chip positions correctly */
-      --pos-chip-clear: 18px;      /* reserved space for the Pos chip */
-    }
-    .pos-chip{
-      position:absolute; top:6px; left:6px;
-      padding:2px 6px; border-radius:6px; font-size:11px; font-weight:600;
-      background: var(--surface-subtle);
-      color: var(--ink-800);
-      border: 1px solid var(--hairline);
-    }
+    .xpbar{height:14px; border-radius:9999px; background:rgba(0,0,0,.1); overflow:hidden}
+    .xpbar>div{height:100%; background:var(--accent)}
+
+    /* Chevron */
+    .chev{position:absolute; right:14px; bottom:14px; font-size:28px; line-height:1; opacity:.8}
+
+    /* Bottom Tabs */
+    .tabs{position:sticky; bottom:0; left:0; right:0; padding:.25rem .5rem calc(.5rem + env(safe-area-inset-bottom)); background:var(--card);
+      border-top:1px solid var(--hairline); display:flex; gap:8px; justify-content:space-around; z-index:40}
+    .tab{flex:1 1 25%; display:flex; flex-direction:column; align-items:center; gap:4px; padding:.4rem .3rem; border-radius:10px; min-height:44px}
+    .tab[aria-selected="true"]{background:var(--surface-subtle); font-weight:700}
+
+    /* Small chips focus */
+    .chip:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+    .lead-ico{font-size:18px; margin-right:8px}
   </style>
 
-  <!-- Put this as the very first <script> in <head> -->
-  <!-- Theme boot (first script in <head>) -->
+  <!-- Dark-mode boot -->
   <script>
-    (function () {
-      try {
-        var key = 'vpq.theme.v1';
-        var stored = localStorage.getItem(key);
-        var preferDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var mode = (stored || (preferDark ? 'dark' : 'light'));
-        document.documentElement.classList.toggle('dark', mode === 'dark');
-        document.documentElement.style.colorScheme = mode;
-        // set body class as soon as it exists
-        document.addEventListener('DOMContentLoaded', function () {
-          document.body.classList.toggle('dark', mode === 'dark');
-        });
-      } catch (e) {}
+    (function(){
+      try{
+        const KEY='vpq.theme.v1';
+        const saved=localStorage.getItem(KEY);
+        const sys=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+        const mode=saved||sys;
+        document.documentElement.classList.toggle('dark', mode==='dark');
+        document.documentElement.style.colorScheme=mode;
+        addEventListener('DOMContentLoaded', ()=>document.body.classList.toggle('dark', mode==='dark'));
+      }catch(e){}
     })();
   </script>
 
-  <script>
-  if (!Object.fromEntries) {
-    Object.fromEntries = function(iter) {
-      var obj = {};
-      for (const [k, v] of iter) obj[k] = v;
-      return obj;
-    };
-  }
-  </script>
-
-  <!-- Put these BEFORE your <script type="text/babel">, and do NOT defer Babel -->
+  <!-- React 18 + Babel -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Tailwind (utility helpers only) -->
-  <script>
-    window.tailwind = window.tailwind || {};
-    tailwind.config = { darkMode:'class', theme:{ extend:{ fontFamily:{ inter:['Inter','ui-sans-serif','system-ui'] }}}};
-  </script>
+  <!-- Tailwind (utilities only) -->
+  <script>window.tailwind={config:{darkMode:'class'}};</script>
   <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
-
-  <!-- Service worker (optional) -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
-      });
-    }
-  </script>
 </head>
 <body>
   <div id="root"></div>
-  <!-- A11y live region -->
-  <div id="sr" role="status" aria-live="polite" tabindex="-1" class="sr-only"></div>
+  <div id="sr" class="sr-only" role="status" aria-live="polite" tabindex="-1"></div>
 
-  <!-- App -->
-  <script type="text/babel" data-presets="react,env">
-    const { useState, useEffect, useMemo, useRef } = React;
+  <!-- APP -->
+  <script type="text/babel" data-presets="env,react">
+    const {useState,useEffect,useMemo,useRef} = React;
 
-    /* =========================================================
-       Storage keys
-    ========================================================== */
-    const THEME_KEY = 'vpq.theme.v1';                   // light | dark
-    const THEME_ACCENT_KEY = 'vpq.themeAccent.v1';      // symphony | rockstar | fantasy | lofi
-    const BEST_KEY = 'positionsQuest.speed.best';
-    const STATS_KEY = 'positionsQuest.speed.stats';
-    const PREFS_KEY = 'positionsQuest.prefs';
-    const PRESETS_KEY = 'positionsQuest.filterPresets.v1';
-    const SESSIONLOG_KEY = 'positionsQuest.sessions.v1';
-    const SCORE_KEY = 'positions.scoreboard.v1';
-    const BADGES_KEY = 'positions.badges.v1';
-    const STREAK_KEY = 'positions.streak.v1';
-    const COSMETICS_KEY = 'positions.cosmetics.v1';
-    const SM2_KEY = 'sm2.v1';
+    /* ================= Keys & constants ================= */
+    const THEME_KEY='vpq.theme.v1';
+    const PREFS_KEY='positionsQuest.prefs';
+    const STATS_KEY='positionsQuest.speed.stats';
+    const SCORE_KEY='positions.scoreboard.v1';
+    const SESSIONLOG_KEY='positionsQuest.sessions.v1';
+    const TEMPO_STATS_KEY='positionsQuest.tempo.stats.v1';
+    const TEMPO_BEST_KEY ='positionsQuest.tempo.best.v1';
+    const HEIGHT_STATS_KEY='positionsQuest.height.stats.v1';
+    const LOCATOR_STATS_KEY='positionsQuest.locator.stats.v1';
+    const SHIFT_STATS_KEY='positionsQuest.shift.stats.v1';
+    const HARM_STATS_KEY='positionsQuest.harmonics.stats.v1';
+    const SNAPSHOT_STATS_KEY='positionsQuest.snapshot.stats.v1';
+    const INTERVAL_STATS_KEY='positionsQuest.interval.stats.v1';
+    const LAST_MODE_KEY='positionsQuest.lastMode.v1';
 
-    const SEYBOLD_KEY = 'seybold.hub.v1';
-    const TEMPO_STATS_KEY = 'positionsQuest.tempo.stats.v1';
-    const TEMPO_BEST_KEY  = 'positionsQuest.tempo.best.v1';
+    const STRINGS=['G','D','A','E'];                // canonical order
+    const DISPLAY_STRINGS=['E','A','D','G'];        // for mobile heatmap
+    const POSITIONS=[1,2,3,4,5];
+    const FINGERS=[1,2,3,4];
 
-    // NEW stats keys for added modes
-    const HEIGHT_STATS_KEY  = 'positionsQuest.height.stats.v1';
-    const LOCATOR_STATS_KEY = 'positionsQuest.locator.stats.v1';
-    const SHIFT_STATS_KEY   = 'positionsQuest.shift.stats.v1';
-    const HARM_STATS_KEY    = 'positionsQuest.harmonics.stats.v1';
-    const SNAPSHOT_STATS_KEY  = 'positionsQuest.snapshot.stats.v1';
-    const INTERVAL_STATS_KEY = 'positionsQuest.interval.stats.v1';
-
-    /* =========================================================
-       Theme
-    ========================================================== */
-    const getTheme = () => {
-      try {
-        const saved = localStorage.getItem(THEME_KEY);
-        if (saved) return saved;
-      } catch {}
-      const preferDark = window.matchMedia &&
-                         matchMedia('(prefers-color-scheme: dark)').matches;
-      return preferDark ? 'dark' : 'light';
-    };
-    const setTheme = (t) => {
-      localStorage.setItem(THEME_KEY, t);
-      const on = t === 'dark';
-      document.documentElement.classList.toggle('dark', on);
-      document.body.classList.toggle('dark', on);
-    };
-    const ThemeToggle = () => {
-      const [mode, setMode] = React.useState(getTheme());
-      React.useEffect(() => setTheme(mode), [mode]);
-      return (
-        <button className="btn btn-gray"
-                aria-label="Toggle color scheme"
-                onClick={() => setMode(m => (m === 'dark' ? 'light' : 'dark'))}>
-          {mode === 'dark' ? '☀️ Light' : '🌙 Dark'}
-        </button>
-      );
-    };
-    const THEMES = {
-      symphony: { '--accent':'#6d28d9' },
-      rockstar: { '--accent':'#e11d48' },
-      fantasy:  { '--accent':'#22d3ee' },
-      lofi:     { '--accent':'#10b981' }
-    };
-    const getAccent = () => localStorage.getItem(THEME_ACCENT_KEY) || 'symphony';
-    const applyAccent = (name) => {
-      const t = THEMES[name] || THEMES.symphony;
-      Object.entries(t).forEach(([k,v])=>document.documentElement.style.setProperty(k, v));
-      localStorage.setItem(THEME_ACCENT_KEY, name);
-    };
-    applyAccent(getAccent());
-
-    /* =========================================================
-       Utilities
-    ========================================================== */
-    const shuffle = (arr) => { const a = [...arr]; for (let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
-    const getRandomItem = (arr) => arr[Math.floor(Math.random()*arr.length)];
-    const nowISO = () => new Date().toISOString();
-
-    // ASCII accidental normalizer for display (used by `norm`)
-    const ASCII_NORM = {
-      'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb','F♭':'Fb',
-      'C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#','E♯':'E#','B♯':'B#'
-    };
-    const norm = n => ASCII_NORM[n] || n;
-    
-    // Normalize Unicode accidentals to ASCII and map all common enharmonics to pitch classes.
-    const NORM = {
-      'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb','F♭':'Fb',
-      'C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#','E♯':'E#','B♯':'B#'
-    };
-    const PC = {
-      C:0,'B#':0,'C#':1,Db:1, D:2,'D#':3,Eb:3, E:4,Fb:4, F:5,'E#':5,
-      'F#':6,Gb:6, G:7,'G#':8,Ab:8, A:9,'A#':10,Bb:10, B:11,Cb:11
-    };
-    const pc = (n) => {
-      const k = NORM[n] || n;
-      const v = PC[k];
-      if (v === undefined) throw new Error(`Unknown note: ${String(n)}`);
-      return v;
-    };
-    
-    // Label helpers
-    const ordinal = n => { const x = Number(n);
-      const suf = (x%10===1 && x%100!==11) ? 'st'
-               : (x%10===2 && x%100!==12) ? 'nd'
-               : (x%10===3 && x%100!==13) ? 'rd' : 'th';
-      return `${x}${suf}`;
-    };
-    const posLabel    = p => `${ordinal(p)} Position`;
-    const fingerLabel = f => `${ordinal(f)} Finger`;
-    const stringLabel = s => `${s} string`;
-    const fullLoc     = (s,p,f,withString=true) =>
-      withString ? `${posLabel(p)}, ${fingerLabel(f)} on the ${stringLabel(s)}`
-                 : `${posLabel(p)}, ${fingerLabel(f)}`;
-
-    /* =========================================================
-       Core enums (MUST be defined before use)
-    ========================================================== */
-    const STRINGS   = ['G','D','A','E'];
-    const POSITIONS = [1,2,3,4,5];
-    const FINGERS   = [1,2,3,4];
-
-    // Defaults: everything ON at first load
     const defaultFilters = {
-      strings:  Object.fromEntries(STRINGS.map(s => [s, true])),
-      positions:Object.fromEntries(POSITIONS.map(p => [p, true])),
-      fingers:  Object.fromEntries(FINGERS.map(f => [f, true])),
+      strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
+      positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
+      fingers:Object.fromEntries(FINGERS.map(f=>[f,true]))
     };
 
-    /* =========================================================
-       Fingerboard Data — generated from semitone math
-       (replaces the hand-typed NOTES_DATA object)
-    ========================================================== */
-    
-    // 0=C ... 11=B; include both spellings where they exist
+    /* ================= Utilities & storage ================= */
+    const loadJSON=(k,fb={})=>{try{return JSON.parse(localStorage.getItem(k))??fb}catch{return fb}};
+    const saveJSON=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+    const nowISO=()=>new Date().toISOString();
+    const shuffle=arr=>{const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+    const getRandom=i=>i[Math.floor(Math.random()*i.length)];
+    const ordinal=n=>{const x=+n;const s=(x%10===1&&x%100!==11)?'st':(x%10===2&&x%100!==12)?'nd':(x%10===3&&x%100!==13)?'rd':'th';return `${x}${s}`};
+    const posLabel=p=>`${ordinal(p)} Position`, fingerLabel=f=>`${ordinal(f)} Finger`, stringLabel=s=>`${s} string`;
+    const fullLoc=(s,p,f,withString=true)=>withString?`${posLabel(p)}, ${fingerLabel(f)} on the ${stringLabel(s)}`:`${posLabel(p)}, ${fingerLabel(f)}`;
+
+    /* ================= Notes model (computed) ================= */
     const SEMI_TO_NAMES = {
-      0:['C'],  1:['C#','Db'], 2:['D'], 3:['D#','Eb'],
-      4:['E'],  5:['F'],       6:['F#','Gb'], 7:['G'],
-      8:['G#','Ab'], 9:['A'], 10:['A#','Bb'], 11:['B']
+      0:['C'],1:['C#','Db'],2:['D'],3:['D#','Eb'],4:['E'],5:['F'],
+      6:['F#','Gb'],7:['G'],8:['G#','Ab'],9:['A'],10:['A#','Bb'],11:['B']
     };
-    
-    // open-string pitch classes (C=0) for G D A E
-    const OPEN_PC = { G:7, D:2, A:9, E:4 };
-    
-    // within each position, the “base” (natural) offsets for fingers 1–4
-    const BASE_OFF = { 1:2, 2:4, 3:5, 4:7 };
-    
-    // Canonical, flat-leaning spellings for reading practice
-    const CANON_PC_NAME = {  // 0..11
-      0:'C', 1:'Db', 2:'D', 3:'Eb', 4:'E', 5:'F', 6:'F#', 7:'G', 8:'Ab', 9:'A', 10:'Bb', 11:'B'
-    };
-    
-    // position offsets measured in semitones from 1st position
-    const POS_SHIFT = {1:0, 2:2, 3:3, 4:5, 5:7};           // keep object for existing calls
-    
-    const wrap12 = n => ((n % 12) + 12) % 12;
-    const names   = k => SEMI_TO_NAMES[wrap12(k)];
-    const flatFirst  = a => (a.length===2 ? [a[1], a[0]] : a);  // e.g. ['Db','C#']
-    const sharpFirst = a => (a.length===2 ? [a[0], a[1]] : a);  // e.g. ['C#','Db']
-    
-    function buildNotesData() {
-      const data = {};
-      for (const s of STRINGS) {
-        data[s] = {};
-        for (let p = 1; p <= 5; p++) {
-          data[s][p] = {};
-          for (const f of FINGERS) {
+    const NORMALIZE={'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb','F♭':'Fb','C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#','E♯':'E#','B♯':'B#'};
+    const PC={C:0,'B#':0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,Fb:4,F:5,'E#':5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11,Cb:11};
+    const CANON_PC_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
+    const pc=n=>{const k=NORMALIZE[n]||n; const v=PC[k]; if(v===undefined) throw new Error('note'); return v};
+    const wrap12=n=>((n%12)+12)%12;
+    const names   = k=>SEMI_TO_NAMES[wrap12(k)];
+    const flatFirst=a=>a.length===2?[a[1],a[0]]:a;
+    const sharpFirst=a=>a.length===2?[a[0],a[1]]:a;
+    const OPEN_PC={G:7,D:2,A:9,E:4};
+    const BASE_OFF={1:2,2:4,3:5,4:7};
+    const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
+
+    function buildNotes(){
+      const out={};
+      for(const s of STRINGS){
+        out[s]={};
+        for(let p=1;p<=5;p++){
+          out[s][p]={};
+          for(const f of FINGERS){
             const basePC = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-            if (f === 1 || f === 2) {
-              // low (flat) + base
-              data[s][p][f] = [...flatFirst(names(basePC-1)), ...names(basePC)];
-            } else if (f === 3) {
-              // base + high (sharp)
-              data[s][p][3] = [...names(basePC), ...sharpFirst(names(basePC+1))];
-            } else { // finger 4 varies by position per posters
-              if (p === 1) {
-                data[s][p][4] = [...names(basePC)];                       // natural only
-              } else if (p === 2) {
-                data[s][p][4] = [...flatFirst(names(basePC-1)), ...names(basePC)]; // low-4
-              } else {
-                data[s][p][4] = [...names(basePC), ...sharpFirst(names(basePC+1))]; // high-4
-              }
+            if(f===1||f===2) out[s][p][f]=[...flatFirst(names(basePC-1)),...names(basePC)];
+            else if(f===3)   out[s][p][3]=[...names(basePC),...sharpFirst(names(basePC+1))];
+            else {
+              if(p===1)      out[s][p][4]=[...names(basePC)];
+              else if(p===2) out[s][p][4]=[...flatFirst(names(basePC-1)),...names(basePC)];
+              else           out[s][p][4]=[...names(basePC),...sharpFirst(names(basePC+1))];
             }
           }
         }
       }
-      return data;
+      return out;
     }
-    
-    const NOTES_DATA = buildNotesData();
-    
-    // ---- Base-only helpers (natural/base note for each cell) ----
-    const baseNamesFor = (s,p,f) => {
-      const pc0 = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-      return names(pc0); // may return one or two spellings (e.g., ['C#','Db'])
-    };
-    
-    // Unique canonical base-note pool for Core distractors
-    const ALL_BASE_CANON = (() => {
-      const set = new Set();
-      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
-        baseNamesFor(s,p,f).forEach(n => set.add(CANON_PC_NAME[pc(n)]));
-      })));
-      return [...set];  // 12 names
-    })();
-    
-    const ALL_BASE_UNIQUE = (() => {
-      const set = new Set();
-      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
-        baseNamesFor(s,p,f).forEach(n => set.add(n));
-      })));
-      return [...set];
-    })();
-    
-    function getDistractorsFromPool(correct, pool, forbidPCs = [], count = 3){
-      const banned = new Set([pc(correct), ...forbidPCs]);
-      const picks = [];
-      const seen = new Set();
-      const filtered = pool.filter(n => !banned.has(pc(n)));
-      while (picks.length < Math.min(count, filtered.length)) {
-        const cand = getRandomItem(filtered);
-        const cls = pc(cand);
-        if (!seen.has(cls)) { seen.add(cls); picks.push(cand); }
-      }
-      return picks;
-    }
-    
-    // Quick data sanity check against a few poster anchor points
-    (function selfTest(){
-      const MUST = {
-        'G:1:1':'A','G:1:2':'B','G:1:3':'C','G:1:4':'D',
-        'D:1:1':'E','D:1:2':'F#','D:1:3':'G','D:1:4':'A',
-        'A:1:1':'B','A:1:2':'C#','A:1:3':'D','A:1:4':'E',
-        'E:1:1':'F#','E:1:2':'G#','E:1:3':'A','E:1:4':'B',
-        // spot checks in higher positions that often get mistyped:
-        'G:2:2':'C#', 'G:2:3':'D',
-        'G:3:4':'F',          // fixed
-        'A:4:1':'E',          // fixed
-        'E:3:4':'D',          // new guard
-        'G:3:1':'C'           // new guard
-      };
-      const ASCII = {'A♭':'Ab','B♭':'Bb','E♭':'Eb','D♭':'Db','G♭':'Gb','C♭':'Cb',
-                     'C♯':'C#','D♯':'D#','F♯':'F#','G♯':'G#','A♯':'A#'};
-      const bad=[];
-      for (const k in MUST){
-        const [s,p,f]=k.split(':');
-        const cell = (NOTES_DATA[s] && NOTES_DATA[s][p] && NOTES_DATA[s][p][f]) || [];
-        const ascii = cell.map(n=>ASCII[n]||n);
-        if (!ascii.includes(MUST[k])) bad.push(`${k} expected ${MUST[k]} got [${ascii.join(', ')}]`);
-      }
-      if (bad.length) console.warn('Fingerboard data mismatches:', bad);
-      else console.info('Fingerboard data ✓ matches poster spec.');
-    })();
+    const NOTES_DATA=buildNotes();
+    const validCell=(s,p,f)=>Array.isArray(NOTES_DATA[s]?.[p]?.[f])?NOTES_DATA[s][p][f]:null;
+    const baseNamesFor=(s,p,f)=>{const k=OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f]; return names(k)};
+    const allCombos=()=>{const arr=[]; for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){const cell=validCell(s,p,f); if(cell) arr.push({s,p,f,valid:cell})} return arr};
+    const ALL_NOTES_UNIQUE=(()=>{const set=new Set(); for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){(validCell(s,p,f)||[]).forEach(n=>set.add(n))} return [...set]})();
+    const ALL_BASE_CANON=(()=>{const set=new Set(); for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){baseNamesFor(s,p,f).forEach(n=>set.add(CANON_PC_NAME[pc(n)]))} return [...set]})();
+    const hasPitch=(cell,n)=>Array.isArray(cell)&&cell.some(x=>pc(x)===pc(n));
+    const allLocationsForNote=note=>{const spots=[]; for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){const c=validCell(s,p,f); if(hasPitch(c,note)) spots.push({s,p,f})} return spots};
+    const norm=n=>NORMALIZE[n]||n;
 
-    // Low/High helper
-    function fingerHeight(note, options){
-      if (!Array.isArray(options) || options.length <= 1) return 'natural';
-      const low  = options[0];
-      const high = options[options.length - 1];
-      const k = pc(note);
-      if (k === pc(low))  return 'low';
-      if (k === pc(high)) return 'high';
-      return 'natural';
-    }
+    /* ================= Stats helpers & evidence bands ================= */
+    const wilsonLB=(correct,total,z=1.96)=>{if(!total) return 0; const p=correct/total; const denom=1+z*z/total; const centre=p+z*z/(2*total);
+      const adj=z*Math.sqrt((p*(1-p)+z*z/(4*total))/total); return Math.max(0,(centre-adj)/denom)};
+    const band=(x)=>x<.65?'red':x<.85?'yellow':'green';
+    const SWATCH={red:[239,68,68],yellow:[245,158,11],green:[16,185,129],gray:[120,120,120]};
+    const RGBA=(r,a)=>`rgba(${r[0]},${r[1]},${r[2]},${a})`;
+    const stability=(n)=>{if(!n) return .18; const t=Math.min(1, Math.log10(n+1)/Math.log10(50)); return .35+.65*t};
 
-    // Simple harmonics set per string
-    const HARMONICS = {
-      G: { '1/2':['G','octave'], '1/3':['D','oct+5th'], '1/4':['G','2 oct'] },
-      D: { '1/2':['D','octave'], '1/3':['A','oct+5th'], '1/4':['D','2 oct'] },
-      A: { '1/2':['A','octave'], '1/3':['E','oct+5th'], '1/4':['A','2 oct'] },
-      E: { '1/2':['E','octave'], '1/3':['B','oct+5th'], '1/4':['E','2 oct'] },
-    };
-
-    // Unique note list
-    const ALL_NOTES_UNIQUE = (() => {
-      const set = new Set();
-      STRINGS.forEach(s => POSITIONS.forEach(p => FINGERS.forEach(f => {
-        const cell = NOTES_DATA[s]?.[p]?.[f];
-        if (Array.isArray(cell)) cell.forEach(n => set.add(n));
-      })));
-      return [...set];
-    })();
-
-    /* =========================================================
-       Prefs & persistence
-    ========================================================== */
-    const loadPrefs = () => {
-      try {
-        const p = JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
-        return {
-          // sensible defaults
-          sound: true,
-          confetti: true,
-          adaptive: true,
-          coach: true,
-          coachRetry: true,
-          callouts: true,
-          roundLen: 120,
-          goalEnabled: false,
-          goalTarget: 10,
-          // filters: start “all on”, then overlay any saved overrides
-          filters: { ...defaultFilters, ...(p.filters || {}) },
-          // finally overlay any other saved prefs
-          ...p
-        };
-      } catch {
-        return {
-          sound: true,
-          confetti: true,
-          adaptive: true,
-          coach: true,
-          coachRetry: true,
-          callouts: true,
-          roundLen: 120,
-          goalEnabled: false,
-          goalTarget: 10,
-          filters: defaultFilters
-        };
-      }
-    };
-    const savePrefs = (obj) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(obj)); } catch {} };
-    const loadBest = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
-    const saveBest = (obj) => { try { localStorage.setItem(BEST_KEY, JSON.stringify(obj)); } catch {} };
-    const loadStats = () => { try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; } catch { return {}; } };
-    const saveStats = (obj) => { try { localStorage.setItem(STATS_KEY, JSON.stringify(obj)); } catch {} };
-    const loadTempoStats = () => { try { return JSON.parse(localStorage.getItem(TEMPO_STATS_KEY)) || {}; } catch { return {}; } };
-    const saveTempoStats = (obj) => { try { localStorage.setItem(TEMPO_STATS_KEY, JSON.stringify(obj)); } catch {} };
-    const loadTempoBest = () => { try { return JSON.parse(localStorage.getItem(TEMPO_BEST_KEY)) || { bestScore:0, bestStreak:0 }; } catch { return { bestScore:0, bestStreak:0 }; } };
-    const saveTempoBest = (obj) => { try { localStorage.setItem(TEMPO_BEST_KEY, JSON.stringify(obj)); } catch {} };
-    const loadJSON = (k, fallback={}) => { try { return JSON.parse(localStorage.getItem(k)) || fallback; } catch { return fallback; } };
-    const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-
-    /* =========================================================
-       Audio & call-outs
-    ========================================================== */
-    const useBeeps = (enabled) => {
-      const ctxRef = useRef(null);
-      const ensureCtx = () => {
-        if (!enabled) return null;
-        if (!ctxRef.current) ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        return ctxRef.current;
-      };
-      const beep = (freq = 880, dur = 0.08, type = 'sine') => {
-        const ctx = ensureCtx(); if (!ctx) return;
-        const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.type = type; o.frequency.value = freq; g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination);
-        o.start(); setTimeout(()=>o.stop(), dur*1000);
-      };
-      return { good: () => beep(1046, 0.09, 'triangle'), bad: () => beep(196, 0.12, 'sawtooth') };
-    };
-    const useCallouts = (enabled) => {
-      const speak = (text) => {
-        if (!enabled || !window.speechSynthesis) return;
-        try {
-          const u = new SpeechSynthesisUtterance(text);
-          u.lang='en-US'; u.rate=1.0;
-          window.speechSynthesis.cancel();
-          setTimeout(()=>window.speechSynthesis.speak(u), 0);
-        } catch {}
-      };
-      return { speak };
-    };
-
-    /* =========================================================
-       Evidence-based & visuals helpers
-    ========================================================== */
-    const wilsonLowerBound = (correct, total, z = 1.96) => {
-      if (!total) return 0;
-      const p = correct / total;
-      const denom = 1 + (z*z)/total;
-      const centre = p + (z*z)/(2*total);
-      const adj = z * Math.sqrt((p*(1-p) + (z*z)/(4*total)) / total);
-      return Math.max(0, (centre - adj) / denom);
-    };
-    const bandFromLB = (lb, total) => {
-      if (total < 3) return 'gray';      // or keep your original alpha but gray the band
-      if (lb < 0.65) return 'red';
-      if (lb < 0.85) return 'yellow';
-      return 'green';
-    };
-    const bandFromAcc = (acc) => {
-      if (acc < 0.65) return 'red';
-      if (acc < 0.85) return 'yellow';
-      return 'green';
-    }; 
-    const SWATCH = { red:[239,68,68], yellow:[245,158,11], green:[16,185,129], gray:[120,120,120] };
-    const rgba = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
-    const stabilityAlpha = (n) => { if (!n) return 0.18; const t = Math.min(1, Math.log10(n + 1) / Math.log10(50)); return 0.35 + 0.65 * t; };
-    const evidenceStyle = (st) => {
-      const correct = st?.correct || 0, total = st?.total || 0;
-      if (!total) {
-        return {
-          // unchanged empty-state styling
-          bandColorLB:  rgba(SWATCH.gray, 0.45),
-          bandColorAcc: rgba(SWATCH.gray, 0.45),
-          bg: 'transparent',
-          text: 'var(--ink-600)',
-          lb: 0,
-          acc: 0,
-          total: 0,
-          bandLB: 'gray',
-          bandAcc: 'gray'
-        };
-      }
-      const acc = correct / total;                 // raw accuracy
-      const lb  = wilsonLowerBound(correct, total);
-      const bandLB  = bandFromLB(lb, total);
-      const bandAcc = bandFromAcc(acc);
-      const alpha   = stabilityAlpha(total);       // opacity grows with attempts
-    
+    const evidenceStyle=(st)=>{
+      const c=st?.correct||0, t=st?.total||0; if(!t) return {acc:0, lb:0, total:0, accColor:RGBA(SWATCH.gray,.35), lbColor:RGBA(SWATCH.gray,.35), dot:true};
+      const acc=c/t, lb=wilsonLB(c,t);
+      const a=stability(t);
       return {
-        bandColorLB:  rgba(SWATCH[bandLB],  alpha),
-        bandColorAcc: rgba(SWATCH[bandAcc], alpha),
-        bg: 'transparent',
-        text: 'var(--ink-800)',
-        lb, acc, total,
-        bandLB, bandAcc
+        acc, lb, total:t, dot: t<3,
+        accColor: RGBA(SWATCH[band(acc)], a),
+        lbColor:  RGBA(SWATCH[band(lb)],  a)
       };
     };
 
-    /* =========================================================
-       XP, Streaks, Levels, Badges (Gamification Core)
-    ========================================================== */
-    const BASE_XP = 10;
-    const streakMultiplier = (streak) => Math.min(2.0, 1 + Math.floor(streak/5)*0.2);
-    const xpForEvent = ({type='normal', streak=0}) => {
-      const base = (type==='review'?5 : type==='retry'?1 : BASE_XP);
-      return Math.round(base * streakMultiplier(streak));
-    };
-    const levelForXP = (xp)=> Math.floor(Math.pow(xp/120, 0.75))+1;  // fast early levels
-    const nextLevelXP = (lvl)=> Math.round(120*Math.pow(lvl, 1.33));
-
-    const loadScoreboard = () => loadJSON(SCORE_KEY, { xp:0, level:1, next: nextLevelXP(1) });
-    const saveScoreboard = (obj) => saveJSON(SCORE_KEY, obj);
-    const loadStreak = () => loadJSON(STREAK_KEY, { current:0, best:0, lastTimestamp:0 });
-    const saveStreak = (obj) => saveJSON(STREAK_KEY, obj);
-
-    const BADGES = [
-      {slug:'first-100', name:'First 100', test: s => s.totalCorrect >= 100},
-      {slug:'perfect-20', name:'Perfect 20', test: s => s.bestStreak >= 20},
-      {slug:'d-string-ace', name:'Master of D String', test: s => {
-        const keys = Object.keys(s.byCell || {}).filter(k=>k.startsWith('D:'));
-        if (!keys.length) return false;
-        return keys.every(k=> { const t=s.byCell[k]; return (t.total||0)>=10 && (t.correct||0)/(t.total||1) >= 0.9; });
-      }},
-      {slug:'streak-50', name:'Combo 50', test: s => s.bestStreak >= 50},
-    ];
-    const loadBadges = () => loadJSON(BADGES_KEY, { earned:{} });
-    const saveBadges = (b) => saveJSON(BADGES_KEY, b);
-
-    const summarizeStats = (stats) => {
-      let total=0, correct=0; const byCell={};
-      Object.entries(stats||{}).forEach(([k,v])=>{
-        const c=v.correct||0, t=v.total||0; total+=t; correct+=c; byCell[k]={correct:c,total:t};
-      });
-      const bestStreak = Math.max(loadBest().bestStreak||0, (loadStreak().best||0));
-      return { totalAttempts: total, totalCorrect: correct, byCell, bestStreak };
+    /* ================= Gamification (XP / Level) ================= */
+    const levelForXP=x=>Math.floor(Math.pow(x/120,.75))+1;
+    const nextLevelXP=l=>Math.round(120*Math.pow(l,1.33));
+    const xpAdd=({type='normal',streak=0})=>{
+      const base=type==='review'?5:type==='retry'?1:10;
+      const mult=Math.min(2,1+Math.floor(streak/5)*.2);
+      return Math.round(base*mult);
     };
 
-    const checkAwardBadges = () => {
-      const summary = summarizeStats(loadStats());
-      const bag = loadBadges();
-      let changed = false;
-      BADGES.forEach(b=>{
-        if (!bag.earned[b.slug] && b.test(summary)) { bag.earned[b.slug] = nowISO(); changed = true; }
-      });
-      if (changed) saveBadges(bag);
-      return bag;
+    /* ================= Audio & speech ================= */
+    const useBeeps=(enabled)=>{
+      const ctxRef=useRef(null);
+      const ensure=()=>{ if(!enabled) return null; if(!ctxRef.current) ctxRef.current=new (window.AudioContext||window.webkitAudioContext)(); return ctxRef.current; };
+      const beep=(f=880,d=.08,t='sine')=>{const ctx=ensure(); if(!ctx) return; const o=ctx.createOscillator(), g=ctx.createGain(); o.type=t; o.frequency.value=f; g.gain.value=.08; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>o.stop(), d*1000)};
+      return {good:()=>beep(1046,.09,'triangle'), bad:()=>beep(196,.12,'sawtooth')};
     };
+    const speak=(text)=>{ try{ const u=new SpeechSynthesisUtterance(text); u.rate=1; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);}catch(_){} };
 
-    /* =========================================================
-       SM-2 Spaced Repetition (Speed Ladder)
-    ========================================================== */
-    function scheduleSM2(item, quality) { // 0..5
-      const MIN_EASE = 1.3;
-      if (quality < 3) { item.reps = 0; item.interval = 1; item.lapses=(item.lapses||0)+1; }
-      else {
-        item.reps = (item.reps||0) + 1;
-        if (item.reps === 1) item.interval = 1;
-        else if (item.reps === 2) item.interval = 6;
-        else item.interval = Math.round(item.interval * (item.ease||2.5));
-      }
-      item.ease = Math.max(MIN_EASE, (item.ease||2.5) + (0.1 - (5 - quality)*(0.08 + (5 - quality)*0.02)));
-      item.due = Date.now() + item.interval * 86400000;
-      return item;
-    }
-    const sm2Update = (key, quality) => {
-      const sm2 = loadJSON(SM2_KEY, {});
-      const item = sm2[key] || { ease:2.5, interval:0, due:Date.now(), reps:0, lapses:0 };
-      sm2[key] = scheduleSM2(item, quality);
-      saveJSON(SM2_KEY, sm2);
-    };
-    const sm2DueKeys = () => {
-      const sm2 = loadJSON(SM2_KEY, {});
-      const now = Date.now();
-      return Object.entries(sm2).filter(([k,v]) => (v?.due||0) <= now).map(([k])=>k);
-    };
+    /* ================= Persisted prefs ================= */
+    const loadPrefs=()=>{const p=loadJSON(PREFS_KEY,{}); return {sound:true,confetti:true,adaptive:true,coach:true,coachRetry:true,callouts:true,roundLen:120,filters:{...defaultFilters,...(p.filters||{})},...p}};
+    const savePrefs=p=>saveJSON(PREFS_KEY,p);
 
-    /* =========================================================
-       Tiny UI atoms
-    ========================================================== */
-    const Modal = ({ open, onClose, title, children }) => !open ? null : (
-      <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal card rounded-xl p-5" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}>
+    /* ================= UI atoms ================= */
+    const Modal=({open,onClose,title,children})=>!open?null:(
+      <div className="fixed inset-0 z-[100] bg-[rgba(0,0,0,.38)] flex items-center justify-center" onClick={onClose}>
+        <div className="card rounded-xl p-5 w-[min(680px,92vw)]" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}>
           <div className="flex items-center justify-between mb-2">
             <div className="text-lg font-bold">{title}</div>
             <button className="btn btn-gray" onClick={onClose}>Close</button>
           </div>
           <div className="muted text-sm leading-relaxed">{children}</div>
         </div>
-      </div>
-    );
-
-   const CardButton = ({ title, description, onClick, onHelp }) => (
-      <button className="card rounded-xl p-5 relative text-left w-full" onClick={onClick}>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold ink800">{title}</div>
-            <div className="muted text-sm mt-1">{description}</div>
-          </div>
-          <button
-            type="button"
-            className="help-dot"
-            aria-label={`How to play: ${title}`}
-            onClick={(e)=>{ e.stopPropagation(); onHelp(); }}
-          >i</button>
+      </div>);
+    const ActionSheet=({open,onClose,children})=>!open?null:(
+      <div className="fixed inset-0 z-[90] bg-[rgba(0,0,0,.35)]" onClick={onClose}>
+        <div className="card rounded-t-2xl p-4 fixed left-0 right-0 bottom-0" style={{borderTop:'1px solid var(--hairline)'}} onClick={e=>e.stopPropagation()}>
+          {children}
         </div>
-        <span className="absolute right-4 bottom-4 text-2xl" aria-hidden="true">›</span>
-      </button>
-    );
+      </div>);
 
-    const Toast = ({ open, text, action, onAction }) => !open ? null : (
+    // Tappable card
+    const CardButton = ({title,icon,verb='Open',description,onClick,onHelp}) => {
+      const pressRef = React.useRef(null);
+      const onDown = () => { pressRef.current = setTimeout(()=>onHelp?.(), 600); };
+      const onUp   = () => { clearTimeout(pressRef.current); };
+      const onKey  = (e) => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onClick?.(); } };
+      return (
+        <div role="button" tabIndex={0}
+             className="card rounded-xl p-5 relative text-left w-full"
+             onMouseDown={onDown} onMouseUp={onUp} onTouchStart={onDown} onTouchEnd={onUp}
+             onKeyDown={onKey} onClick={onClick} aria-label={`${verb}: ${title}`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="pr-10">
+              <div className="text-xl font-bold ink800">
+                {icon ? <span className="lead-ico" aria-hidden>{icon}</span> : null}{title}
+              </div>
+              <div className="muted text-sm mt-1">{description}</div>
+              <div className="mt-2">
+                <span className="inline-block text-xs rounded-full px-2 py-0.5 bg-[color:var(--surface-subtle)] border"
+                      style={{borderColor:'var(--hairline)'}}>{verb}</span>
+              </div>
+            </div>
+            <button type="button" className="help-dot" aria-label={`Info: ${title}`}
+                    onClick={(e)=>{e.stopPropagation(); onHelp?.();}}>i</button>
+          </div>
+          <span aria-hidden="true" className="chev">›</span>
+        </div>
+      );
+    };
+
+    const Toast=({open,text,action,onAction})=>!open?null:(
       <div className="toast">
         <div className="card rounded-full px-4 py-2 flex items-center gap-3">
           <span className="ink800">{text}</span>
@@ -807,1611 +347,1165 @@
       </div>
     );
 
-    /* =========================================================
-       Help text (one-paragraph per card)
-    ========================================================== */
-    const HELP = {
-      speed: "Speed Ladder: you’ll see a prompt like “G string — 2nd Position, 3rd Finger”. Choose the note that fits. Use keys 1–4 to answer fast. The coach re-surfaces weaknesses and (optionally) retries misses. Aim for accuracy first, then speed.",
-      speedbase: "Speed Ladder — Core: same game, but only the base note in each cell (no low/high). Use this to cement the map before tackling the full ladder.",
-      cards: "Flashcards: two decks—(A) direct fingerboard hits (what note is at a given string/position/finger?) and (B) locations by note. Press Space to reveal, N/P or arrows to navigate.",
-      bingo: "Positions Bingo: a 5×5 practice board with violin tasks. Mark squares as you complete them. The center is FREE. Press R to reshuffle the board.",
-      dice: "Dice of Destiny: press Roll for a focused practice challenge. The dice avoids repeats until the set cycles. Copy your challenge to notes if you like.",
-      tempoTrainer: "Tempo Trainer: flashcards for Italian tempo terms with optional speech call-outs. Reveal the meaning, then say the feel out loud.",
-      tempoTester: "Tempo Tester: timed multiple choice. Press 1–4 to answer. At the end, review your misses and retry just those items. A heat map tracks per-term accuracy.",
-      bielerLab: "Bieler Method Lab: progressive study of Ida Bieler’s approach. First build vocabulary, then test conceptual understanding, then apply ideas to musical scenarios and bow/left-hand technique.",
-      height: "Finger Height Drill: Low vs High fingers. Prompt: note + standardized string/position/finger wording. Answer Low or High (L/H) to build intonation patterns.",
-      locator: "Note Locator: Given a pitch (e.g., Bb), pick a valid location (Nth Position, Nth Finger on a given string). Reinforces multiple locations for the same note.",
-      shift: "Shift Coach: Stay on one string. Given start & target notes, choose the most efficient new position/finger (requires a shift).",
-      harmonics: "Harmonics Lab: Learn natural harmonic nodes (1/2, 1/3, 1/4) per string with flashcards and quick checks. Great for tone and intonation reference.",
-      snapshot: "Snapshot Core: You get a quick flash of the four base notes for a given position on one string. Memorize the 'hand-frame' picture, then answer a single base-note question.",
-      interval: "Interval Sprint: On one string/in one position, answer whether the distance between adjacent fingers (1–2, 2–3, 3–4) is a half or whole step. Shortcuts: H/W."
+    /* ================= Help text ================= */
+    const HELP={
+      speed:"Speed Ladder: prompt like “G string — 2nd Position, 3rd Finger”. Pick the correct pitch; 1–4 shortcuts. Coach can resurface weaknesses and retry misses.",
+      speedbase:"Speed Ladder — Core: same game, but only the base note per cell (no low/high). Map the hand frame first.",
+      cards:"Flashcards: (A) fingerboard hits; (B) locations by note. Space to reveal, N/P to navigate.",
+      tempoTrainer:"Tempo Trainer: Italian tempo flashcards with optional voice call-outs. Space=Reveal, S=Speak.",
+      tempoTester:"Tempo Tester: 60-second 4-choice quiz. 1–4 shortcuts. End screen offers “Review Misses”.",
+      snapshot:"Snapshot Core: quick flash of four base notes on one string/position; then answer one.",
+      interval:"Interval Sprint: judge 1–2, 2–3, 3–4 distances (Half/Whole) inside a position.",
+      locator:"Note Locator: Given a pitch, choose a valid position+finger on a specified string.",
+      shift:"Shift Coach: (reserved)",
+      harmonics:"Harmonics Lab: (reserved)",
+      bielerLab:"Bieler Method Lab: vocabulary → concept checks → applied scenarios.",
+      bingo:"Positions Bingo: 5×5 practice tasks; tap to mark; reshuffle anytime; saved locally.",
+      dice:"Dice of Destiny: press Roll for a focused practice challenge; avoids immediate repeats."
     };
 
-    /* =========================================================
-       Fingerboard Visual Hint (SVG)
-    ========================================================== */
-    const LANE_Y = {E:70, A:130, D:190, G:250};
-    const X_FOR_POS = (p)=> 60 + (p-1)*120;
-    const FINGER_OFFSET = {1:15, 2:40, 3:65, 4:90};
-    const nodeXY = (s,p,f)=>({ x: X_FOR_POS(p)+FINGER_OFFSET[f], y: LANE_Y[s] });
+    /* ================= Header: Level capsule ================= */
+    const ScoreHeader=()=>{
+      const [sb,setSb]=useState(loadJSON(SCORE_KEY,{xp:0,level:1,next:120}));
+      useEffect(()=>{
+        const id=setInterval(()=>setSb(loadJSON(SCORE_KEY,{xp:0,level:1,next:120})),700);
+        const onStorage=e=>{if(e.key===SCORE_KEY) setSb(loadJSON(SCORE_KEY,{xp:0,level:1,next:120}))};
+        addEventListener('storage',onStorage); return()=>{clearInterval(id); removeEventListener('storage',onStorage)};
+      },[]);
+      const level=sb.level||1, xp=sb.xp||0, nextT=sb.next||nextLevelXP(level), prevT=level>1?nextLevelXP(level-1):0;
+      const num=Math.max(0,xp-prevT), den=Math.max(1,nextT-prevT); const pct=Math.min(100,Math.round(num/den*100));
+      return (
+        <div className="card rounded-xl p-4 mb-3" aria-label="Player progress">
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block px-2.5 py-1 rounded-full text-white font-bold" style={{background:'var(--accent)'}}>Level {level}</span>
+            </span>
+            <div className="text-sm muted" aria-hidden>{num} / {den} XP</div>
+          </div>
+          <div className="mt-2 xpbar"
+               role="progressbar" aria-valuemin={0} aria-valuemax={den} aria-valuenow={num}
+               aria-label={`${num} of ${den} XP to next level`}>
+            <div style={{width:`${pct}%`}}></div>
+          </div>
+          <div className="text-xs muted mt-1">XP to next level</div>
+        </div>
+      );
+    };
 
-    const FingerboardHint = ({active}) => (
-      <svg width="100%" height="320" viewBox="0 0 700 320" className="mt-4">
-        {['G','D','A','E'].map(s => (
-          <g key={s}>
-            <text x="10" y={LANE_Y[s]+4} fontSize="12" fill="currentColor">{s}</text>
-            <line x1="50" x2="670" y1={LANE_Y[s]} y2={LANE_Y[s]} stroke="var(--gridline)" />
-            {[1,2,3,4,5].map(p =>
-              [1,2,3,4].map(f => {
-                const {x,y}=nodeXY(s,p,f);
-                const on = active && active.s===s && active.p===p && active.f===f;
-                return <circle key={`${s}:${p}:${f}`} cx={x} cy={y} r={10}
-                  fill={on?'var(--accent)':'rgba(255,255,255,.08)'}
-                  stroke={on?'white':'rgba(0,0,0,.25)'} strokeWidth={on?2:1}
-                  style={on?{filter:'drop-shadow(0 0 8px var(--accent))'}:null}
-                />;
-              })
-            )}
-            {[1,2,3,4,5].map(p=>{
-              const x = X_FOR_POS(p)+52;
-              return <text key={p} x={x} y={LANE_Y[s]-14} fontSize="11" fill="currentColor">{p}</text>;
+    /* ================= Filters ================= */
+    const ChipsRow=({items,on,isOn,toggle,summaryLabel})=>{
+      return (
+        <div className="mb-1">
+          <div className="flex items-center justify-between mb-1">
+            <div className="font-semibold text-sm">{summaryLabel}</div>
+            <div className="flex gap-1">
+              <button className="chip px-2 py-1 rounded-full text-xs border" onClick={()=>items.forEach(k=>isOn(k)||toggle(k))} aria-label="Select all">All</button>
+              <button className="chip px-2 py-1 rounded-full text-xs border" onClick={()=>items.forEach(k=>isOn(k)&&toggle(k))} aria-label="Select none">None</button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-6">
+            {items.map(k=>{
+              const onState=isOn(k);
+              return (
+                <button key={k} className="chip px-3 py-1 rounded-full text-sm border"
+                        style={onState?{background:'var(--accent)',color:'#fff',borderColor:'transparent'}:{background:'transparent',color:'var(--ink-800)',borderColor:'var(--hairline)'}}
+                        aria-pressed={onState} onClick={()=>toggle(k)}>
+                  {k}
+                </button>
+              );
             })}
-          </g>
-        ))}
+          </div>
+        </div>
+      );
+    };
+
+    const CompactFilters=({prefs,setPrefs})=>{
+      const [open,setOpen]=useState(false);
+      const f=prefs.filters;
+      const toggle=(group,key)=>{
+        setPrefs(p=>{
+          const prev=p.filters; const g={...prev[group]}; const on= g[key]!==false;
+          if(on) g[key]=false; else delete g[key];
+          const nx={...p, filters:{...prev, [group]:g}}; savePrefs(nx); return nx;
+        });
+      };
+      const isOnGroup=(group)=>k=>f[group]?.[k]!==false;
+      const summary=`${STRINGS.filter(isOnGroup('strings')).join(' ')} · Pos ${POSITIONS.filter(isOnGroup('positions')).join('–')} · F${FINGERS.filter(isOnGroup('fingers')).join('–')}`;
+      return (
+        <div className="card rounded-xl p-4">
+          <button className="w-full text-left flex items-center justify-between"
+                  onClick={()=>setOpen(x=>!x)} aria-expanded={open}>
+            <div className="text-lg font-semibold">Filters</div>
+            <div className="text-sm muted">{summary}</div>
+          </button>
+          {open && (
+            <div className="mt-3">
+              <ChipsRow items={STRINGS}  summaryLabel="Strings"  isOn={isOnGroup('strings')}  toggle={(k)=>toggle('strings',k)} />
+              <ChipsRow items={POSITIONS.map(String)} summaryLabel="Positions" isOn={isOnGroup('positions')} toggle={(k)=>toggle('positions',k)} />
+              <ChipsRow items={FINGERS.map(f=>'F'+f)} summaryLabel="Fingers"
+                        isOn={k=>isOnGroup('fingers')(+k.slice(1))}
+                        toggle={k=>toggle('fingers',+k.slice(1))} />
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    /* ================= Heatmaps ================= */
+    const AccuracyHeatmap=({stats})=>{
+      return (
+        <div className="card rounded-xl p-4">
+          <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {DISPLAY_STRINGS.map(s=>(
+              <div key={s} className="rounded-lg border" style={{borderColor:'var(--hairline)'}}>
+                <div className="px-3 py-2 font-semibold" style={{background:'var(--surface-subtle)'}}>{s} string</div>
+                <div className="p-2">
+                  <div className="fb-strip">
+                    {POSITIONS.map(p=>(
+                      <div key={p} className="fb-pos">
+                        <div className="pos-chip" aria-hidden>Pos {p}</div>
+                        <span className="sr-only">Position {p}</span>
+                        <div className="fb-grid">
+                          <div className="fb-colhdr">{FINGERS.map(f=><div key={f} className="text-center">F{f}</div>)}</div>
+                          {FINGERS.map(f=>{
+                            const k=`${s}:${p}:${f}`; const st=stats[k]||{correct:0,total:0};
+                            const style=evidenceStyle(st);
+                            return (
+                              <div key={k} className="fb-tile" title={`${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0}`}
+                                   aria-label={`${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Accuracy ${Math.round(style.acc*100)} percent.`}>
+                                {style.dot && <span className="lowdot" title="Low data (under 3)"></span>}
+                                <div className="fb-pct">{st.total?`${Math.round(style.acc*100)}%`:'—'}</div>
+                                <div className="fb-band acc" style={{background:style.accColor}}></div>
+                                <div className="fb-band lb"  style={{background:style.lbColor}}></div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-xs muted mt-2"><b>Legend:</b> Top band = Accuracy · Bottom = Confidence (95% LB). Red &lt;65% · Yellow 65–85% · Green ≥85%. Opacity increases with attempts.</div>
+        </div>
+      );
+    };
+
+    /* ================= Tempo data ================= */
+    const TEMPOS = [
+      {it:'Prestissimo', en:'super fast', bpm:[200, ~Infinity]},
+      {it:'Presto',      en:'very fast',  bpm:[168, 200]},
+      {it:'Allegro',     en:'fast / lively', bpm:[120, 168]},
+      {it:'Allegretto',  en:'moderately fast', bpm:[112, 120]},
+      {it:'Andante',     en:'walking tempo', bpm:[76, 108]},
+      {it:'Andantino',   en:'slightly faster than Andante (modern use)', bpm:[80, 112]},
+      {it:'Adagio',      en:'slow / majestic', bpm:[66, 76]},
+      {it:'Largo',       en:'broad, slow', bpm:[40, 60]},
+      {it:'Lento',       en:'very slow', bpm:[40, 60]}
+    ];
+
+    /* ================= Visual hint ================= */
+    const FingerboardHint=({active})=>(
+      <svg width="100%" height="180" viewBox="0 0 680 180" className="mt-3" aria-hidden="true">
+        {['G','D','A','E'].map((s,i)=>{
+          const y=30+ i*38;
+          return (
+            <g key={s}>
+              <text x="10" y={y+4} fontSize="12" fill="currentColor">{s}</text>
+              <line x1="48" x2="660" y1={y} y2={y} stroke="var(--gridline)" />
+              {[1,2,3,4,5].map(p=>[1,2,3,4].map(f=>{
+                const x=60+(p-1)*120 + [15,40,65,90][f-1]; const on=active&&active.s===s&&active.p===p&&active.f===f;
+                return <circle key={`${s}:${p}:${f}`} cx={x} cy={y} r={10}
+                               fill={on?'var(--accent)':'rgba(255,255,255,.06)'}
+                               stroke={on?'#fff':'rgba(0,0,0,.25)'} strokeWidth={on?2:1}/>;
+              }))}
+            </g>
+          );
+        })}
       </svg>
     );
 
-    /* =========================================================
-       Heatmaps
-    ========================================================== */
-    const tileColor = (total, acc) => {
-      if (!total) return 'rgba(120,120,120,0.18)';
-      const hue = 140 * acc, sat = 85, light = 45 + 10 * acc;
-      return `hsla(${hue}, ${sat}%, ${light}%, 1)`;
-    };
+    /* ================= Speed Ladder (Core + Full) ================= */
+    const SpeedLadderGame=({onBack,baseOnly=false})=>{
+      const [stats,setStats]=useState(loadJSON(STATS_KEY,{}));
+      const [q,setQ]=useState(null);
+      const [timer,setTimer]=useState(90);
+      const [score,setScore]=useState(0);
+      const [answered,setAnswered]=useState(0);
+      const beeps=useBeeps(true);
+      const optionsRef=useRef([]);
 
-    const AccuracyHeatmap = ({ stats }) => (
-      <div className="card rounded-xl p-4">
-        <div className="text-lg font-semibold mb-2">Fingerboard Accuracy</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STRINGS.map(s => (
-            <div key={s} className="rounded-lg border overflow-hidden">
-              <div className="px-3 py-2 font-semibold" style={{ background: 'var(--surface-subtle)', whiteSpace:'nowrap' }}>
-                {s} string
-              </div>
-              <div className="p-2">
-                <div className="fb-strip">
-                  {POSITIONS.map(p => (
-                    <div key={p} className="fb-pos rounded-md border">
-                      <div className="pos-chip" aria-hidden="true">Pos {p}</div>
-                      <span className="sr-only">Position {p}</span>
-                      <div className="fb-grid p-2">
-                        {FINGERS.map(f => {
-                          const isReal = !!validCell(s, p, f);
-                          const k = `${s}:${p}:${f}`;
-                          const st = isReal ? (stats[k] || { correct:0, total:0 }) : null;
-                          const style = evidenceStyle(st);
-                          return (
-                            <div
-                              key={f}
-                              className="fb-tile"
-                              title={
-                                isReal
-                                  ? `${fullLoc(s,p,f)} — ${st.correct||0}/${st.total||0} (acc ${Math.round(style.acc*100)}%; LB ${Math.round(style.lb*100)}%)`
-                                  : 'Not a valid finger/position'
-                              }
-                              aria-label={
-                                isReal
-                                  ? `${fullLoc(s,p,f)}. ${st.total||0} attempts, ${st.correct||0} correct. Accuracy ${Math.round(style.acc*100)} percent. Lower bound ${Math.round(style.lb*100)} percent.`
-                                  : 'Invalid cell'
-                              }
-                            >
-                              <div style={{ fontWeight:600 }}>F{f}</div>
-                              <div className="text-xs">
-                                {isReal && st.total ? `${Math.round((st.correct/st.total)*100)}%` : '—'}
-                              </div>
-                              <div className="fb-band fb-band--acc" style={{ background: style.bandColorAcc }} />
-                               <div className="fb-band fb-band--lb"  style={{ background: style.bandColorLB  }} />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-xs muted mt-2">
-          Each tile shows <b>two mini bands</b>: top = <b>Accuracy</b> (your current %), bottom = <b>Confidence</b> (95% Wilson <i>LB</i>).
-          Colors: <span style={{color:'#ef4444',fontWeight:600}}>Red</span> &lt;65% ·
-          <span style={{color:'#f59e0b',fontWeight:600}}> Yellow</span> 65–85% ·
-          <span style={{color:'#10b981',fontWeight:600}}> Green</span> ≥85%.
-          Opacity increases with attempts.
-        </p>
-      </div>
-    );
-
-    const TempoHeatmap = ({ stats, terms }) => (
-      <div className="card rounded-xl p-4">
-        <div className="text-lg font-semibold mb-2">Tempo Heatmap</div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {terms.map(t => {
-            const st = stats[t.it] || { correct:0, total:0 };
-            const acc = st.total ? st.correct/st.total : 0;
-            const bg = tileColor(st.total, acc);
-            return (
-              <div key={t.it} className="rounded border p-3" style={{background:bg}} title={`${t.it} — ${st.correct}/${st.total} (${Math.round(acc*100)}%)`}>
-                <div className="font-semibold">{t.it}</div>
-                <div className="text-xs">{st.total ? `${Math.round(acc*100)}%` : '—'}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-
-    /* =========================================================
-       Tempo data
-    ========================================================== */
-    const TEMPOS = [
-      { it:'Prestissimo', en:'super fast' },
-      { it:'Presto',      en:'very fast' },
-      { it:'Allegro',     en:'fast/happy' },
-      { it:'Allegretto',  en:'medium moving/motion, brisk' },
-      { it:'Andante',     en:'walking tempo/speed' },
-      { it:'Andantino',   en:'little walking (little Andante)' },
-      { it:'Adagio',      en:'slow/majestic, at ease' },
-      { it:'Largo',       en:'slow-largeness, broad' },
-      { it:'Lento',       en:'very slow' },
-    ];
-
-    /* =========================================================
-       Bieler Method data
-    ========================================================== */
-    const BIELER_VOCAB = [
-      { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
-      { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
-      { term:'Hand Frame', def:'Stable spacing of fingers across semitone/whole-tone patterns; frame travels during shifts.' },
-      { term:'First Trained Function', def:'Accurate finger placement (intonation and spacing) within a stable frame.' },
-      { term:'Second Trained Function', def:'Finger independence and agility (lifting/placing without disturbing neighbors).' },
-      { term:'Third Trained Function', def:'Shifting—moving the whole hand while preserving the frame and sound line.' },
-      { term:'Fourth Trained Function', def:'Vibrato—finger/hand oscillation integrated with intonation and tone aim.' },
-      { term:'Bow Hold', def:'Flexible, pronation-ready grip with curved fingers and mobile thumb.' },
-      { term:'Contact Point', def:'Soundpoint between bridge and fingerboard; chosen by speed/pressure/tilt.' },
-      { term:'Bow Angles', def:'String crossings via forearm/upper arm levels; keep hair tangent to soundpoint.' },
-      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
-      { term:'Legato', def:'Multiple notes under one bow with seamless changes.' },
-      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
-      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
-      { term:'Spiccato', def:'Controlled bounce near the balance point—vertical energy, horizontal timing.' },
-      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
-      { term:'Ricochet', def:'Thrown bow that rebounds multiple times with one impulse.' },
-      { term:'Firm Staccato', def:'In-the-string articulated stops in one bow direction.' },
-      { term:'Flying Staccato', def:'Off-the-string successive stops in a single bow.' },
-      { term:'Nature', def:'Use body’s natural alignments—economy, ease, resonance.' },
-      { term:'Nurture', def:'Stepwise training—patterns before speed; stability before flourish.' },
-      { term:'Knowledge', def:'Clear mental models: maps, sound ideals, mechanics.' },
-      { term:'Necessity', def:'Technique serves musical intent; choose tools by purpose.' },
-    ];
-
-    const BIELER_CONCEPT_QA = [
-      { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
-      { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
-      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
-      { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
-    ];
-
-    const BIELER_APPLY = [
-      { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
-      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
-      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
-    ];
-
-    /* =========================================================
-       Confetti
-    ========================================================== */
-    const ConfettiBurst = ({ seed }) => {
-      const [pieces, setPieces] = useState([]);
-      useEffect(() => {
-        if (!seed) return;
-        const EMOJI = ['✨','🎉','🎊','⭐','💥','🌟'];
-        const n = 24;
-        const arr = Array.from({ length: n }, (_, i) => ({
-          id: i, left: Math.random()*100, rot: (Math.random()*40)-20, delay: Math.random()*100, emoji: EMOJI[Math.floor(Math.random()*EMOJI.length)]
-        }));
-        setPieces(arr);
-        const t = setTimeout(()=>setPieces([]), 900);
-        return () => clearTimeout(t);
-      }, [seed]);
-      if (!pieces.length) return null;
+      const pool=useMemo(()=>allCombos(),[]);
+      const pick=()=>{
+        const c=getRandom(pool);
+        const baseOpts=baseNamesFor(c.s,c.p,c.f);
+        const correct= baseOnly ? CANON_PC_NAME[pc(baseOpts[0])] : getRandom(c.valid);
+        const choices = baseOnly ? ALL_BASE_CANON : ALL_NOTES_UNIQUE;
+        const distract=shuffle(choices.filter(n=>pc(n)!==pc(correct))).slice(0,3);
+        const options=shuffle([correct,...distract]); optionsRef.current=options;
+        setQ({...c, correct, options});
+        localStorage.setItem(LAST_MODE_KEY, baseOnly?'speedbase':'speed');
+      };
+      useEffect(()=>{pick()},[]);
+      useEffect(()=>{const id=setInterval(()=>setTimer(t=>t<=1?0:t-1),1000); return()=>clearInterval(id)},[]);
+      const answer=(note)=>{
+        if(!q||timer===0) return;
+        const ok=(pc(note)===pc(q.correct)); beeps[ok?'good':'bad'](); setAnswered(a=>a+1); if(ok) setScore(s=>s+1);
+        const k=`${q.s}:${q.p}:${q.f}`; const st=stats[k]||{correct:0,total:0};
+        const next={...stats,[k]:{correct:st.correct+(ok?1:0), total:st.total+1}}; setStats(next); saveJSON(STATS_KEY,next);
+        saveJSON(SCORE_KEY,(s=>{const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120}); const xp=prev.xp+xpAdd({type:'speed'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}})());
+        document.getElementById('sr').textContent = ok?'Correct':'Incorrect';
+        setTimeout(pick, ok?380:720);
+      };
+      useEffect(()=>{const onKey=e=>{const k=e.key; if(['1','2','3','4'].includes(k)){const idx=+k-1; const ch=optionsRef.current[idx]; if(ch) answer(ch)} if(k==='Escape') onBack()}; addEventListener('keydown',onKey); return()=>removeEventListener('keydown',onKey)},[q]);
       return (
-        <div className="pointer-events-none fixed inset-0 overflow-hidden z-50">
-          {pieces.map(p => (
-            <span key={p.id} style={{position:'absolute', left:`${p.left}vw`, top:'-10px', transform:`rotate(${p.rot}deg)`, animation:'fall 0.9s ease-in forwards', animationDelay:`${p.delay}ms`, fontSize:'20px' }}>
-              {p.emoji}
-            </span>
-          ))}
-          <style>{`@keyframes fall{to{transform:translateY(110vh); opacity:.65;}}`}</style>
-        </div>
-      );
-    };
-
-    /* =========================================================
-       Shared helpers for fingerboard
-    ========================================================== */
-    const validCell = (s,p,f) => Array.isArray(NOTES_DATA[s]?.[p]?.[f]) ? NOTES_DATA[s][p][f] : null;
-    // ---- Pitch-class membership helper ----
-    const hasPitch = (cell, note) =>
-      Array.isArray(cell) && cell.some(n => pc(n) === pc(note));
-    const allActualCombos = () => {
-      const arr = [];
-      for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
-        const cell = validCell(s,p,f);
-        if (cell) arr.push({ s, p, f, valid: cell });
-      }
-      return arr;
-    };
-    const allLocationsForNote = (note) => {
-      const spots = [];
-      for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
-        const cell = validCell(s, p, f);
-        if (hasPitch(cell, note)) spots.push({ s, p, f });
-      }
-      return spots;
-    };
-    const groupLocationsByString = (note) => {
-      const by = new Map(STRINGS.map(s=>[s,[]]));
-      for (const loc of allLocationsForNote(note)) by.get(loc.s).push(loc);
-      const lines = [];
-      for (const s of STRINGS){
-        const arr = by.get(s).sort((a,b)=>Number(a.p)-Number(b.p)||Number(a.f)-Number(b.f));
-        if (arr.length) lines.push(`${s}: ${arr.map(({p,f})=>`${posLabel(p)} (${fingerLabel(f)})`).join(', ')}`);
-      }
-      return lines.join('  |  ');
-    };
-
-    (function pitchClassTests(){
-      const mustFind = [
-        ['D#','Eb'], ['Gb','F#'], ['Cb','B'], ['B#','C'], ['Fb','E'], ['E#','F']
-      ];
-      for (const [a,b] of mustFind){
-        const A = allLocationsForNote(a);
-        const B = allLocationsForNote(b);
-        const same = A.length && B.length && A.some(x => B.some(y => x.s===y.s && x.p===y.p && x.f===y.f));
-        console.log(`${a} ~ ${b}:`, same ? '✓' : '✗');
-      }
-    })();
-
-    /* =========================================================
-       Games
-    ========================================================== */
-
-    // Tempo Trainer (flashcards)
-    const TempoTrainer = ({ onBack, prefs }) => {
-      const [i, setI] = useState(0);
-      const [show, setShow] = useState(false);
-      const { speak } = useCallouts(prefs.callouts);
-      useEffect(()=>{ speak(TEMPOS[i].it); }, [i]);
-      const next = () => { setShow(false); setI((i+1)%TEMPOS.length); };
-      const prev = () => { setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
-      useEffect(()=>{
-        const onKey = (e)=>{ const k = e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='arrowright'||k==='n') next(); if(k==='arrowleft'||k==='p') prev(); };
-        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [i, show]);
-      const card = TEMPOS[i];
-      return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
-            <h2 className="text-2xl font-bold mb-4">Tempo Trainer (Flashcards)</h2>
-            <div className="rounded-xl border-2 p-6 text-center">
-              <div className="text-xl font-bold">{card.it}</div>
-              {show ? <div className="mt-2">
-                <div className="text-green-700 font-semibold">{card.en}</div>
-                <div className="text-xs muted mt-1">Say the feel out loud, then tap Next.</div>
-              </div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
-            </div>
-            <div className="flex gap-2 items-center">
-              <div className="font-semibold text-sm">Strings</div>
-              <button className="btn btn-gray" onClick={()=>setAll('strings', true)}>All</button>
-              <button className="btn btn-gray" onClick={()=>setAll('strings', false)}>None</button>
-            </div>
-            <div className="text-xs muted mt-3 text-center">Shortcuts: Space, ←/→ or P/N</div>
+        <div className="p-4 max-w-3xl mx-auto min-h-screen">
+          <div className="card rounded-xl p-6">
+            <h2 className="text-2xl font-bold">{baseOnly?'Speed Ladder — Core':'Speed Ladder'}</h2>
+            <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+            {q && <>
+              <div className="text-center mb-3">
+                <div className="text-lg font-bold">What note can you play at <b>{fullLoc(q.s,q.p,q.f)}</b>?</div>
+                <div className="text-xs muted mt-1">Press 1–4 to answer quickly.</div>
+              </div>
+              <FingerboardHint active={{s:q.s,p:q.p,f:q.f}} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                {q.options.map((n,i)=><button key={i} className="btn btn-blue" onClick={()=>answer(n)}><span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{norm(n)}</button>)}
+              </div>
+            </>}
           </div>
           <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    // Tempo Tester (MCQ + XP + session log)
-    const TempoTester = ({ onBack, prefs }) => {
-      const [best, setBest] = useState(loadTempoBest());
-      const [stats, setStats] = useState(loadTempoStats());
-      const [timer, setTimer] = useState(prefs.roundLen || 60);
-      const [finished, setFinished] = useState(false);
-      const [score, setScore] = useState(0);
-      const [answered, setAnswered] = useState(0);
-      const [streak, setStreak] = useState(0);
-      const [confettiSeed, setConfettiSeed] = useState(0);
-      const [events, setEvents] = useState([]);
-      const [q, setQ] = useState(null);
-      const { speak } = useCallouts(prefs.callouts);
-      const beeps = useBeeps(prefs.sound);
-      const optionsRef = useRef([]);
-      const hitIdxRef = useRef(-1);
-
-      const pickQ = (forced=null) => {
-        const correct = forced || getRandomItem(TEMPOS);
-        const distractors = shuffle(TEMPOS.filter(t=>t.it!==correct.it)).slice(0,3);
-        const options = shuffle([correct.en, ...distractors.map(d=>d.en)]);
-        setQ({ it: correct.it, correct: correct.en, options, ts: performance.now() });
-        optionsRef.current = options;
-        speak(correct.it);
-      };
-
-      // In TempoTester
-      const pushSession = (correct, total) => {
-        const log = loadJSON(SESSIONLOG_KEY, []);
-        log.push({ mode: 'tempo', date: nowISO(), correct, total });
-        saveJSON(SESSIONLOG_KEY, log);
-      };
-
-      useEffect(() => {
-        if (finished) return;
-        const id = setInterval(() => setTimer(t => {
-          if (t <= 1) {
-            clearInterval(id);
-            setFinished(true);
-            const nb = {
-              bestScore: Math.max(best.bestScore, score),
-              bestStreak: Math.max(best.bestStreak, streak)
-            };
-            setBest(nb);
-            saveTempoBest(nb);
-            pushSession(score, answered);   // <-- correct arg order
-            return 0;
-          }
-          return t - 1;
-        }), 1000);
-        return () => clearInterval(id);
-        // include `answered` so the logged total is current
-      }, [finished, score, streak, answered, best]);
-
-      const bump = (it, ok) => {
-        const st = stats[it] || { correct:0, total:0 };
-        const next = { ...stats, [it]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveTempoStats(next);
-      };
-
-      const addXP = (ok) => {
-        if (!ok) return;
-        const sb = loadScoreboard();
-        const add = xpForEvent({type:'tempo', streak});
-        const xp = sb.xp + add;
-        const level = levelForXP(xp), next = nextLevelXP(level);
-        saveScoreboard({ xp, level, next });
-      };
-
-      const handleAnswer = (choice, idx) => {
-        if (finished || !q) return;
-        const ok = (choice === q.correct);
-        bump(q.it, ok);
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
-        setEvents(e => [{ t: Date.now(), it:q.it, chosen:choice, correct:q.correct, ok }, ...e]);
-        setAnswered(a=>a+1);
-        hitIdxRef.current = idx;
-        if (ok){ beeps.good(); setScore(s=>s+1); setStreak(x=>x+1); addXP(true); if (prefs.confetti) setConfettiSeed(x=>x+1); setTimeout(()=>pickQ(), 360); }
-        else { beeps.bad(); setStreak(0); setTimeout(()=>pickQ(), 760); }
-        setTimeout(()=>{ hitIdxRef.current = -1; }, 280);
-      };
-
-      useEffect(()=>{
-        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const ch=optionsRef.current?.[idx]; if(ch) handleAnswer(ch, idx); } };
-        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [finished, q]);
-
-      const endReviewList = useMemo(()=>{
-        const misses = [...events].filter(e=>!e.ok).reverse();
-        const unique = []; const seen = new Set();
-        for (const m of misses){ if(!seen.has(m.it)){ unique.push(m); seen.add(m.it); } }
-        return unique;
-      }, [events]);
-
-      const startReview = () => {
-        if (!endReviewList.length) return;
-        setFinished(false); setScore(0); setAnswered(0); setStreak(0); setEvents([]);
-        pickQ(endReviewList[0] && { it:endReviewList[0].it, en:endReviewList[0].correct });
-      };
-
-      const reset = () => {
-        setFinished(false); setScore(0); setAnswered(0); setStreak(0); setEvents([]); setConfettiSeed(0);
-        setTimer(prefs.roundLen || 60); pickQ();
-      };
-
-      return (
-        <div className="relative p-4 min-h-screen flex flex-col items-center">
-          <ConfettiBurst seed={confettiSeed} />
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
-            <h2 className="text-2xl font-bold mb-2">Tempo Tester (Multiple Choice)</h2>
-            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Best: <b>{best.bestScore}</b> · Best streak: <b>{best.bestStreak}</b></div>
-            {!finished && q && (
-              <>
-                <div className="text-center mb-5">
-                  <div className="text-xl font-bold">What does <b>{q.it}</b> mean?</div>
-                  <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {q.options.map((opt,i)=>(
-                    <button key={i} className={`btn btn-blue ${i===hitIdxRef.current ? 'btn-hit ' + (opt===q.correct?'ok':'miss') : ''}`} title={`Press ${i+1}`} onClick={()=>handleAnswer(opt,i)}>
-                      <span className="pill" style={{ background: 'rgba(0,0,0,.15)' }}>{i+1}</span>&nbsp; {opt}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            {finished && (
-              <div className="text-center">
-                <div className="text-xl font-semibold">Round over! Final score: {score} / {answered}</div>
-                <div className="mt-3">
-                  <button className="btn btn-purple mr-2" onClick={reset}>Play Again</button>
-                  <button className="btn btn-green" disabled={!endReviewList.length} onClick={startReview}>
-                    Review Misses {endReviewList.length ? `(${endReviewList.length})` : ''}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="w-full mt-6" style={{maxWidth:900}}>
-            <TempoHeatmap stats={stats} terms={TEMPOS} />
-          </div>
-
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ===================== NEW: Snapshot Core (mental “photograph” drill) ===================== */
-    const SnapshotCore = ({ onBack, prefs }) => {
-      const [timer, setTimer] = React.useState(prefs.roundLen || 120);
-      const [score, setScore] = React.useState(0);
-      const [answered, setAnswered] = React.useState(0);
-      const [q, setQ] = React.useState(null);
-      const [phase, setPhase] = React.useState('flash'); // flash -> quiz
-      const [showGrid, setShowGrid] = React.useState(false);
-      const [stats, setStats] = React.useState(loadJSON(SNAPSHOT_STATS_KEY, {}));
-      const beeps = useBeeps(prefs.sound);
-    
-      const pick = () => {
-        const s = getRandomItem(STRINGS);
-        const p = getRandomItem(POSITIONS);
-        const bases = FINGERS.map(f => CANON_PC_NAME[pc(baseNamesFor(s,p,f)[0])]); // F1..F4 canonical
-        // ask about one random finger from this snapshot
-        const f = getRandomItem(FINGERS);
-        const correct = bases[f-1];
-        const opts = shuffle([correct, ...getDistractorsFromPool(correct, ALL_BASE_CANON, [], 3)]);
-        setQ({ s, p, bases, f, correct, opts });
-        setPhase('flash'); setShowGrid(true);
-        setTimeout(()=>{ setShowGrid(false); setPhase('quiz'); }, 1700); // 1.7s “photograph”
-      };
-    
-      React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(()=>{
-        const id=setInterval(()=>setTimer(t=>t<=1?0:t-1), 1000);
-        return ()=>clearInterval(id);
+    /* ================= Flashcards ================= */
+    const Flashcards=({onBack})=>{
+      const deckA=useMemo(()=>{
+        const cards=[]; for(const s of STRINGS)for(const p of POSITIONS)for(const f of FINGERS){
+          const cell=validCell(s,p,f); if(cell) cards.push({q:`What note(s) at ${fullLoc(s,p,f)}?`, a: cell.map(norm).join(' or ')});
+        } return cards;
       },[]);
-    
-      const bump = (key, ok) => {
-        const st = stats[key] || { correct:0, total:0 };
-        const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveJSON(SNAPSHOT_STATS_KEY, next);
+      const uniq=[...new Set(ALL_NOTES_UNIQUE)].sort();
+      const groupByString=n=>{
+        const by=new Map(STRINGS.map(s=>[s,[]]));
+        for(const loc of allLocationsForNote(n)) by.get(loc.s).push(loc);
+        const lines=[]; for(const s of STRINGS){const arr=(by.get(s)||[]).sort((a,b)=>a.p-b.p||a.f-b.f); if(arr.length) lines.push(`${s}: ${arr.map(x=>`${posLabel(x.p)} (${fingerLabel(x.f)})`).join(', ')}`)}
+        return lines.join('  |  ');
       };
-    
-      const answer = (note) => {
-        if (!q || timer===0 || phase!=='quiz') return;
-        const ok = (note===q.correct);
-        beeps[ok?'good':'bad'](); setAnswered(a=>a+1); if (ok) setScore(s=>s+1);
-        bump(`${q.s}:${q.p}:F${q.f}`, ok);
-        setTimeout(pick, ok?350:700);
-      };
-    
+      const deckB=uniq.map(n=>({q:`Where can you play ${norm(n)} (Pos 1–5)?`, a:groupByString(n)}));
+      const [mode,setMode]=useState('A'); const deck=mode==='A'?deckA:deckB;
+      const [i,setI]=useState(0), [show,setShow]=useState(false);
+      const next=()=>{setShow(false); setI((i+1)%deck.length); localStorage.setItem(LAST_MODE_KEY,'flash')}; const prev=()=>{setShow(false); setI((i-1+deck.length)%deck.length)};
+      useEffect(()=>{const onKey=e=>{const k=e.key.toLowerCase(); if(k===' ') {e.preventDefault(); setShow(true)} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='escape') onBack()}; addEventListener('keydown',onKey); return()=>removeEventListener('keydown',onKey)},[i,show]);
       return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
-            <h2 className="text-2xl font-bold mb-2">Snapshot Core</h2>
-            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-    
-            {!!q && (
-              <>
-                <div className="rounded-md border p-3 text-center" style={{background:'var(--surface-subtle)'}}>
-                  <div className="font-semibold">{q.s} string — {posLabel(q.p)}</div>
-                  {showGrid ? (
-                    <div className="mt-2 grid grid-cols-4 gap-2">
-                      {q.bases.map((n,i)=><div key={i} className="rounded border p-2"><div className="text-xs muted">F{i+1}</div><div className="text-lg font-bold">{norm(n)}</div></div>)}
-                    </div>
-                  ) : (
-                    <div className="muted italic mt-2">What is the base note for <b>{fingerLabel(q.f)}</b>?</div>
-                  )}
-                </div>
-    
-                {phase==='quiz' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                    {q.opts.map((n,i)=>(
-                      <button key={i} className="btn btn-blue" onClick={()=>answer(n)}>
-                        <span className="pill" style={{background:'rgba(0,0,0,.15)'}}>{i+1}</span>&nbsp; {norm(n)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="text-xs muted mt-3 text-center">Tip: picture the four turquoise notes for this position. That’s your hand-frame.</div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ===================== NEW: Interval Sprint (half/whole-step fluency inside the frame) ===================== */
-    const IntervalSprint = ({ onBack, prefs }) => {
-      const [timer, setTimer] = React.useState(prefs.roundLen || 90);
-      const [score, setScore] = React.useState(0);
-      const [answered, setAnswered] = React.useState(0);
-      const [q, setQ] = React.useState(null);
-      const [stats, setStats] = React.useState(loadJSON(INTERVAL_STATS_KEY, {}));
-      const beeps = useBeeps(prefs.sound);
-    
-      // Core hand-frame distances between adjacent fingers: W-H-W (2–1–2 semitones)
-      const DIST = { '1-2':'whole', '2-3':'half', '3-4':'whole' };
-    
-      const pick = () => {
-        const s = getRandomItem(STRINGS);
-        const p = getRandomItem(POSITIONS);
-        const f = getRandomItem([1,2,3]); // pair = f .. f+1
-        const baseA = CANON_PC_NAME[pc(baseNamesFor(s,p,f)[0])];
-        const baseB = CANON_PC_NAME[pc(baseNamesFor(s,p,f+1)[0])];
-        const correct = DIST[`${f}-${f+1}`];
-        const opts = shuffle(['half','whole']);
-        setQ({ s, p, f, a:baseA, b:baseB, correct, opts });
-      };
-    
-      React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(() => {
-        const onKey = (e) => {
-          if (!q || timer === 0) return;
-          const k = e.key.toLowerCase();
-          if (k === 'h') { e.preventDefault(); answer('half'); }
-          if (k === 'w') { e.preventDefault(); answer('whole'); }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [q, timer]);
-    
-      const bump = (key, ok) => {
-        const st = stats[key] || { correct:0, total:0 };
-        const nx = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(nx); saveJSON(INTERVAL_STATS_KEY, nx);
-      };
-    
-      const answer = (choice) => {
-        const ok = (choice===q.correct);
-        beeps[ok?'good':'bad'](); setAnswered(a=>a+1); if (ok) setScore(s=>s+1);
-        bump(`${q.s}:${q.p}:${q.f}`, ok);
-        setTimeout(pick, ok?300:650);
-      };
-    
-      return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
-            <h2 className="text-2xl font-bold mb-2">Interval Sprint</h2>
-            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Shortcuts: H/W</div>
-            {!!q && (
-              <>
-                <div className="text-center mb-2">
-                  <div className="text-xl font-bold">{posLabel(q.p)}, {fingerLabel(q.f)}→{fingerLabel(q.f+1)} on the {q.s} string</div>
-                  <div className="text-sm muted">Between <b>{norm(q.a)}</b> and <b>{norm(q.b)}</b>, is it a <b>half</b>- or <b>whole</b>-step?</div>
-                </div>
-                <FingerboardHint active={{s:q.s, p:q.p, f:q.f}} />
-                <div className="flex gap-3 justify-center mt-3">
-                  {q.opts.map((o,i)=> <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>{o[0].toUpperCase()+o.slice(1)} step</button>)}
-                </div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ===================== NEW: Finger Height Drill ===================== */
-    const HeightDrill = ({ onBack, prefs }) => {
-      const [q, setQ] = useState(null);
-      const [score, setScore] = useState(0);
-      const [answered, setAnswered] = useState(0);
-      const [timer, setTimer] = useState(prefs.roundLen || 60);
-      const [stats, setStats] = useState(loadJSON(HEIGHT_STATS_KEY, {}));
-      const [confettiSeed, setConfettiSeed] = useState(0);
-      const beeps = useBeeps(prefs.sound);
-      const { speak } = useCallouts(prefs.callouts);
-
-      const combos = useMemo(()=> allActualCombos().filter(c => c.valid.length >= 2),[]);
-      const pick = () => {
-        const c = getRandomItem(combos);
-        const note = getRandomItem(c.valid);
-        const label = fingerHeight(note, c.valid);
-        speak(fullLoc(c.s, c.p, c.f));
-        setQ({ ...c, note, label });
-      };
-      useEffect(()=>{ pick(); },[]);
-      useEffect(()=>{
-        const id = setInterval(()=>setTimer(t => (t <= 1 ? 0 : t-1)), 1000);
-        return ()=>clearInterval(id);
-      },[]);
-
-      const bump = (key, ok) => {
-        const st = stats[key] || { low:{correct:0,total:0}, high:{correct:0,total:0}, natural:{correct:0,total:0} };
-        const next = { ...stats, [key]: {
-          low: { correct: st.low.correct + (ok && q.label==='low'?1:0), total: st.low.total + (q.label==='low'?1:0) },
-          high:{ correct: st.high.correct+ (ok && q.label==='high'?1:0), total: st.high.total + (q.label==='high'?1:0) },
-          natural:{ correct: st.natural.correct+ (ok && q.label==='natural'?1:0), total: st.natural.total + (q.label==='natural'?1:0) },
-        } };
-        setStats(next); saveJSON(HEIGHT_STATS_KEY, next);
-      };
-
-      const answer = (choice) => {
-        if (!q || timer===0) return;
-        const ok = (choice.toLowerCase() === q.label);
-        const key = `${q.s}:${q.p}:${q.f}`;
-        bump(key, ok);
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
-        setAnswered(a=>a+1);
-        if (ok) { beeps.good(); setScore(s=>s+1); if (prefs.confetti) setConfettiSeed(x=>x+1); setTimeout(pick, 350); }
-        else { beeps.bad(); setTimeout(pick, 700); }
-      };
-
-      useEffect(()=>{
-        const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k==='l') answer('low'); if(k==='h') answer('high'); if(k==='escape') onBack(); };
-        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [q, timer]);
-
-      return (
-        <div className="relative p-4 min-h-screen flex flex-col items-center">
-          <ConfettiBurst seed={confettiSeed} />
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
-            <h2 className="text-2xl font-bold mb-2">Finger Height Drill (Low / High)</h2>
-            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Shortcuts: L / H</div>
-            {q && (
-              <>
-                <div className="text-center mb-3">
-                  <div className="text-xl font-bold">To play <b>{norm(q.note)}</b> at <b>{fullLoc(q.s, q.p, q.f)}</b> — is the finger <b>Low</b> or <b>High</b>?</div>
-                </div>
-                <FingerboardHint active={{s:q.s, p:q.p, f:q.f}} />
-                <div className="flex gap-3 justify-center mt-3">
-                  <button className="btn btn-blue" onClick={()=>answer('low')}>Low</button>
-                  <button className="btn btn-purple" onClick={()=>answer('high')}>High</button>
-                </div>
-                <div className="text-xs muted mt-4 text-center">Tip: “Low” is the first (flat) value in a cell like [F, F#]; “High” is the sharp.</div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ===================== NEW: Note Locator ===================== */
-    const NoteLocator = ({ onBack, prefs }) => {
-      const [q,setQ] = useState(null);
-      const [timer,setTimer] = useState(prefs.roundLen || 90);
-      const [score,setScore] = useState(0);
-      const [answered,setAnswered] = useState(0);
-      const [stats, setStats] = useState(loadJSON(LOCATOR_STATS_KEY, {}));
-      const beeps = useBeeps(prefs.sound);
-      const { speak } = useCallouts(prefs.callouts);
-
-      const labelLoc = o => `${fullLoc(o.s, o.p, o.f)}`;
-
-      const makeQ = () => {
-        const note = getRandomItem(ALL_NOTES_UNIQUE);
-        const correctLocs = allLocationsForNote(note);
-        if (!correctLocs.length) return makeQ();
-        const correct = getRandomItem(correctLocs);
-        const wrongPool = allActualCombos().filter(c => {
-          const cell = validCell(c.s, c.p, c.f) || [];
-          return !hasPitch(cell, note);
-        });
-        const nearby = wrongPool.filter(c => c.s===correct.s || c.p===correct.p || c.f===correct.f);
-        const fillers = nearby.length >= 3 ? nearby : wrongPool;
-        const opts = shuffle([{...correct, ok:true}, ...shuffle(fillers)
-          .filter(c => !(c.s===correct.s && c.p===correct.p && c.f===correct.f))
-          .slice(0,3).map(c => ({...c, ok:false}))]);
-        speak(note);
-        setQ({ note, opts });
-      };
-
-      useEffect(()=>{ makeQ(); },[]);
-      useEffect(()=>{
-        const id = setInterval(()=>setTimer(t => t<=1 ? 0 : t-1), 1000);
-        return ()=>clearInterval(id);
-      },[]);
-
-      const bump = (note, ok) => {
-        const st = stats[note] || { correct:0, total:0 };
-        const next = { ...stats, [note]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveJSON(LOCATOR_STATS_KEY, next);
-      };
-
-      const answer = (o) => {
-        const ok = !!o.ok;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
-        beeps[ok?'good':'bad']();
-        bump(q.note, ok);
-        setAnswered(a=>a+1);
-        if (ok) setScore(s=>s+1);
-        setTimeout(makeQ, ok?350:700);
-      };
-
-      return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:800}}>
-            <h2 className="text-2xl font-bold mb-2">Note Locator</h2>
-            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-            {q && (
-              <>
-                <div className="text-xl font-bold text-center">Where can you play <b>{norm(q.note)}</b>?</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  {q.opts.map((o,i)=>(
-                    <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
-                      <span className="pill" style={{background:'rgba(0,0,0,.15)'}}>{i+1}</span>&nbsp; {labelLoc(o)}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ===================== NEW: Shift Coach ===================== */
-    const ShiftCoach = ({ onBack, prefs }) => {
-      const [q,setQ] = useState(null);
-      const [score,setScore] = useState(0);
-      const [answered,setAnswered] = useState(0);
-      const [timer,setTimer] = useState(prefs.roundLen || 90);
-      const [stats, setStats] = useState(loadJSON(SHIFT_STATS_KEY, {}));
-      const beeps = useBeeps(prefs.sound);
-
-      const locationsForNoteOnString = (note, s) => allLocationsForNote(note).filter(l => l.s === s);
-      const samePosExists = (A, B) => A.some(a => B.some(b => a.p===b.p));
-      const pathCost = (a, b) => Math.abs(Number(a.p) - Number(b.p));
-      const bestPair = (A, B) => {
-        let best = null;
-        for (const a of A) for (const b of B) {
-          const cost = pathCost(a,b);
-          if (!best || cost < best.cost) best = {a,b,cost};
-        }
-        return best;
-      };
-
-      const makePrompt = () => {
-        const s = getRandomItem(STRINGS);
-        const n1 = getRandomItem(ALL_NOTES_UNIQUE);
-        const n2 = getRandomItem(ALL_NOTES_UNIQUE);
-        const A = locationsForNoteOnString(n1, s);
-        const B = locationsForNoteOnString(n2, s);
-        if (!A.length || !B.length) return makePrompt();
-        if (samePosExists(A,B)) return makePrompt();
-        const best = bestPair(A,B);
-        const start = best.a;
-        const correctEnd = best.b;
-        const pool = allActualCombos().filter(c => c.s === s)
-          .filter(c => {
-            const cell = validCell(c.s, c.p, c.f) || [];
-            return !hasPitch(cell, n2);
-          });
-        const opts = [{...correctEnd, ok:true}];
-        for (const cand of shuffle(pool)) {
-          if (opts.length >= 4) break;
-          if (!opts.some(o => o.p===cand.p && o.f===cand.f)) opts.push({...cand, ok:false});
-        }
-        setQ({ string:s, startNote:n1, targetNote:n2, start, opts: shuffle(opts) });
-      };
-
-      useEffect(()=>{ makePrompt(); },[]);
-      useEffect(()=>{
-        const id = setInterval(()=>setTimer(t => t<=1 ? 0 : t-1), 1000);
-        return ()=>clearInterval(id);
-      },[]);
-
-      const bump = (key, ok) => {
-        const st = stats[key] || { correct:0, total:0 };
-        const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveJSON(SHIFT_STATS_KEY, next);
-      };
-
-      const answer = (o) => {
-        const ok = !!o.ok;
-        const key = `${q.string}:${q.startNote}->${q.targetNote}`;
-        bump(key, ok);
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
-        beeps[ok?'good':'bad']();
-        setAnswered(a=>a+1);
-        if (ok) setScore(s=>s+1);
-        setTimeout(makePrompt, ok?350:700);
-      };
-
-      const labelLoc = o => `${fullLoc(q.string, o.p, o.f, false)}`;
-
-      return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:860}}>
-            <h2 className="text-2xl font-bold mb-2">Shift Coach</h2>
-            <div className="muted text-sm mb-4">Stay on one string. Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
-            {q && (
-              <>
-                <div className="rounded-md p-4" style={{background:'rgba(0,0,0,.05)'}} aria-live="polite">
-                  <div className="font-semibold mb-1">String: <b>{q.string}</b></div>
-                  <div className="text-sm">Start at <b>{norm(q.startNote)}</b> → <span className="muted">{fullLoc(q.string, q.start.p, q.start.f, false)}</span></div>
-                  <div className="text-sm">Target note: <b>{norm(q.targetNote)}</b></div>
-                </div>
-                <div className="text-center text-sm muted mt-2 mb-4">Which <b>position + finger</b> is the best landing spot for the target?</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {q.opts.map((o,i)=>(
-                    <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
-                      <span className="pill" style={{background:'rgba(0,0,0,.15)'}}>{i+1}</span>&nbsp; {labelLoc(o)}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* ===================== NEW: Harmonics Lab ===================== */
-    const HarmonicsLab = ({ onBack, prefs }) => {
-      const [mode, setMode] = useState('flash'); // flash | quiz
-      const [i, setI] = useState(0);
-      const [show, setShow] = useState(false);
-      const [stats, setStats] = useState(loadJSON(HARM_STATS_KEY, {}));
-      const beeps = useBeeps(prefs.sound);
-
-      const deck = useMemo(()=>{
-        const cards = [];
-        for (const s of STRINGS) {
-          for (const ratio of Object.keys(HARMONICS[s])) {
-            const [pitch, label] = HARMONICS[s][ratio];
-            cards.push({ s, ratio, label, pitch });
-          }
-        }
-        return cards;
-      },[]);
-
-      const next = () => { setShow(false); setI((i+1)%deck.length); };
-      const prev = () => { setShow(false); setI((i-1+deck.length)%deck.length); };
-
-      const [q, setQ] = useState(null);
-      const makeQ = () => {
-        const s = getRandomItem(STRINGS);
-        const target = getRandomItem(Object.entries(HARMONICS[s]));
-        const correctRatio = target[0];
-        const noteName = target[1][0];
-        const display = `${s} string — play the ${noteName} harmonic`;
-        const ratios = Object.keys(HARMONICS[s]);
-        const distracts = shuffle(ratios.filter(r=>r!==correctRatio)).slice(0,3);
-        const options = shuffle([correctRatio, ...distracts]).map(r => ({r, ok: r===correctRatio}));
-        setQ({ s, note: noteName, display, options });
-      };
-
-      useEffect(()=>{ if(mode==='quiz') makeQ(); }, [mode]);
-
-      const bump = (key, ok) => {
-        const st = stats[key] || { correct:0, total:0 };
-        const next = { ...stats, [key]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
-        setStats(next); saveJSON(HARM_STATS_KEY, next);
-      };
-
-      const answer = (opt) => {
-        const ok = !!opt.ok;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
-        beeps[ok?'good':'bad']();
-        const key = `${q.s}:${q.note}`;
-        bump(key, ok);
-        setTimeout(makeQ, ok?350:700);
-      };
-
-      return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:820}}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Harmonics Lab</h2>
-              <div className="flex gap-2">
-                <button className={`btn ${mode==='flash'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('flash')}>Flashcards</button>
-                <button className={`btn ${mode==='quiz'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('quiz')}>Quick Quiz</button>
-              </div>
-            </div>
-
-            {mode==='flash' && (
-              <div className="mt-4">
-                <div className="rounded-xl border-2 p-6 text-center">
-                  <div className="text-xl font-bold">{deck[i].s} string — Node {deck[i].ratio}</div>
-                  {show ? (
-                    <div className="mt-2 ink700">
-                      <div><b>Pitch:</b> {deck[i].pitch}</div>
-                      <div><b>Type:</b> {deck[i].label}</div>
-                      <div className="text-xs muted mt-1">Light touch above the node; release pressure for a clear chime.</div>
-                    </div>
-                  ) : <div className="muted italic">Press Reveal to show details.</div>}
-                </div>
-                <div className="flex gap-2 mt-4 justify-center">
-                  <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
-                  <button className="btn btn-gray" onClick={prev}>Previous</button>
-                  <button className="btn btn-purple" onClick={next}>Next</button>
-                </div>
-                <div className="text-xs muted mt-2 text-center">Card {i+1} / {deck.length}</div>
-              </div>
-            )}
-
-            {mode==='quiz' && (
-              <div className="mt-4">
-                {!q ? <div className="muted">Loading…</div> : (
-                  <>
-                    <div className="text-lg font-semibold mb-2">Which node ratio produces this harmonic?</div>
-                    <div className="rounded-md p-4 mb-3" style={{background:'var(--surface-subtle)'}}>
-                      {q.display}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {q.options.map((o,idx)=>(
-                        <button key={idx} className="btn btn-blue" onClick={()=>answer(o)}>{o.r}</button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    // Speed Ladder (fingerboard) + SM-2 + XP + hint + fingerboard SVG
-    const SpeedLadderGame = ({ onBack, prefs, stats, setStats, mode = 'full' }) => {
-      const baseOnly = mode === 'base';
-      const modeKey  = baseOnly ? 'base' : 'full';
-      const allCombos = useMemo(()=>allActualCombos(), []);
-      const beeps = useBeeps(prefs.sound);
-      const { speak } = useCallouts(prefs.callouts);
-      const [question, setQuestion] = useState(null);
-      const [score, setScore] = useState(0);
-      const [answered, setAnswered] = useState(0);
-      const [timer, setTimer] = useState(prefs.roundLen || 120);
-      const [finished, setFinished] = useState(false);
-      const [streak, setStreak] = useState(0);
-      const [bestStreak, setBestStreak] = useState(loadBest().bestStreak);
-      const [bestScore, setBestScore] = useState(loadBest().bestScore);
-      const [confettiSeed, setConfettiSeed] = useState(0);
-      const optionsRef = useRef([]);
-      const lastMissRef = useRef(null);
-      const hitIdxRef = useRef(-1);
-      const [microHint, setMicroHint] = useState('');
-
-      // SM-2: include some due items
-      const dueKeysRaw = sm2DueKeys().filter(k => k.startsWith(modeKey + ':')); // <<< new
-      const dueCombos = useMemo(()=>{
-        const map = new Map(allCombos.map(c=>[`${c.s}:${c.p}:${c.f}`, c]));
-        const arr = [];
-        for (const k of dueKeysRaw) {
-          const [, s, p, f, maybeNote] = k.split(':'); // drop mode prefix
-          const base = map.get(`${s}:${p}:${f}`);
-          if (base) arr.push({ ...base, sm2Key:k, preferredNote: maybeNote });
-        }
-        return arr;
-        // include modeKey so toggling Core/Full doesn't reuse stale dues
-      }, [allCombos, modeKey, dueKeysRaw.join('|')]);
-
-      const candidates = useMemo(()=>{
-        const f = prefs.filters||{};
-        const okS = f.strings||{}; const okP = f.positions||{}; const okF = f.fingers||{};
-        const sel = allCombos.filter(c => (okS[c.s]!==false) && (okP[c.p]!==false) && (okF[c.f]!==false));
-        return sel.length ? sel : allCombos;
-      }, [allCombos, prefs.filters]);
-
-      const weightedPick = () => {
-        if (!prefs.adaptive) return getRandomItem(candidates);
-        const entries = candidates.map(c => {
-          const k = `${c.s}:${c.p}:${c.f}`;
-          const st = stats[k] || {correct:0,total:0};
-          const lb = wilsonLowerBound(st.correct, st.total || 0);
-          const unseen = st.total ? 0 : 0.6;
-          return { combo: c, weight: Math.max(0.05, (1 - lb) + unseen) };
-        });
-        if (prefs.coach && prefs.coachRetry && lastMissRef.current){
-          const miss = lastMissRef.current;
-          const idx = entries.findIndex(e=> e.combo.s===miss.s && e.combo.p===miss.p && e.combo.f===miss.f);
-          if (idx>=0) entries[idx].weight*=2.2;
-        }
-        // Interleave SM-2 due ~40% when available
-        if (dueCombos.length && Math.random()<0.4) return getRandomItem(dueCombos);
-        const sum = entries.reduce((a,e)=>a+e.weight,0)||1; let r = Math.random()*sum;
-        for (const e of entries){ if((r-=e.weight)<=0) return e.combo; }
-        return entries[entries.length-1].combo;
-      };
-
-      const newQuestion = (preset=null) => {
-      const duePick = (dueCombos.length && Math.random() < 0.4) ? getRandomItem(dueCombos) : null;
-      const c = preset || duePick || weightedPick();
-    
-      const baseOpts = baseNamesFor(c.s, c.p, c.f);
-      const correct = baseOnly
-        ? CANON_PC_NAME[pc(baseOpts[0])]
-        : (c.preferredNote ? c.preferredNote : getRandomItem(c.valid));
-    
-      const pool = baseOnly ? ALL_BASE_CANON : ALL_NOTES_UNIQUE;
-      const opts = shuffle([correct, ...getDistractorsFromPool(correct, pool, [], 3)]);
-    
-      optionsRef.current = opts;
-      setMicroHint('');
-      setQuestion({
-        ...c,
-        valid: baseOnly ? baseNamesFor(c.s, c.p, c.f) : c.valid,
-        correct,
-        options: opts,
-        ts: performance.now(),
-        sm2Key: `${modeKey}:${c.s}:${c.p}:${c.f}:${norm(correct)}`
-      });
-    };
-      useEffect(()=>{ newQuestion(); }, []);
-      useEffect(() => {
-        if (!finished) setTimer(prefs.roundLen || 120);
-      }, [prefs.roundLen, finished]);
-      useEffect(()=>{
-        if (finished) return;
-        const id = setInterval(()=>setTimer(t=>{
-          if(t<=1){
-            clearInterval(id); setFinished(true);
-            const bs = Math.max(bestScore, score); const bk = Math.max(bestStreak, streak);
-            setBestScore(bs); setBestStreak(bk); saveBest({ bestScore:bs, bestStreak:bk });
-            // log session
-            const log = loadJSON(SESSIONLOG_KEY, []);
-            log.push({
-              mode: baseOnly ? 'speedbase' : 'speed',
-              date: nowISO(),
-              correct: score,
-              total: answered
-            });
-            saveJSON(SESSIONLOG_KEY, log);
-            checkAwardBadges();
-            return 0;
-          }
-          return t-1;
-        }), 1000);
-        return ()=>clearInterval(id);
-      }, [finished, score, streak, bestScore, bestStreak, answered]);
-
-      const addXP = (type, ok) => {
-        if (!ok) return;
-        const sb = loadScoreboard();
-        const add = xpForEvent({type, streak});
-        const xp = sb.xp + add;
-        const level = levelForXP(xp), next = nextLevelXP(level);
-        saveScoreboard({ xp, level, next });
-      };
-
-      const handleAnswer = (note, idx) => {
-        if (finished || !question) return;
-        const key = `${question.s}:${question.p}:${question.f}`;
-        const prev = stats[key] || { correct:0, total:0 };
-        const ok = (note===question.correct);
-        const updated = { ...stats, [key]: { correct: prev.correct + (ok?1:0), total: prev.total + 1 } };
-        setStats(updated); saveStats(updated);
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
-        setAnswered(a=>a+1);
-        hitIdxRef.current = idx;
-
-        // micro hint when wrong
-        if (!ok) {
-          if (baseOnly) {
-            setMicroHint(`${norm(question.correct)} = base ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
-          } else {
-            const label = fingerHeight(question.correct, question.valid);
-            setMicroHint(`${norm(question.correct)} = ${label==='natural'?'natural':label} ${fingerLabel(question.f)} in ${posLabel(question.p)} (${question.s})`);
-          }
-        } else {
-          setMicroHint('');
-        }
-
-        // SM-2
-        const speedMs = performance.now() - (question.ts||performance.now());
-        const quality = ok ? (speedMs<2000?5:4) : 2;
-        sm2Update(question.sm2Key, quality);
-
-        if (ok){
-          lastMissRef.current=null; beeps.good(); setScore(s=>s+1); setStreak(x=>x+1); addXP('speed', true); if (prefs.confetti) setConfettiSeed(x=>x+1);
-          setTimeout(()=>newQuestion(), prefs.coach ? 380 : 550);
-        } else {
-          lastMissRef.current={ s:question.s, p:question.p, f:question.f, valid:question.valid };
-          beeps.bad(); setStreak(0);
-          setTimeout(()=>{
-            if (prefs.coach && prefs.coachRetry){
-              // inside the miss-retry timeout
-              const miss = lastMissRef.current;
-              if (miss){
-                const correct = baseOnly
-                  ? CANON_PC_NAME[pc(getRandomItem(baseNamesFor(miss.s, miss.p, miss.f)))]
-                  : getRandomItem(miss.valid);
-              
-                const pool = baseOnly ? ALL_BASE_CANON : ALL_NOTES_UNIQUE;
-                const opts = shuffle([correct, ...getDistractorsFromPool(correct, pool, [], 3)]);
-              
-                optionsRef.current = opts;
-                setQuestion({
-                  ...miss,
-                  valid: baseOnly ? baseNamesFor(miss.s, miss.p, miss.f) : miss.valid,
-                  correct,
-                  options: opts,
-                  ts: performance.now(),
-                  sm2Key: `${modeKey}:${miss.s}:${miss.p}:${miss.f}:${norm(correct)}`
-                });
-                return;
-              }
-            }
-            newQuestion();
-          }, 900);
-        }
-        setTimeout(()=>{ hitIdxRef.current = -1; }, 280);
-      };
-
-      useEffect(()=>{
-        const onKey=(e)=>{ if(finished) return; const k=e.key.toLowerCase(); if(['1','2','3','4'].includes(k)){ const idx=Number(k)-1; const raw=optionsRef.current?.[idx]; if(raw) handleAnswer(raw, idx); } if(k==='escape') onBack(); };
-        window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey);
-      }, [finished, question]);
-
-      const reset = () => { setScore(0); setAnswered(0); setTimer(prefs.roundLen||120); setFinished(false); setStreak(0); setConfettiSeed(0); newQuestion(); };
-
-      return (
-        <div className="relative p-4 min-h-screen flex flex-col items-center">
-          <ConfettiBurst seed={confettiSeed} />
-          <div className="card rounded-xl p-8" style={{maxWidth:740, width:'100%'}}>
-            <h2 className="text-2xl font-bold mb-2">Speed Ladder</h2>
-            <div className="muted text-sm mb-4">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered} · Best: <b>{bestScore}</b> · Best streak: <b>{bestStreak}</b></div>
-            {!finished && question && (
-              <>
-                <div className="text-center mb-4">
-                  <div className="text-xl font-bold">
-                    What note can you play at <b>{fullLoc(question.s, question.p, question.f)}</b>?
-                  </div>
-                  <div className="text-xs muted mt-1">Press 1–4 to answer fast.</div>
-                </div>
-                <FingerboardHint active={{s:question.s, p:question.p, f:question.f}} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  {question.options.map((note, i)=>(
-                    <button key={i} className={`btn btn-blue ${i===hitIdxRef.current ? 'btn-hit ' + (note===question.correct?'ok':'miss') : ''}`} title={`Press ${i+1}`} onClick={()=>handleAnswer(note,i)}>
-                      <span className="pill" style={{ background: 'rgba(0,0,0,.15)' }}>{i+1}</span>&nbsp; {norm(note)}
-                    </button>
-                  ))}
-                </div>
-                {!!microHint && <div className="text-xs mt-3 text-center" style={{color:'#ef4444'}}>{microHint}</div>}
-              </>
-            )}
-            {finished && (
-              <div className="text-center">
-                <div className="text-xl font-semibold">Round over! Final score: {score} / {answered}</div>
-                <button className="btn btn-purple mt-3" onClick={reset}>Play Again</button>
-              </div>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    // Flashcards (fingerboard)
-    const Flashcards = ({ onBack }) => {
-      const [mode, setMode] = useState('A');
-      const [i, setI] = useState(0);
-      const [show,setShow] = useState(false);
-      const deckA = useMemo(()=>{
-        const cards=[]; for (const s of STRINGS) for (const p of POSITIONS) for (const f of FINGERS) {
-          const cell = validCell(s,p,f);
-          if (cell) cards.push({q:`What note(s) at ${fullLoc(s, p, f)}?`, a: cell.map(norm).join(' or ')});
-        }
-        return cards;
-      },[]);
-      const uniq = useMemo(()=>[...new Set(ALL_NOTES_UNIQUE)].sort(),[]);
-      const deckB = useMemo(()=>uniq.map(n=>({q:`Where can you play ${norm(n)} (Pos 1–5)?`, a:groupLocationsByString(n)})),[uniq]);
-      const deck = mode==='A'?deckA:deckB;
-      const next=()=>{ setShow(false); setI((i+1)%deck.length); };
-      const prev=()=>{ setShow(false); setI((i-1+deck.length)%deck.length); };
-      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault();setShow(true);} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='escape') onBack(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); }, [i,show]);
-      return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:760}}>
-            <h2 className="text-2xl font-bold mb-4">Flashcards</h2>
+        <div className="p-4 max-w-3xl mx-auto min-h-screen">
+          <div className="card rounded-xl p-6">
+            <h2 className="text-2xl font-bold">Flashcards</h2>
             <div className="flex gap-2 mb-3">
-              <button className={`btn ${mode==='A'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('A'); setI(0); setShow(false);}}>Deck A</button>
-              <button className={`btn ${mode==='B'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('B'); setI(0); setShow(false);}}>Deck B</button>
+              <button className={`btn ${mode==='A'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('A'); setI(0); setShow(false)}}>Deck A</button>
+              <button className={`btn ${mode==='B'?'btn-purple':'btn-gray'}`} onClick={()=>{setMode('B'); setI(0); setShow(false)}}>Deck B</button>
             </div>
             <div className="rounded-xl border-2 p-6 text-center">
               <div className="text-lg font-bold">{deck[i].q}</div>
               {show ? <div className="mt-2 ink700 whitespace-pre-wrap">{deck[i].a}</div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
             </div>
-            <div className="flex gap-2 mt-6 justify-center">
-              <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
+            <div className="flex gap-2 mt-4 justify-center">
+              <button className="btn btn-blue" onClick={()=>{setShow(true); localStorage.setItem(LAST_MODE_KEY,'flash')}}>Reveal</button>
               <button className="btn btn-gray" onClick={prev}>Previous</button>
               <button className="btn btn-purple" onClick={next}>Next</button>
             </div>
-            <div className="text-xs muted mt-3 text-center">Card {i+1} / {deck.length} · Shortcuts: Space, ←/→ or P/N</div>
           </div>
           <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    // Bingo
-    const BingoBoard = ({ onBack }) => {
-      const base = [
-        "Say & play A-string Pos 2 F1–F4 aloud","Upbeat start ×8 bars","Bridge-lane forte ×4 bars","Name all B notes Pos 1–5","Sight-read in Pos 2",
-        "G-string Pos 1 quiz","C major in Pos 3 aloud","Find 3 ways to play D","E-string Pos 4 quiz","Slur → up-bow staccato",
-        "Name all Cs Pos 1–5","D major in Pos 5 aloud","Echo dynamics on repeat","Perfect fifth resonance check (stopped notes)","A-string Pos 3 quiz",
-        "List all F#s Pos 1–5","Gigue pickup (up-bow)","Martelé ×8 bars","Map staff lines → fingers","D-string Pos 4 quiz",
-        "Contact-point ladders","Slow spiccato ×8 bars","Tempo flashcards ×20","Record 30s and review"
-      ];
-      const makeBoard=()=>{ const grid = shuffle(base).slice(0,24); grid.splice(12,0,'FREE'); return grid; };
-      const [tiles,setTiles]=useState(makeBoard);
-      const [on,setOn]=useState(()=>{ const o={}; tiles.forEach(t=>o[t]= (t==='FREE')); return o; });
-      const toggle=(t)=>{ if(t==='FREE') return; setOn(s=>({...s,[t]:!s[t]})); };
-      const reset=()=>{ const nx=makeBoard(); setTiles(nx); const o={}; nx.forEach(t=>o[t]=(t==='FREE')); setOn(o); };
-      const checked = Object.values(on).filter(Boolean).length;
+    /* ================= Snapshot Core ================= */
+    const SnapshotCore = ({ onBack }) => {
+      const [stats, setStats] = React.useState(loadJSON(SNAPSHOT_STATS_KEY, {}));
+      const [timer, setTimer] = React.useState(90);
+      const [score, setScore] = React.useState(0);
+      const [answered, setAnswered] = React.useState(0);
+      const [flash, setFlash] = React.useState(null);
+      const [q, setQ] = React.useState(null);
+      const beeps = useBeeps(true);
+      const optionsRef = React.useRef([]);
+
+      const canonBase = (s,p,f) => CANON_PC_NAME[pc(baseNamesFor(s,p,f)[0])];
+
+      const pick = () => {
+        const s = getRandom(STRINGS);
+        const p = getRandom(POSITIONS);
+        const labels = {1:canonBase(s,p,1), 2:canonBase(s,p,2), 3:canonBase(s,p,3), 4:canonBase(s,p,4)};
+        setFlash({ s, p, labels });
+        setQ(null);
+        localStorage.setItem(LAST_MODE_KEY,'snapshot');
+
+        setTimeout(() => {
+          const f = getRandom(FINGERS);
+          const correct = labels[f];
+          const distract = shuffle(ALL_BASE_CANON.filter(n => pc(n)!==pc(correct))).slice(0,3);
+          const options = shuffle([correct, ...distract]);
+          optionsRef.current = options;
+          setFlash(null);
+          setQ({ s, p, f, correct, options });
+        }, 1100);
+      };
+
+      React.useEffect(() => { pick(); }, []);
+      React.useEffect(() => { const id=setInterval(()=>setTimer(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); }, []);
+      React.useEffect(()=>{
+        const onKey = (e)=>{
+          if(!q || timer===0) return;
+          if(['1','2','3','4'].includes(e.key)){
+            const idx = +e.key - 1;
+            const ch = optionsRef.current[idx];
+            if (ch) answer(ch);
+          }
+          if(e.key==='Escape') onBack();
+        };
+        addEventListener('keydown', onKey);
+        return ()=>removeEventListener('keydown', onKey);
+      }, [q, timer]);
+
+      const answer = (choice) => {
+        if(!q || timer===0) return;
+        const ok = pc(choice) === pc(q.correct);
+        beeps[ok?'good':'bad']();
+        setAnswered(a=>a+1);
+        if(ok) setScore(s=>s+1);
+
+        const k = `${q.s}:${q.p}:${q.f}`;
+        const st = stats[k] || { correct:0, total:0 };
+        const next = { ...stats, [k]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
+        setStats(next); saveJSON(SNAPSHOT_STATS_KEY, next);
+
+        saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
+          const xp=prev.xp+xpAdd({type:'review'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
+
+        const log = loadJSON(SESSIONLOG_KEY, []);
+        log.push({ mode:'snapshot', date: nowISO(), correct: ok?1:0, total:1 });
+        saveJSON(SESSIONLOG_KEY, log);
+
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+        setTimeout(pick, ok?380:720);
+      };
+
       return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-6 w-full" style={{maxWidth:960}}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-2xl font-bold">Positions Bingo</div>
-              <button className="btn btn-purple" onClick={reset}>New Board</button>
+        <div className="p-4 max-w-3xl mx-auto min-h-screen">
+          <div className="card rounded-xl p-6">
+            <h2 className="text-2xl font-bold">Snapshot Core</h2>
+            <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+
+            {flash && (
+              <div className="rounded-xl border-2 p-5 text-center">
+                <div className="text-lg font-semibold">Memorize these base notes:</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                  {FINGERS.map(f=>(
+                    <div key={f} className="rounded border p-3">
+                      <div className="text-xs muted">F{f}</div>
+                      <div className="font-bold text-lg">{flash.labels[f]}</div>
+                    </div>
+                  ))}
+                </div>
+                <FingerboardHint active={{ s:flash.s, p:flash.p, f:null }}/>
+              </div>
+            )}
+
+            {q && (
+              <>
+                <div className="text-center mb-3">
+                  <div className="text-lg font-bold">
+                    Which base note is <b>F{q.f}</b> at {posLabel(q.p)} on the {stringLabel(q.s)}?
+                  </div>
+                  <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
+                </div>
+                <FingerboardHint active={{ s:q.s, p:q.p, f:q.f }}/>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                  {q.options.map((n,i)=>
+                    <button key={i} className="btn btn-blue" onClick={()=>answer(n)}>
+                      <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{n}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* ================= Interval Sprint ================= */
+    <script type="text/babel">
+		const IntervalSprint = ({ onBack }) => {
+		  const [stats, setStats] = React.useState(loadJSON(INTERVAL_STATS_KEY, {}));
+		  const {time:timer,setTime,paused}=useGameTimer(90);
+		  const [score, setScore] = React.useState(0);
+		  const [answered, setAnswered] = React.useState(0);
+		  const [q, setQ] = React.useState(null);
+		  const beeps = useBeeps(loadPrefs().sound);
+		  const adaptive = !!loadPrefs().adaptive;
+		
+		  const basePC = (s,p,f)=> OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
+		
+		  const pick = ()=>{
+		    const cand=[];
+		    for(const s of STRINGS) for(const p of POSITIONS){
+		      for(const [a,b] of [[1,2],[2,3],[3,4]]){
+		        if(!(isAllowed(s,p,a)||isAllowed(s,p,b))) continue;
+		        cand.push({s,p,a,b});
+		      }
+		    }
+		    const chosen = cand.length
+		      ? (adaptive ? pickWeighted(cand, it=> weaknessWeight(stats[`${it.s}:${it.p}:${it.a}-${it.b}`]||{})) : getRandom(cand))
+		      : {s:getRandom(STRINGS),p:getRandom(POSITIONS),a:1,b:2};
+		
+		    const d = Math.abs((basePC(chosen.s,chosen.p,chosen.b) - basePC(chosen.s,chosen.p,chosen.a) + 12) % 12);
+		    const type = (d===1) ? 'half' : 'whole';
+		    setQ({ ...chosen, type });
+		    localStorage.setItem(LAST_MODE_KEY,'interval');
+		  };
+		
+		  React.useEffect(()=>{ pick(); },[]);
+		  React.useEffect(()=>{
+		    const onKey=(e)=>{
+		      if(!q || timer===0) return;
+		      const k=e.key.toLowerCase();
+		      if(k==='1' || k==='h') answer('half');
+		      if(k==='2' || k==='w') answer('whole');
+		      if(k==='escape') onBack();
+		    };
+		    addEventListener('keydown',onKey);
+		    return ()=>removeEventListener('keydown',onKey);
+		  },[q,timer]);
+		
+		  const answer=(choice)=>{
+		    if(!q || timer===0) return;
+		    const ok = (choice===q.type);
+		    beeps[ok?'good':'bad']();
+		    setAnswered(a=>a+1);
+		    if(ok) setScore(s=>s+1);
+		
+		    const k = `${q.s}:${q.p}:${q.a}-${q.b}`;
+		    const st = stats[k] || { correct:0, total:0 };
+		    const next = { ...stats, [k]:{ correct: st.correct + (ok?1:0), total: st.total + 1 } };
+		    setStats(next); saveJSON(INTERVAL_STATS_KEY, next);
+		
+		    saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
+		      const xp=prev.xp+xpAdd({type:'normal'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
+		    const log = loadJSON(SESSIONLOG_KEY, []);
+		    log.push({ mode:'interval', date: nowISO(), correct: ok?1:0, total:1 });
+		    saveJSON(SESSIONLOG_KEY, log);
+		
+		    document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+		    setTimeout(pick, ok?320:680);
+		  };
+		
+		  return (
+		    <div className="p-4 max-w-3xl mx-auto min-h-screen">
+		      <PausedBanner show={paused}/>
+		      <div className="card rounded-xl p-6">
+		        <h2 className="text-2xl font-bold">Interval Sprint</h2>
+		        <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+		        {q && (
+		          <>
+		            <div className="text-center mb-3">
+		              <div className="text-lg font-bold">
+		                In {posLabel(q.p)} on the {stringLabel(q.s)}, between <b>F{q.a}</b> and <b>F{q.b}</b> — Half Step or Whole Step?
+		              </div>
+		              <div className="text-xs muted mt-1">Shortcuts: <b>1/H</b>=Half, <b>2/W</b>=Whole</div>
+		            </div>
+		            <FingerboardHint active={{ s:q.s, p:q.p, f:q.a }}/>
+		            <FingerboardHint active={{ s:q.s, p:q.p, f:q.b }}/>
+		            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+		              <button className="btn btn-blue" onClick={()=>answer('half')}>
+		                <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">1</span>Half Step
+		              </button>
+		              <button className="btn btn-green" onClick={()=>answer('whole')}>
+		                <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">2</span>Whole Step
+		              </button>
+		            </div>
+		          </>
+		        )}
+		      </div>
+		      <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		};
+		</script>
+    /* ================= Note Locator ================= */
+    <script type="text/babel">
+		const NoteLocator = ({ onBack }) => {
+		  const [stats, setStats] = React.useState(loadJSON(LOCATOR_STATS_KEY, {}));
+		  const {time:timer,setTime,paused}=useGameTimer(90);
+		  const [score, setScore] = React.useState(0);
+		  const [answered, setAnswered] = React.useState(0);
+		  const [q, setQ] = React.useState(null);
+		  const beeps = useBeeps(loadPrefs().sound);
+		  const optionsRef = React.useRef([]);
+		  const adaptive = !!loadPrefs().adaptive;
+		
+		  const allValidCellsOnString = (s, respectFilters=true) => {
+		    const out = [];
+		    for (const p of POSITIONS) for (const f of FINGERS) {
+		      const ok = validCell(s,p,f) && (!respectFilters || isAllowed(s,p,f));
+		      if (ok) out.push({s,p,f});
+		    }
+		    return out;
+		  };
+		
+		  const pick = () => {
+		    // Build candidate cells (respect filters)
+		    const cells=[];
+		    for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){
+		      if(isAllowed(s,p,f) && validCell(s,p,f)) cells.push({s,p,f});
+		    }
+		    const chosenCell = cells.length
+		      ? (adaptive ? pickWeighted(cells, it=> weaknessWeight(stats[`${it.s}:${it.p}:${it.f}`]||{})) : getRandom(cells))
+		      : ({s:'A',p:1,f:3});
+		
+		    const s = chosenCell.s;
+		    // pick a playable note at that exact cell
+		    const noteChoices = (validCell(chosenCell.s,chosenCell.p,chosenCell.f)||[]).map(norm);
+		    const note = noteChoices.length? getRandom(noteChoices) : 'A';
+		
+		    // options: correct cell + 3 distractors on same string
+		    const correct = {p:chosenCell.p, f:chosenCell.f};
+		    const wrongPool = allValidCellsOnString(s,true).filter(c => !(c.p===correct.p && c.f===correct.f));
+		    let distract = shuffle(wrongPool).slice(0,3);
+		    if(distract.length<3){ // relax filters if needed to keep 4 options
+		      const fallback = allValidCellsOnString(s,false).filter(c =>
+		        !(c.p===correct.p && c.f===correct.f) &&
+		        !distract.some(d=>d.p===c.p && d.f===c.f)
+		      );
+		      distract = [...distract, ...shuffle(fallback).slice(0, 3-distract.length)];
+		    }
+		    const options = shuffle([{p:correct.p,f:correct.f}, ...distract.map(d=>({p:d.p,f:d.f}))]);
+		    optionsRef.current = options;
+		    setQ({ s, note: norm(note), correct, options });
+		    localStorage.setItem(LAST_MODE_KEY,'locator');
+		  };
+		
+		  React.useEffect(()=>{ pick(); },[]);
+		  React.useEffect(()=>{
+		    const onKey=(e)=>{
+		      if(!q || timer===0) return;
+		      if(['1','2','3','4'].includes(e.key)){
+		        const ch = optionsRef.current[+e.key-1];
+		        if (ch) answer(ch);
+		      }
+		      if(e.key==='Escape') onBack();
+		    };
+		    addEventListener('keydown', onKey);
+		    return ()=>removeEventListener('keydown', onKey);
+		  }, [q, timer]);
+		
+		  const label = (p,f)=>`Pos ${p} — F${f}`;
+		  const answer = (choice) => {
+		    if(!q || timer===0) return;
+		    const ok = (choice.p===q.correct.p && choice.f===q.correct.f);
+		    beeps[ok?'good':'bad']();
+		    setAnswered(a=>a+1);
+		    if(ok) setScore(s=>s+1);
+		
+		    const k = `${q.s}:${q.correct.p}:${q.correct.f}`;
+		    const st = stats[k] || { correct:0, total:0 };
+		    const next = { ...stats, [k]: { correct: st.correct + (ok?1:0), total: st.total + 1 } };
+		    setStats(next); saveJSON(LOCATOR_STATS_KEY, next);
+		
+		    saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
+		      const xp=prev.xp+xpAdd({type:'normal'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
+		    const log = loadJSON(SESSIONLOG_KEY, []);
+		    log.push({ mode:'locator', date: nowISO(), correct: ok?1:0, total:1 });
+		    saveJSON(SESSIONLOG_KEY, log);
+		
+		    document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+		    setTimeout(pick, ok?360:760);
+		  };
+		
+		  return (
+		    <div className="p-4 max-w-3xl mx-auto min-h-screen">
+		      <PausedBanner show={paused}/>
+		      <div className="card rounded-xl p-6">
+		        <h2 className="text-2xl font-bold">Note Locator</h2>
+		        <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+		        {q && (
+		          <>
+		            <div className="text-center mb-3">
+		              <div className="text-lg font-bold">
+		                On the <b>{q.s}</b> string, where can you play <b>{q.note}</b> (Pos 1–5)?
+		              </div>
+		              <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
+		            </div>
+		            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+		              {q.options.map((o,i)=>
+		                <button key={i} className="btn btn-blue" onClick={()=>answer(o)}>
+		                  <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{label(o.p,o.f)}
+		                </button>
+		              )}
+		            </div>
+		          </>
+		        )}
+		      </div>
+		      <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		};
+		</script>
+
+    /* ================= Bieler Method Lab ================= */
+    const BIELER_VOCAB = [
+      { term:'Hand Frame', def:'Stable spacing of fingers (semitone/whole-tone patterns) that travels as a unit while shifting.' },
+      { term:'Three-Dimensional Positioning', def:'Height, depth, and angle of violin set to free both hands.' },
+      { term:'Contact Point', def:'Soundpoint between bridge and fingerboard chosen by speed/pressure/tilt.' },
+      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
+    ];
+    const BIELER_CONCEPT_QA = [
+      { q:'Why build the hand frame before speed?', a:'It stabilizes spacing so motion stays accurate at tempo.', wrong:['It makes vibrato louder','It avoids all shifts','Player height decides positions'] },
+      { q:'Best cue for contact point?', a:'Match bow speed/pressure/tilt to desired tone color.', wrong:['Finger curvature only','String brand','Player arm length'] },
+      { q:'Spiccato vs Sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['They are identical','Sautillé is always loud','Spiccato is legato only'] },
+    ];
+    const BIELER_APPLY = [
+      { scenario:'Bright forte, clear projection on A string', a:'Move soundpoint toward bridge; higher speed with supportive index; stable hand frame.', wrong:['Over-fingerboard with light bow','Only vibrato faster','Tighten thumb and press'] },
+      { scenario:'Clean off-string at MM=100, 8ths', a:'Spiccato near balance point with small vertical energy; consistent levels.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Ricochet near bridge'] },
+      { scenario:'Dolce line in 3rd position', a:'More fingerboard soundpoint, lower pressure, seamless legato; frame glides in shifts.', wrong:['Firm staccato','Stiff wrist collé','Always sul ponticello'] },
+    ];
+
+    const BielerLab = ({ onBack }) => {
+      const [tab, setTab] = React.useState('vocab'); // vocab | concept | apply
+      const [i, setI] = React.useState(0);
+      const [show, setShow] = React.useState(false);
+      const [score, setScore] = React.useState(0);
+      const [answered, setAnswered] = React.useState(0);
+      const [q, setQ] = React.useState(null);
+      const beeps = useBeeps(true);
+
+      React.useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'bielerLab'); }, []);
+
+      const nextVocab = ()=>{ setShow(false); setI((i+1)%BIELER_VOCAB.length); };
+      const prevVocab = ()=>{ setShow(false); setI((i-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
+      React.useEffect(()=>{
+        const onKey=(e)=>{
+          const k=e.key.toLowerCase();
+          if(tab==='vocab'){
+            if(k===' '){ e.preventDefault(); setShow(true); }
+            if(k==='arrowright'||k==='n') nextVocab();
+            if(k==='arrowleft'||k==='p')  prevVocab();
+          }else if(tab==='concept' || tab==='apply'){
+            if(['1','2','3','4'].includes(k)){
+              const idx=+k-1; const ch=q?.options?.[idx]; if(ch) answer(ch);
+            }
+          }
+          if(k==='escape') onBack();
+        };
+        addEventListener('keydown', onKey);
+        return ()=>removeEventListener('keydown', onKey);
+      }, [tab, i, q, show]);
+
+      const makeMCQ = (bank, type) => {
+        const item = getRandom(bank);
+        const distract = shuffle(item.wrong).slice(0,3);
+        const options = shuffle([item.a, ...distract]);
+        setQ({ stem: type==='concept' ? item.q : item.scenario, correct:item.a, options, type });
+      };
+
+      React.useEffect(()=>{ if(tab==='concept') makeMCQ(BIELER_CONCEPT_QA,'concept'); }, [tab]);
+      React.useEffect(()=>{ if(tab==='apply')   makeMCQ(BIELER_APPLY,'apply'); },   [tab]);
+
+      const answer = (choice)=>{
+        if(!q) return;
+        const ok = choice===q.correct;
+        beeps[ok?'good':'bad']();
+        setAnswered(a=>a+1);
+        if(ok){ setScore(s=>s+1);
+          saveJSON(SCORE_KEY, (()=>{ const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120});
+            const xp=prev.xp+xpAdd({type:'review'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}; })());
+        }
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again';
+        setTimeout(()=>makeMCQ(q.type==='concept'?BIELER_CONCEPT_QA:BIELER_APPLY, q.type), ok?340:720);
+      };
+
+      return (
+        <div className="p-4 max-w-3xl mx-auto min-h-screen">
+          <div className="card rounded-xl p-6">
+            <h2 className="text-2xl font-bold">Bieler Method Lab</h2>
+            <div className="flex gap-2 mb-3">
+              <button className={`btn ${tab==='vocab'?'btn-purple':'btn-gray'}`} onClick={()=>setTab('vocab')}>Vocabulary</button>
+              <button className={`btn ${tab==='concept'?'btn-purple':'btn-gray'}`} onClick={()=>setTab('concept')}>Concept Checks</button>
+              <button className={`btn ${tab==='apply'?'btn-purple':'btn-gray'}`} onClick={()=>setTab('apply')}>Applied</button>
             </div>
-            <div className="muted text-sm mb-2">Checked: {checked}/25 · Center is FREE</div>
-            <div className="grid grid-cols-5 gap-2">
-              {tiles.map((t,i)=>(
-                <button key={i} onClick={()=>toggle(t)}
-                  className={`rounded-lg border-2 p-2 h-24 text-xs ${on[t]?'bg-green-500 text-white border-green-700':'bg-gray-200 text-gray-800 border-gray-300'}`}>
-                  {t}
+
+            {tab==='vocab' && (
+              <div className="rounded-xl border-2 p-6 text-center">
+                <div className="text-xl font-bold">{BIELER_VOCAB[i].term}</div>
+                {show ? <div className="mt-2 ink700">{BIELER_VOCAB[i].def}</div> : <div className="muted italic">Press Space or tap “Reveal”.</div>}
+                <div className="flex gap-2 mt-4 justify-center">
+                  <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
+                  <button className="btn btn-gray" onClick={prevVocab}>Previous</button>
+                  <button className="btn btn-purple" onClick={nextVocab}>Next</button>
+                </div>
+              </div>
+            )}
+
+            {(tab==='concept' || tab==='apply') && q && (
+              <>
+                <div className="muted text-sm mb-2">Score: <b>{score}</b> / {answered}</div>
+                <div className="text-center mb-3">
+                  <div className="text-lg font-bold">{q.stem}</div>
+                  <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {q.options.map((opt,i)=>
+                    <button key={i} className="btn btn-blue" onClick={()=>answer(opt)}>
+                      <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{opt}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* ================= Tempo Trainer (flashcards with voice) ================= */
+    const TempoTrainer = ({ onBack }) => {
+      const [i,setI]=useState(0);
+      const [show,setShow]=useState(false);
+      const [prefs,setPrefs]=useState(loadPrefs());
+      useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'tempo-trainer'); },[]);
+      const next=()=>{ setShow(false); setI((i+1)%TEMPOS.length); };
+      const prev=()=>{ setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
+      const t=TEMPOS[i];
+      const say=()=>{ if(prefs.callouts) speak(`${t.it}. ${t.en}.`); };
+      useEffect(()=>{ const onKey=(e)=>{ const k=e.key.toLowerCase(); if(k===' '){e.preventDefault(); setShow(true)} if(k==='n'||k==='arrowright') next(); if(k==='p'||k==='arrowleft') prev(); if(k==='s') say(); if(k==='escape') onBack(); }; addEventListener('keydown',onKey); return()=>removeEventListener('keydown',onKey);});
+      return (
+        <div className="p-4 max-w-3xl mx-auto min-h-screen">
+          <div className="card rounded-xl p-6">
+            <h2 className="text-2xl font-bold">Tempo Trainer</h2>
+            <div className="text-xs muted mb-2">Shortcuts: Space=Reveal · N/P=Next/Prev · S=Speak</div>
+            <div className="rounded-xl border-2 p-6 text-center">
+              <div className="text-3xl font-black">{t.it}</div>
+              {show ? (
+                <div className="mt-2 ink700">
+                  <div className="font-semibold">{t.en}</div>
+                  <div className="text-sm muted">Typical BPM: {Array.isArray(t.bpm)?`${t.bpm[0]}–${t.bpm[1]===~Infinity?'200+':t.bpm[1]}`:'—'}</div>
+                </div>
+              ) : <div className="muted italic">Press Space or tap “Reveal”.</div>}
+            </div>
+            <div className="flex gap-2 mt-4 justify-center">
+              <button className="btn btn-blue" onClick={()=>{setShow(true); say();}}>Reveal</button>
+              <button className="btn btn-gray" onClick={prev}>Previous</button>
+              <button className="btn btn-purple" onClick={next}>Next</button>
+              <button className="btn btn-green" onClick={say}>Speak</button>
+            </div>
+          </div>
+          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+        </div>
+      );
+    };
+
+    /* ================= Tempo Tester (timed quiz) ================= */
+		<script type="text/babel">
+		const TempoTester=({onBack})=>{
+		  const {time:timer,setTime,paused}=useGameTimer(60);
+		  const [score,setScore]=useState(0);
+		  const [answered,setAnswered]=useState(0);
+		  const [q,setQ]=useState(null);
+		  const [misses,setMisses]=useState([]);
+		  const beeps=useBeeps(loadPrefs().sound);
+		  const optionsRef=useRef([]);
+		  useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'tempo-tester'); },[]);
+		
+		  const pick=()=>{
+		    const t=getRandom(TEMPOS);
+		    const correct=t.en;
+		    const distract=shuffle(TEMPOS.map(x=>x.en).filter(x=>x!==correct)).slice(0,3);
+		    const options=shuffle([correct,...distract]); optionsRef.current=options;
+		    setQ({term:t.it, correct, options});
+		  };
+		
+		  useEffect(()=>{ pick(); },[]);
+		  useEffect(()=>{
+		    const onKey=e=>{
+		      if(!q || timer===0) return;
+		      if(['1','2','3','4'].includes(e.key)){
+		        const ch=optionsRef.current[+e.key-1]; if(ch) answer(ch);
+		      }
+		      if(e.key==='Escape') onBack();
+		    };
+		    addEventListener('keydown',onKey);
+		    return ()=>removeEventListener('keydown',onKey);
+		  },[q,timer]);
+		
+		  const answer=(choice)=>{
+		    if(!q||timer===0) return;
+		    const ok=(choice===q.correct);
+		    beeps[ok?'good':'bad']();
+		    setAnswered(a=>a+1);
+		    if(ok) setScore(s=>s+1); else setMisses(m=>[...m,{term:q.term,correct:q.correct}]);
+		    const stat=loadJSON(TEMPO_STATS_KEY,{correct:0,total:0});
+		    const next={correct:stat.correct+(ok?1:0), total:(stat.total||0)+1};
+		    saveJSON(TEMPO_STATS_KEY,next);
+		    saveJSON(SCORE_KEY,(()=>{const prev=loadJSON(SCORE_KEY,{xp:0,level:1,next:120}); const xp=prev.xp+xpAdd({type: ok?'review':'retry'}); const level=levelForXP(xp); return {xp,level,next:nextLevelXP(level)}})());
+		    document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+		    setTimeout(pick, ok?260:600);
+		  };
+		
+		  if(timer===0){
+		    const best=loadJSON(TEMPO_BEST_KEY,{bestScore:0,bestStreak:0});
+		    return (
+		      <div className="p-4 max-w-3xl mx-auto min-h-screen">
+		        <div className="card rounded-xl p-6">
+		          <h2 className="text-2xl font-bold">Tempo Tester — Results</h2>
+		          <div className="mt-2 text-lg">Score: <b>{score}</b> / {answered}</div>
+		          {misses.length>0 && (
+		            <div className="mt-4">
+		              <div className="font-semibold mb-2">Review Misses</div>
+		              <ul className="list-disc pl-6 text-sm">
+		                {misses.map((m,i)=><li key={i}><b>{m.term}</b> — {m.correct}</li>)}
+		              </ul>
+		            </div>
+		          )}
+		          <div className="flex gap-2 mt-4">
+		            <button className="btn btn-purple" onClick={()=>{ setTime(60); setScore(0); setAnswered(0); setMisses([]); pick(); }}>Play again</button>
+		            <button className="btn btn-gray" onClick={onBack}>Back</button>
+		          </div>
+		        </div>
+		      </div>
+		    );
+		  }
+		
+		  return (
+		    <div className="p-4 max-w-3xl mx-auto min-h-screen">
+		      <PausedBanner show={paused}/>
+		      <div className="card rounded-xl p-6">
+		        <h2 className="text-2xl font-bold">Tempo Tester</h2>
+		        <div className="muted text-sm mb-3">Time: <b>{timer}s</b> · Score: <b>{score}</b> / {answered}</div>
+		        {q && (
+		          <>
+		            <div className="text-center mb-3">
+		              <div className="text-lg font-bold">What does <b>{q.term}</b> mean?</div>
+		              <div className="text-xs muted mt-1">Press 1–4 to answer.</div>
+		            </div>
+		            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+		              {q.options.map((opt,i)=>
+		                <button key={i} className="btn btn-blue" onClick={()=>answer(opt)}>
+		                  <span className="mr-2 inline-block px-2 py-0.5 rounded-full bg-[rgba(0,0,0,.15)]">{i+1}</span>{opt}
+		                </button>
+		              )}
+		            </div>
+		          </>
+		        )}
+		      </div>
+		      <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		};
+		</script>
+    /* ================= Positions Bingo ================= */
+    const BINGO_KEY='positionsQuest.bingo.v1';
+    const bingoTasksBase = [
+      'Speed Ladder (core) — 3 min',
+      'Speed Ladder (full) — 3 min',
+      'Snapshot Core — 2 rounds',
+      'Interval Sprint — 2 rounds',
+      'Note Locator — 2 rounds',
+      'Flashcards — Deck A (10 cards)',
+      'Flashcards — Deck B (10 cards)',
+      'Play F1-F2 half steps in Pos 2 (all strings)',
+      'Détaché in your “middle” — 3 min',
+      'Martelé in upper half — Kreutzer 7 (8 bars)',
+      'Collé landings — 16 clean starts',
+      'String crossings — Kreutzer 2 (8 bars)',
+      'Tempo Trainer — Allegro family',
+      'Tempo Trainer — Slow family',
+      'Bieler vocab — 5 cards',
+      'Vibrato starts on head of note — scale one octave',
+      'Hand frame check — Pos 1 (G & D strings)',
+      'Shift blocks up & down (A string) — 1st↔3rd',
+      'Contact point survey — E string',
+      'Record one passage and self-critique',
+      'Slow scales with drones — 5 min',
+      'Arpeggio intonation — 5 min',
+      'Chord voicing — 3-note rolls (slow)',
+      'Sautillé 8ths at MM=100 — 1 min',
+      'Spiccato 8ths at MM=100 — 1 min'
+    ];
+    const makeBoard=()=>shuffle(bingoTasksBase).slice(0,25).map(t=>({t,done:false}));
+    const Bingo=({onBack})=>{
+      const [board,setBoard]=useState(loadJSON(BINGO_KEY, makeBoard()));
+      const toggle=i=>{const nx=[...board]; nx[i]={...nx[i],done:!nx[i].done}; setBoard(nx); saveJSON(BINGO_KEY,nx)};
+      const reset=()=>{const nx=makeBoard(); setBoard(nx); saveJSON(BINGO_KEY,nx)};
+      useEffect(()=>{ localStorage.setItem(LAST_MODE_KEY,'bingo'); },[]);
+      return (
+        <div className="p-4 max-w-5xl mx-auto min-h-screen">
+          <div className="card rounded-xl p-6">
+            <h2 className="text-2xl font-bold mb-3">Positions Bingo</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+              {board.map((c,i)=>(
+                <button key={i} className="card rounded-lg p-3 text-left border" style={{borderColor:'var(--hairline)', background:c.done?'rgba(16,185,129,.15)':'var(--card)'}} onClick={()=>toggle(i)}>
+                  <div className="text-sm">{c.t}</div>
+                  {c.done && <div className="text-xs mt-2 font-bold text-green-700">✔ Done</div>}
                 </button>
               ))}
             </div>
+            <div className="flex gap-2 mt-4">
+              <button className="btn btn-purple" onClick={reset}>Reshuffle</button>
+              <button className="btn btn-gray" onClick={onBack}>Back</button>
+            </div>
           </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    // Dice
-    const DiceOfDestinyGame = ({ onBack }) => {
-      const poolFull = [
-        'Say & play A-string Pos 2 F1–F4 aloud','Upbeat start ×8 bars','Bridge-lane forte ×4 bars','Name all B notes Pos 1–5',
-        'Sight-read in Pos 2','G-string Pos 1 quiz','C major in Pos 3 aloud','Find 3 ways to play D','E-string Pos 4 quiz',
-        'Slur → up-bow staccato','Name all Cs Pos 1–5','D major in Pos 5 aloud','Echo dynamics on repeat','Perfect fifth resonance check (stopped notes)',
-        'A-string Pos 3 quiz','List all F#s Pos 1–5','Gigue pickup (up-bow)','Martelé ×8 bars','Map staff lines → fingers','D-string Pos 4 quiz',
-      ];
-      const [pool,setPool]=useState(poolFull);
-      const [cur,setCur]=useState('');
-      const [busy,setBusy]=useState(false);
-      const [history,setHistory]=useState([]);
-      const roll=()=>{ setBusy(true); setCur('…'); setTimeout(()=>{ const p = pool.length ? pool : poolFull; const pick = getRandomItem(p); setCur(pick); setHistory(h=>[pick,...h].slice(0,6)); setPool(p.filter(x=>x!==pick)); setBusy(false); }, 560); };
-      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key.toLowerCase()==='r') roll(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[]);
+    /* ================= Dice of Destiny ================= */
+    const Dice=({onBack})=>{
+      const [last,setLast]=useState(null);
+      const [task,setTask]=useState('Roll to get a focused challenge!');
+      const roll=()=>{
+        const choices=bingoTasksBase.filter(t=>t!==last);
+        const pick=getRandom(choices);
+        setTask(pick); setLast(pick);
+        localStorage.setItem(LAST_MODE_KEY,'dice');
+      };
       return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-8 w-full" style={{maxWidth:720}}>
-            <h2 className="text-2xl font-bold mb-4">Dice of Destiny</h2>
-            <button disabled={busy} className="btn btn-green text-xl" onClick={roll}>{busy?'…':'Roll Dice'}</button>
-            <div className="rounded-lg p-4 mt-6" style={{ background: 'var(--surface-subtle)' }}>
-              <div className="text-sm muted">Your Destiny:</div>
-              <div className="text-xl font-bold mt-2">{cur || 'Press Roll to begin!'}</div>
+        <div className="p-4 max-w-3xl mx-auto min-h-screen">
+          <div className="card rounded-xl p-6 text-center">
+            <h2 className="text-2xl font-bold">Dice of Destiny</h2>
+            <div className="mt-3 text-lg">{task}</div>
+            <div className="flex gap-2 justify-center mt-4">
+              <button className="btn btn-purple" onClick={roll}>Roll</button>
+              <button className="btn btn-gray" onClick={onBack}>Back</button>
             </div>
-            {!!history.length && <div className="mt-4">
-              <div className="font-semibold text-sm mb-1">Recent rolls</div>
-              <ul className="text-sm">{history.map((h,i)=><li key={i}>• {h}</li>)}</ul>
-            </div>}
           </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
         </div>
       );
     };
 
-    /* =========================================================
-       Bieler Method Lab
-    ========================================================== */
-    const BielerLab = ({ onBack }) => {
-      const [mode,setMode]=useState('vocab');
-      const [i,setI]=useState(0); const [show,setShow]=useState(false);
-      const next=()=>{ setShow(false); setI((i+1)%BIELER_VOCAB.length); };
-      const prev=()=>{ setShow(false); setI((i-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
+    /* ================= Home ================= */
+    const Home=({openScreen})=>{
+      const [helpKey,setHelpKey]=useState(null);
+      const [sheet,setSheet]=useState(false);
+      const [confirmReset,setConfirmReset]=useState(false);
+      const [prefs,setPrefs]=useState(loadPrefs());
+      const lastMode=localStorage.getItem(LAST_MODE_KEY);
 
-      const makeConceptQ = () => {
-        const item = getRandomItem(BIELER_CONCEPT_QA);
-        const options = shuffle([item.a, ...shuffle(item.wrong).slice(0,3)]);
-        return { prompt:item.q, correct:item.a, options };
+      const resetAll=()=>{
+        saveJSON(STATS_KEY,{});
+        saveJSON(TEMPO_STATS_KEY,{});
+        saveJSON(TEMPO_BEST_KEY,{bestScore:0,bestStreak:0});
+        saveJSON(HEIGHT_STATS_KEY,{});
+        saveJSON(LOCATOR_STATS_KEY,{});
+        saveJSON(SHIFT_STATS_KEY,{});
+        saveJSON(HARM_STATS_KEY,{});
+        saveJSON(SNAPSHOT_STATS_KEY,{});
+        saveJSON(INTERVAL_STATS_KEY,{});
+        saveJSON(BINGO_KEY, makeBoard());
+        setConfirmReset(false);
+        document.getElementById('sr').textContent='All stats reset';
       };
-      const makeApplyQ = () => {
-        const item = getRandomItem(BIELER_APPLY);
-        const options = shuffle([item.answer, ...shuffle(item.wrong).slice(0,3)]);
-        return { prompt:item.scenario, correct:item.answer, options };
-      };
-      const [cq,setCq]=useState(makeConceptQ());
-      const [aq,setAq]=useState(makeApplyQ());
-      const [scoreC,setScoreC]=useState(0), [answeredC,setAnsweredC]=useState(0);
-      const [scoreA,setScoreA]=useState(0), [answeredA,setAnsweredA]=useState(0);
-
-      const answerConcept = (opt)=>{ const ok = opt===cq.correct; document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again'; setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); setTimeout(()=>setCq(makeConceptQ()), ok?350:700); };
-      const answerApply   = (opt)=>{ const ok = opt===aq.correct; document.getElementById('sr').textContent = ok ? 'Correct' : 'Try again'; setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); setTimeout(()=>setAq(makeApplyQ()), ok?350:700); };
-
-      useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape') onBack(); if(e.key==='ArrowRight'||e.key.toLowerCase()==='n') next(); if(e.key==='ArrowLeft'||e.key.toLowerCase()==='p') prev(); }; window.addEventListener('keydown', onKey); return ()=>window.removeEventListener('keydown', onKey); },[]);
 
       return (
-        <div className="p-4 min-h-screen flex flex-col items-center">
-          <div className="card rounded-xl p-6 w-full" style={{maxWidth:980}}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Bieler Method Lab</h2>
-              <div className="flex gap-2">
-                <button className={`btn ${mode==='vocab'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('vocab')}>Vocabulary</button>
-                <button className={`btn ${mode==='concept'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('concept')}>Concept Check</button>
-                <button className={`btn ${mode==='apply'?'btn-purple':'btn-gray'}`} onClick={()=>setMode('apply')}>Applications</button>
-              </div>
-            </div>
-
-            {mode==='vocab' && (
-              <div className="mt-4">
-                <div className="rounded-xl border-2 p-6 text-center">
-                  <div className="text-xl font-bold">{BIELER_VOCAB[i].term}</div>
-                  {show ? <div className="mt-2 ink700">{BIELER_VOCAB[i].def}</div> : <div className="muted italic">Press Reveal to show definition.</div>}
-                </div>
-                <div className="flex gap-2 mt-4 justify-center">
-                  <button className="btn btn-blue" onClick={()=>setShow(true)}>Reveal</button>
-                  <button className="btn btn-gray" onClick={prev}>Previous</button>
-                  <button className="btn btn-purple" onClick={next}>Next</button>
-                </div>
-                <div className="text-xs muted mt-2 text-center">Card {i+1} / {BIELER_VOCAB.length}</div>
-              </div>
-            )}
-
-            {mode==='concept' && (
-              <div className="mt-4">
-                <div className="muted text-sm mb-2">Score: {scoreC} / {answeredC}</div>
-                <div className="text-lg font-semibold mb-2">{cq.prompt}</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {cq.options.map((o,idx)=><button key={idx} className="btn btn-blue" onClick={()=>answerConcept(o)}>{o}</button>)}
-                </div>
-              </div>
-            )}
-
-            {mode==='apply' && (
-              <div className="mt-4">
-                <div className="muted text-sm mb-2">Score: {scoreA} / {answeredA}</div>
-                <div className="text-lg font-semibold mb-2">Choose the best practice approach:</div>
-                <div className="ink700 mb-3"><i>Pick the best practice approach for the scenario.</i></div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {aq.options.map((o,idx)=>
-                    <button key={idx} className="btn btn-blue" onClick={()=>answerApply(o)}>{o}</button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          <button className="btn btn-gray mt-6" onClick={onBack}>Back</button>
-        </div>
-      );
-    };
-
-    /* =========================================================
-       Filters & Panels
-    ========================================================== */
-    // --- minimal filters UI for Strings / Positions / Fingers ---
-    const MiniFilters = ({ prefs, setPrefs }) => {
-      const f = prefs.filters || { strings:{}, positions:{}, fingers:{} };
-    
-      const toggle = (group, key) => {
-        setPrefs(p => {
-          const prevFilters = p.filters || { strings:{}, positions:{}, fingers:{} };
-          const prevGroup   = prevFilters[group] || {};
-          const isOn        = prevGroup[key] !== false;   // default ON unless explicitly false
-          const nextGroup   = { ...prevGroup };
-          if (isOn) nextGroup[key] = false; else delete nextGroup[key];
-          const next = { ...p, filters: { ...prevFilters, [group]: nextGroup } };
-          savePrefs(next);
-          return next;
-        });
-      };
-    
-      const Chip = ({ on, label, onClick }) => (
-        <button
-          onClick={onClick}
-          aria-pressed={on}
-          className="px-3 py-1 rounded-full text-sm font-semibold border"
-          style={on
-            ? { background:'var(--accent)', color:'#fff', borderColor:'transparent' }
-            : { background:'transparent', color:'var(--ink-800)', borderColor:'var(--hairline)' }
-          }
-        >
-          {label}
-        </button>
-      );
-    
-      return (
-        <div className="card rounded-xl p-4">
-          <div className="text-lg font-semibold mb-2">Filters</div>
-          <div className="mb-2 text-xs muted">Click to toggle which items are used in drills.</div>
-    
-          <div className="mb-2">
-            <div className="font-semibold text-sm mb-1">Strings</div>
-            <div className="flex flex-wrap gap-2">
-              {STRINGS.map(s => (
-                <Chip key={s} label={s} on={f.strings?.[s] !== false} onClick={() => toggle('strings', s)} />
-              ))}
-            </div>
-          </div>
-    
-          <div className="mb-2">
-            <div className="font-semibold text-sm mb-1">Positions</div>
-            <div className="flex flex-wrap gap-2">
-              {POSITIONS.map(p => (
-                <Chip key={p} label={String(p)} on={f.positions?.[p] !== false} onClick={() => toggle('positions', p)} />
-              ))}
-            </div>
-          </div>
-    
-          <div>
-            <div className="font-semibold text-sm mb-1">Fingers</div>
-            <div className="flex flex-wrap gap-2">
-              {FINGERS.map(fn => (
-                <Chip key={fn} label={`F${fn}`} on={f.fingers?.[fn] !== false} onClick={() => toggle('fingers', fn)} />
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }; 
-    
-    // --- tiny XP/Level header (reads existing SCORE_KEY data) ---
-    const ScoreHeader = () => {
-      const [sb, setSb] = React.useState(loadScoreboard());
-    
-      React.useEffect(() => {
-        // refresh when other screens update XP (same-tab changes won't fire 'storage')
-        const id = setInterval(() => setSb(loadScoreboard()), 800);
-        const onStorage = (e) => { if (e.key === SCORE_KEY) setSb(loadScoreboard()); };
-        window.addEventListener('storage', onStorage);
-        return () => { clearInterval(id); window.removeEventListener('storage', onStorage); };
-      }, []);
-    
-      const level = sb?.level || 1;
-      const xp    = sb?.xp    || 0;
-      const nextT = sb?.next  || nextLevelXP(level);
-      const prevT = level > 1 ? nextLevelXP(level - 1) : 0;
-      const num   = Math.max(0, xp - prevT);
-      const den   = Math.max(1, nextT - prevT);
-      const pct   = Math.max(0, Math.min(100, Math.round((num / den) * 100)));
-    
-      return (
-        <div className="card rounded-xl p-4 mb-4" aria-label="Player progress">
-          <div className="flex items-center justify-between">
-            <div className="font-semibold">Level {level}</div>
-            <div className="text-sm muted">
-              {num} / {den} XP to next
-            </div>
-          </div>
-          <div className="xpbar mt-2" role="progressbar" aria-valuemin={0} aria-valuemax={den} aria-valuenow={num}>
-            <div className="xpbar-fill" style={{ width: `${pct}%` }} />
-          </div>
-        </div>
-      );
-    };
-    
-    // --- App shell with ScoreHeader + robust home
-    const App = () => {
-      const [view, setView]   = React.useState('home');
-      const [prefs, setPrefs] = React.useState(loadPrefs());
-      const [stats, setStats] = React.useState(loadStats());
-      const [helpKey, setHelpKey] = React.useState(null);
-    
-      const onResetStats = () => {
-        if (!confirm('Reset ALL stats?')) return;
-        saveStats({});
-        saveTempoStats({});
-        saveTempoBest({ bestScore: 0, bestStreak: 0 });
-        saveJSON(HEIGHT_STATS_KEY,  {});
-        saveJSON(LOCATOR_STATS_KEY, {});
-        saveJSON(SHIFT_STATS_KEY,   {});
-        saveJSON(HARM_STATS_KEY,    {});
-        saveJSON(SNAPSHOT_STATS_KEY, {});
-        saveJSON(INTERVAL_STATS_KEY, {});
-        setStats({});
-      };
-    
-      const onExportCSV = () => {
-        const s = loadStats();
-        const rows = [['string','position','finger','correct','total','accuracy']];
-        Object.entries(s).forEach(([k,v])=>{
-          const [str,p,f] = k.split(':');
-          const c=v.correct||0, t=v.total||0, acc = t ? (c/t).toFixed(3) : '0';
-          rows.push([str,p,f,c,t,acc]);
-        });
-        const csv = rows.map(r=>r.join(',')).join('\n');
-        const blob = new Blob([csv], {type:'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'vpq-stats.csv';
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      };
-    
-      if (view === 'speed')         return <SpeedLadderGame onBack={()=>setView('home')} prefs={prefs} stats={stats} setStats={setStats} />;
-      if (view === 'speedbase')     return <SpeedLadderGame mode="base" onBack={()=>setView('home')} prefs={prefs} stats={stats} setStats={setStats} />;
-      if (view === 'flash')         return <Flashcards onBack={()=>setView('home')} />;
-      if (view === 'tempo-trainer') return <TempoTrainer onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'tempo-tester')  return <TempoTester  onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'snapshot')      return <SnapshotCore onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'interval')      return <IntervalSprint onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'height')        return <HeightDrill onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'locator')       return <NoteLocator onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'shift')         return <ShiftCoach onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'harmonics')     return <HarmonicsLab onBack={()=>setView('home')} prefs={prefs} />;
-      if (view === 'bieler')        return <BielerLab onBack={()=>setView('home')} />;
-      if (view === 'bingo')         return <BingoBoard onBack={()=>setView('home')} />;
-      if (view === 'dice')          return <DiceOfDestinyGame onBack={()=>setView('home')} />;
-    
-      return (
-        <div className="p-4 max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
+        <div className="p-4 max-w-5xl mx-auto pb-24">
+          <div className="flex items-center justify-between mb-2">
             <h1 className="text-2xl font-bold">Violin Positions Quest</h1>
-            <ThemeToggle />
+            <button className="btn btn-gray" aria-label="More actions" onClick={()=>setSheet(true)}>⋯</button>
           </div>
-    
-          {/* XP / Level */}
-          <ScoreHeader />
-    
-          {/* quick tools */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            <button className="btn btn-rose"  onClick={onResetStats}>Reset Stats</button>
-            <button className="btn btn-amber" onClick={onExportCSV}>Export CSV</button>
-          </div>
-    
-          <div className="grid-cards">
-            <CardButton title="Speed Ladder"            description="Full fingerboard drill" onClick={()=>setView('speed')}      onHelp={()=>setHelpKey('speed')} />
-            <CardButton title="Speed Ladder — Core"     description="Base notes only"        onClick={()=>setView('speedbase')}  onHelp={()=>setHelpKey('speedbase')} />
-            <CardButton title="Flashcards"              description="Two decks: by location or by note" onClick={()=>setView('flash')} onHelp={()=>setHelpKey('cards')} />
-            <CardButton title="Tempo Trainer"           description="Tempo flashcards with call-outs"   onClick={()=>setView('tempo-trainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
-            <CardButton title="Tempo Tester"            description="Timed multiple choice"  onClick={()=>setView('tempo-tester')} onHelp={()=>setHelpKey('tempoTester')} />
-            <CardButton title="Snapshot Core"           description="Memorize a position snapshot" onClick={()=>setView('snapshot')} onHelp={()=>setHelpKey('snapshot')} />
-            <CardButton title="Interval Sprint"         description="Half/whole steps in the frame" onClick={()=>setView('interval')} onHelp={()=>setHelpKey('interval')} />
-            <CardButton title="Finger Height Drill"     description="Low vs High answers"    onClick={()=>setView('height')}     onHelp={()=>setHelpKey('height')} />
-            <CardButton title="Note Locator"            description="Find valid locations for a pitch" onClick={()=>setView('locator')} onHelp={()=>setHelpKey('locator')} />
-            <CardButton title="Shift Coach"             description="Best landing choice on one string" onClick={()=>setView('shift')} onHelp={()=>setHelpKey('shift')} />
-            <CardButton title="Harmonics Lab"           description="Nodes & quick checks"   onClick={()=>setView('harmonics')}  onHelp={()=>setHelpKey('harmonics')} />
-            <CardButton title="Bieler Method Lab"       description="Vocab • Concepts • Applications" onClick={()=>setView('bieler')} onHelp={()=>setHelpKey('bielerLab')} />
-            <CardButton title="Positions Bingo"         description="5×5 practice board"     onClick={()=>setView('bingo')}      onHelp={()=>setHelpKey('bingo')} />
-            <CardButton title="Dice of Destiny"         description="Random focused challenge" onClick={()=>setView('dice')}     onHelp={()=>setHelpKey('dice')} />
-          </div>
-    
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <MiniFilters prefs={prefs} setPrefs={setPrefs} />
-            <div>
-              <AccuracyHeatmap stats={stats} />
+
+          <ScoreHeader/>
+
+          {lastMode && (
+            <div className="mb-3">
+              <CardButton
+                title="Continue"
+                description={`Jump back into your last activity (${lastMode === 'speed' ? 'Speed Ladder' : lastMode==='speedbase'?'Speed Ladder — Core' : lastMode==='flash'?'Flashcards': lastMode})`}
+                icon="▶️"
+                verb="Resume"
+                onClick={()=>openScreen(lastMode)}
+                onHelp={()=>setHelpKey('speed')}
+              />
+            </div>
+          )}
+
+          <div className="section">
+            <div className="section-title"><span className="label">Drills</span></div>
+            <div className="grid-cards">
+              <CardButton title="Speed Ladder" icon="🎯" verb="Play" description="Full fingerboard drill"
+                onClick={()=>openScreen('speed')} onHelp={()=>setHelpKey('speed')} />
+              <CardButton title="Speed Ladder — Core" icon="🎯" verb="Play" description="Base notes only"
+                onClick={()=>openScreen('speedbase')} onHelp={()=>setHelpKey('speedbase')} />
+              <CardButton title="Snapshot Core" icon="📸" verb="Play" description="Flash base notes, answer one"
+                onClick={()=>openScreen('snapshot')} onHelp={()=>setHelpKey('snapshot')} />
+              <CardButton title="Interval Sprint" icon="↔️" verb="Play" description="Half vs Whole (1–2, 2–3, 3–4)"
+                onClick={()=>openScreen('interval')} onHelp={()=>setHelpKey('interval')} />
+              <CardButton title="Note Locator" icon="📍" verb="Play" description="Find a pitch’s location on a string"
+                onClick={()=>openScreen('locator')} onHelp={()=>setHelpKey('locator')} />
             </div>
           </div>
-    
-          <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How to play">
+
+          <div className="mt-4 section">
+            <div className="section-title"><span className="label">Study</span></div>
+            <div className="grid-cards">
+              <CardButton title="Flashcards" icon="🧠" verb="Study" description="By location or by note"
+                onClick={()=>openScreen('flash')} onHelp={()=>setHelpKey('cards')} />
+              <CardButton title="Tempo Trainer" icon="🎼" verb="Study" description="Tempo flashcards with call-outs"
+                onClick={()=>openScreen('tempo-trainer')} onHelp={()=>setHelpKey('tempoTrainer')} />
+              <CardButton title="Tempo Tester" icon="📝" verb="Quiz" description="Timed multiple choice"
+                onClick={()=>openScreen('tempo-tester')} onHelp={()=>setHelpKey('tempoTester')} />
+              <CardButton title="Bieler Method Lab" icon="🎻" verb="Open" description="Vocabulary • Concept checks • Applied"
+                onClick={()=>openScreen('bielerLab')} onHelp={()=>setHelpKey('bielerLab')} />
+            </div>
+          </div>
+
+          <div className="mt-4 section">
+            <div className="section-title"><span className="label">Play</span></div>
+            <div className="grid-cards">
+              <CardButton title="Positions Bingo" icon="🎲" verb="Play" description="5×5 practice board"
+                onClick={()=>openScreen('bingo')} onHelp={()=>setHelpKey('bingo')} />
+              <CardButton title="Dice of Destiny" icon="🎲" verb="Roll" description="Random focused challenge"
+                onClick={()=>openScreen('dice')} onHelp={()=>setHelpKey('dice')} />
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <CompactFilters prefs={prefs} setPrefs={setPrefs} />
+            <AccuracyHeatmap stats={loadJSON(STATS_KEY,{})} />
+          </div>
+
+          <Modal open={!!helpKey} onClose={()=>setHelpKey(null)} title="How it works">
             {HELP[helpKey] || 'No help available.'}
           </Modal>
+
+          <ActionSheet open={sheet} onClose={()=>setSheet(false)}>
+            <div className="mb-2 text-center font-semibold">More</div>
+            <div className="grid gap-2">
+              <button className="btn btn-amber w-full" onClick={()=>{
+                const s=loadJSON(STATS_KEY,{});
+                const rows=[['string','position','finger','correct','total','accuracy']];
+                Object.entries(s).forEach(([k,v])=>{
+                  const [str,p,f]=k.split(':'); const c=v.correct||0, t=v.total||0, acc=t?(c/t).toFixed(3):'0';
+                  rows.push([str,p,f,c,t,acc]);
+                });
+                const csv=rows.map(r=>r.join(',')).join('\n');
+                const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+                const a=document.createElement('a'); a.href=url; a.download='vpq-stats.csv'; a.click(); URL.revokeObjectURL(url);
+                setSheet(false);
+              }}>Export CSV</button>
+
+              <button className="btn btn-rose w-full" onClick={()=>setConfirmReset(true)}>Reset Stats...</button>
+              <button className="btn btn-gray w-full" onClick={()=>setSheet(false)}>Close</button>
+            </div>
+            {confirmReset && (
+              <div className="mt-3 p-3 rounded-lg border" style={{borderColor:'var(--hairline)'}}>
+                <div className="font-semibold mb-2">Really reset all stats?</div>
+                <div className="flex gap-2">
+                  <button className="btn btn-rose" onClick={resetAll}>Yes, reset</button>
+                  <button className="btn btn-gray" onClick={()=>setConfirmReset(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </ActionSheet>
         </div>
       );
     };
-    
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-    </script>
-  </body>
+
+    /* ================= Tabs ================= */
+    const Tabs=({tab,setTab})=>(
+      <nav className="tabs" role="tablist" aria-label="Main">
+        {[
+          ['home','Home','🏠'],
+          ['stats','Stats','📈'],
+          ['settings','Settings','⚙️']
+        ].map(([id,label,ico])=>(
+          <button key={id} className="tab" role="tab" aria-selected={tab===id} onClick={()=>setTab(id)}>
+            <div aria-hidden>{ico}</div>
+            <div className="text-xs">{label}</div>
+          </button>
+        ))}
+      </nav>
+    );
+
+    const StatsScreen=()=>{
+      return (
+        <div className="p-4 max-w-5xl mx-auto pb-24">
+          <h2 className="text-2xl font-bold mb-2">Stats</h2>
+          <ScoreHeader/>
+          <AccuracyHeatmap stats={loadJSON(STATS_KEY,{})}/>
+          <div className="mt-4 card rounded-xl p-4">
+            <div className="text-sm muted">Recent sessions:</div>
+            <ul className="text-sm mt-2">
+              {loadJSON(SESSIONLOG_KEY,[]).slice(-10).reverse().map((s,i)=><li key={i}>• {new Date(s.date).toLocaleString()} — {s.mode} {s.correct}/{s.total}</li>)}
+            </ul>
+          </div>
+        </div>
+      );
+    };
+
+    const SettingsScreen=()=>{
+      const [prefs,setPrefs]=useState(loadPrefs());
+      return (
+        <div className="p-4 max-w-5xl mx-auto pb-24">
+          <h2 className="text-2xl font-bold mb-2">Settings</h2>
+          <div className="card rounded-xl p-4 grid gap-3">
+            <label className="flex items-center gap-3">
+              <input type="checkbox" checked={!!prefs.sound} onChange={e=>{const nx={...prefs,sound:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
+              Sounds
+            </label>
+            <label className="flex items-center gap-3">
+              <input type="checkbox" checked={!!prefs.confetti} onChange={e=>{const nx={...prefs,confetti:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
+              Confetti on correct
+            </label>
+            <label className="flex items-center gap-3">
+              <input type="checkbox" checked={!!prefs.adaptive} onChange={e=>{const nx={...prefs,adaptive:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
+              Adaptive question weighting
+            </label>
+            <label className="flex items-center gap-3">
+              <input type="checkbox" checked={!!prefs.callouts} onChange={e=>{const nx={...prefs,callouts:e.target.checked}; setPrefs(nx); savePrefs(nx)}}/>
+              Voice call-outs in Tempo Trainer
+            </label>
+          </div>
+        </div>
+      );
+    };
+
+    /* ================= Root app (simple router) ================= */
+    const App=()=>{
+      const [route,setRoute]=useState({screen:'tabs', tab:'home'});
+      const openScreen=(screen)=>setRoute({screen, tab:null});
+
+      let page=null;
+      if(route.screen==='tabs'){
+        page=(
+          <>
+            {route.tab==='home'    && <Home openScreen={openScreen} />}
+            {route.tab==='stats'   && <StatsScreen />}
+            {route.tab==='settings'&& <SettingsScreen />}
+            <Tabs tab={route.tab} setTab={tab=>setRoute({screen:'tabs', tab})}/>
+          </>
+        );
+      }else{
+        if(route.screen==='speed') page=<SpeedLadderGame onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='speedbase') page=<SpeedLadderGame baseOnly onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='flash') page={<Flashcards onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='snapshot') page={<SnapshotCore onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='interval') page={<IntervalSprint onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='locator') page={<NoteLocator onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='bielerLab') page={<BielerLab onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='tempo-trainer') page={<TempoTrainer onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='tempo-tester')  page={<TempoTester  onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='bingo') page={<Bingo onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+        else if(route.screen==='dice')  page={<Dice  onBack={()=>setRoute({screen:'tabs',tab:'home'})}/>;
+      }
+      return page;
+    };
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
 </html>
