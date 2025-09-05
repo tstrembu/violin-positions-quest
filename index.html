@@ -260,7 +260,8 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
       const [show,setShow]=React.useState(false);
       const pick=()=>{
         if(!deck.length){ setCard(null); return; }
-        const now=Date.now(); const due=deck.filter(c=>c.due<=now);
+        const now=Date.now();
+        const due=deck.filter(c=>c.due<=now).sort((a,b)=>a.due-b.due);
         const next= due.length? due[0] : getRandom(deck);
         setCard(next); setShow(false);
       };
