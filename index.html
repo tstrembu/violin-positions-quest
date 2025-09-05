@@ -372,6 +372,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
 
     function IntervalSprint({prefs,onBack}){
       const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
       const [score,setScore]=React.useState(0);
       const [answered,setAnswered]=React.useState(0);
       const [q,setQ]=React.useState(null);
@@ -392,7 +393,12 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           audioEngine.playInterval({rootMidi: root, semitones: Math.abs(BASE_OFF[b]-BASE_OFF[a])});
         } catch {}
       };
-      React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
       const answer=(choice,idx)=>{
         setSelected(idx);
         setTimeout(()=>{
