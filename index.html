@@ -159,7 +159,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
                 : k==='distractor' ? 'var(--warning)'
                 : 'var(--card)';
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" aria-label="Fingerboard">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
       {['G','D','A','E'].map((s,si)=>(
         <g key={s} transform={`translate(0,${(3-si)*strH})`}>
           {POSITIONS.map(p=>(
