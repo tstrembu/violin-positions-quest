@@ -526,6 +526,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
             <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
 
             <h3>Audio</h3>
+            <button className="btn btn-primary" onClick={()=>audioEngine.ensure()}>Enable Sound</button>
             <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>
               {audioEngine.mute? 'Unmute' : 'Mute'}
             </button>
