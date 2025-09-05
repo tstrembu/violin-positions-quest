@@ -765,7 +765,11 @@ const TIME_SIGNATURES=[
           <div className="card">
             <h2>Intervals Tester</h2>
             <p>Time {time}s | Score {score}/{answered}</p>
-            {q && (<div><p>{q.prompt}</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}
+            {q && (
+            <button className="btn btn-secondary" onClick={()=>{
+              try{ audioEngine.playInterval({rootMidi:64, semitones:q.semitones}); }catch{}
+             }}>Play Again</button>
+           )}
           </div>
           <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
