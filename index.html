@@ -83,9 +83,13 @@ class AudioEngine{
     const osc=ctx.createOscillator(); const gain=ctx.createGain(); osc.frequency.value=freq; osc.type='sine';
     gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(0.8,now+0.01); gain.gain.exponentialRampToValueAtTime(0.1,now+durationMs/1000*0.8); gain.gain.linearRampToValueAtTime(0,now+durationMs/1000);
     osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now+durationMs/1000);
-  }
-  playInterval({rootMidi,semitones,gapMs=150}){
-    this.playNote({midi:rootMidi}); setTimeout(()=> this.playNote({midi:rootMidi+semitones}), gapMs);
+  } playInterval({rootMidi,semitones,gapMs=150,durationMs=600}){
+    if(this.mute) return; const ctx=this.ensure(); const now=ctx.currentTime;
+    const start2 = now + gapMs/1000;
+    this.playNote({midi:rootMidi, durationMs});
+    // schedule the second note using audio clock
+    const midi2 = rootMidi + semitones;
+    setTimeout(()=> this.playNote({midi:midi2, durationMs}), gapMs);
   }
   setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
 }
@@ -127,6 +131,7 @@ const FLASH_DURATIONS={
       React.useEffect(()=>{
         if(!enabled) return;
         const handler=(e)=>{
+        	
           const k=e.key;
           if(k>='1' && k<='9'){
             const idx=Number(k)-1;
@@ -290,6 +295,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
       const [q,setQ]=React.useState(null);
       const [selected,setSelected]=React.useState(null);
       const flashRef=React.useRef(null);
+			const revealAtRef=React.useRef(null);
       const pick=()=>{
         if(!cells.length){ setState('none'); return; }
         const s=getRandom(STRINGS.filter(s=>prefs.strings[s]));
@@ -297,8 +303,13 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
         const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); });
         setFlash({s,p,labels}); setState('flash'); setSelected(null);
         if(flashRef.current) clearTimeout(flashRef.current);
-        const delay=FLASH_DURATIONS[prefs.flashLevel] || 1000;
-        flashRef.current=setTimeout(()=>{
+			  const delay=FLASH_DURATIONS[prefs.flashLevel] || 1000;
+		    revealAtRef.current = Date.now() + delay;
+		    const schedule=()=>{
+		      if(paused) { // retry after a tick if paused
+		        flashRef.current = setTimeout(schedule, 100);
+		        return;
+		      }
           const f=getRandom(FINGERS);
           const correct=labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
           setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
@@ -306,7 +317,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
             const midi=MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[f];
             audioEngine.playNote({midi});
           }catch{}
-        },delay);
+          flashRef.current = setTimeout(schedule, delay)
       };
       React.useEffect(()=>{
         pick();
@@ -320,7 +331,8 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
         return ()=>clearInterval(id);
       },[paused]);
       const answer=(opt,idx)=>{
-        setSelected(idx);
+        if(selected!==null) return;
+				setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
           document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
@@ -791,7 +803,7 @@ const TIME_SIGNATURES=[
       const [selected,setSelected]=React.useState(null);
       const pick=()=>{
         const item=getRandom(INTERVALS);
-        let prompt, correct, opts, semitones;
+        let prompt, correct, opts, semitones, rootMidi;
         if(Math.random()<0.5){
           correct=item.name;
           opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
@@ -803,9 +815,11 @@ const TIME_SIGNATURES=[
           prompt=`Which interval matches the cue “${cue}”?`;
         }
         semitones=item.semitones;
-        setQ({prompt,correct,options:opts,semitones}); setSelected(null);
-        const rootMidi=64+Math.floor(Math.random()*6);
-        try{ audioEngine.playInterval({rootMidi,semitones:item.semitones}); }catch{}
+        rootMidi = 64 + Math.floor(Math.random()*6);
+				setQ({prompt,correct,options:opts,semitones,rootMidi}); setSelected(null);
+				try{ audioEngine.playInterval({rootMidi,semitones:item.semitones}); }catch{
+				};
+ 				<button className="btn btn-secondary" onClick={()=>{ try{ audioEngine.playInterval({rootMidi:64, semitones:q.semitones}); }catch{} }}
       };
       React.useEffect(()=>{ pick(); },[]);
       React.useEffect(()=>{
@@ -978,7 +992,10 @@ const TIME_SIGNATURES=[
         },200);
       };
       useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
-      if(time===0) return <div className="card"><h2>Time Sig Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      if(time===0) return <div className="card"><h2>Time Sig Tester Complete</h2><p>Score {score}/{answered}</p>
+      <button className="btn btn-primary" onClick={()=>{ 	setTime(60); setScore(0); setAnswered(0);     setSelected(null); pick();
+ 	   }}>Restart</button>
+ 	   <button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       return (
         <div>
           <div className="card">
