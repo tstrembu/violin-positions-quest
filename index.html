@@ -229,7 +229,8 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
 
     function SpeedDrill({prefs,onBack}){
       const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
-      const cells=filteredCells(prefs);
+      // stabilize the filtered cells so deps don't change every render
+			const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
       const [time,setTime]=React.useState(90);
       const [paused,setPaused]=React.useState(false);
       const [score,setScore]=React.useState(0);
@@ -251,8 +252,8 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           audioEngine.playNote({midi});
         }catch{}
       },[cells,stats]);
-      // Start a question when component mounts; depend on pick function
-      React.useEffect(()=>{ pick(); },[pick]);
+      // Start (or re-pick) when the available cells actually change
+			React.useEffect(()=>{ pick(); },[cells]); // or [] if you want only on mount
       React.useEffect(()=>{
         if(paused) return;
         const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
