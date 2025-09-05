@@ -421,6 +421,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           <div className="card">
             <h2>Interval Sprint</h2>
             <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
             <p>In {ordinal(q.p)} pos on {q.s} string, between {noteA} and {noteB}: Half or Whole step?</p>
             <OptionButton label="Half Step" selected={selected===0} onClick={()=>answer('half',0)}/>
             <OptionButton label="Whole Step" selected={selected===1} onClick={()=>answer('whole',1)}/>
