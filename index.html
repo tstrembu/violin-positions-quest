@@ -734,7 +734,7 @@ const TIME_SIGNATURES=[
         if(Math.random()<0.5){
           const correct=item.name;
           const opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
-          setQ({prompt:`Which interval has ${item.semitones} semitone${item.semitones>1?'s':''}?`,correct,options:opts});
+          setQ({prompt:`Which interval has ${item.semitones} semitone${item.semitones>1?'s':''}?`,correct, options:opts, semitones:item.semitones});
         } else {
           const correct=item.name;
           const cue=item.cue.split(',')[0];
