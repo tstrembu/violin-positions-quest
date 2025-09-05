@@ -229,7 +229,8 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
 
     function SpeedDrill({prefs,onBack}){
       const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
-      const cells=filteredCells(prefs);
+      // stabilize the filtered cells so deps don't change every render
+			const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
       const [time,setTime]=React.useState(90);
       const [paused,setPaused]=React.useState(false);
       const [score,setScore]=React.useState(0);
@@ -251,8 +252,8 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           audioEngine.playNote({midi});
         }catch{}
       },[cells,stats]);
-      // Start a question when component mounts; depend on pick function
-      React.useEffect(()=>{ pick(); },[pick]);
+      // Start (or re-pick) when the available cells actually change
+			React.useEffect(()=>{ pick(); },[cells]); // or [] if you want only on mount
       React.useEffect(()=>{
         if(paused) return;
         const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
@@ -736,274 +737,6 @@ const TIME_SIGNATURES=[
   {sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},
   {sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}
 ];
-
-    /* =========================================================
-       Bieler Method data
-    ========================================================== */
-    // Vocabulary terms based on Ida Bieler’s pedagogy. Each entry has a term and definition.
-    const BIELER_VOCAB = [
-      { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
-      { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
-      { term:'Hand Frame', def:'Stable spacing of fingers across semitone/whole-tone patterns; frame travels during shifts.' },
-      { term:'First Trained Function', def:'Accurate finger placement (intonation and spacing) within a stable frame.' },
-      { term:'Second Trained Function', def:'Finger independence and agility (lifting/placing without disturbing neighbors).' },
-      { term:'Third Trained Function', def:'Shifting—moving the whole hand while preserving the frame and sound line.' },
-      { term:'Fourth Trained Function', def:'Vibrato—finger/hand oscillation integrated with intonation and tone aim.' },
-      { term:'Bow Hold', def:'Flexible, pronation-ready grip with curved fingers and mobile thumb.' },
-      { term:'Contact Point', def:'Soundpoint between bridge and fingerboard; chosen by speed/pressure/tilt.' },
-      { term:'Bow Angles', def:'String crossings via forearm/upper arm levels; keep hair tangent to soundpoint.' },
-      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
-      { term:'Legato', def:'Multiple notes under one bow with seamless changes.' },
-      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
-      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
-      { term:'Spiccato', def:'Controlled bounce near the balance point—vertical energy, horizontal timing.' },
-      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
-      { term:'Ricochet', def:'Thrown bow that rebounds multiple times with one impulse.' },
-      { term:'Firm Staccato', def:'In-the-string articulated stops in one bow direction.' },
-      { term:'Flying Staccato', def:'Off-the-string successive stops in a single bow.' },
-      { term:'Nature', def:'Use body’s natural alignments—economy, ease, resonance.' },
-      { term:'Nurture', def:'Stepwise training—patterns before speed; stability before flourish.' },
-      { term:'Knowledge', def:'Clear mental models: maps, sound ideals, mechanics.' },
-      { term:'Necessity', def:'Technique serves musical intent; choose tools by purpose.' },
-    ];
-
-    // Conceptual multiple choice questions about Bieler’s method. Each question has wrong distractors.
-    const BIELER_CONCEPT_QA = [
-      { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
-      { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
-      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
-      { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
-    ];
-
-    // Application scenarios for Bieler method: choose best practice approach.
-    const BIELER_APPLY = [
-      { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
-      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
-      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
-    ];
-
-    /* =========================================================
-       Bieler Method Lab
-    ========================================================== */
-    // Component presenting vocabulary, concept checks, and application scenarios based on Ida Bieler’s pedagogy.
-    function BielerLab({ onBack }) {
-      const [mode,setMode] = React.useState('vocab');
-      const [index,setIndex] = React.useState(0);
-      const [showDef,setShowDef] = React.useState(false);
-      // Build a random concept question
-      const makeConceptQ = React.useCallback(() => {
-        const item = getRandom(BIELER_CONCEPT_QA);
-        const options = shuffle([item.a,...shuffle(item.wrong).slice(0,3)]);
-        return { prompt:item.q, correct:item.a, options };
-      }, []);
-      // Build a random application scenario
-      const makeApplyQ = React.useCallback(() => {
-        const item = getRandom(BIELER_APPLY);
-        const options = shuffle([item.answer,...shuffle(item.wrong).slice(0,3)]);
-        return { prompt:item.scenario, correct:item.answer, options };
-      }, []);
-      const [conceptQ,setConceptQ] = React.useState(() => makeConceptQ());
-      const [applyQ,setApplyQ] = React.useState(() => makeApplyQ());
-      const [scoreC,setScoreC] = React.useState(0);
-      const [answeredC,setAnsweredC] = React.useState(0);
-      const [scoreA,setScoreA] = React.useState(0);
-      const [answeredA,setAnsweredA] = React.useState(0);
-      // Advance vocabulary index
-      const next = () => { setShowDef(false); setIndex((index+1) % BIELER_VOCAB.length); };
-      const prev = () => { setShowDef(false); setIndex((index-1 + BIELER_VOCAB.length) % BIELER_VOCAB.length); };
-      // Answer handlers
-      const answerConcept = (opt) => {
-        const ok = opt === conceptQ.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
-        setScoreC(s => s + (ok ? 1 : 0));
-        setAnsweredC(a => a + 1);
-        setTimeout(() => setConceptQ(makeConceptQ()), ok ? 350 : 700);
-      };
-      const answerApply = (opt) => {
-        const ok = opt === applyQ.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
-        setScoreA(s => s + (ok ? 1 : 0));
-        setAnsweredA(a => a + 1);
-        setTimeout(() => setApplyQ(makeApplyQ()), ok ? 350 : 700);
-      };
-      // Keyboard navigation: arrow keys for next/prev, escape to back
-      React.useEffect(() => {
-        const onKey = (e) => {
-          if(e.key === 'Escape') { onBack(); }
-          if(e.key === 'ArrowRight' || e.key.toLowerCase() === 'n') { next(); }
-          if(e.key === 'ArrowLeft' || e.key.toLowerCase() === 'p') { prev(); }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [next, prev, onBack]);
-      return (
-        <div>
-          <div className="card">
-            <h2>Bieler Method Lab</h2>
-            <div style={{display:'flex',flexWrap:'wrap',gap:'0.5rem',marginBottom:'0.5rem'}}>
-              <button className="btn btn-primary" style={{background: mode==='vocab' ? 'var(--primary-dark)' : 'var(--primary)'}} onClick={() => setMode('vocab')}>Vocabulary</button>
-              <button className="btn btn-primary" style={{background: mode==='concept' ? 'var(--primary-dark)' : 'var(--primary)'}} onClick={() => setMode('concept')}>Concept Check</button>
-              <button className="btn btn-primary" style={{background: mode==='apply' ? 'var(--primary-dark)' : 'var(--primary)'}} onClick={() => setMode('apply')}>Applications</button>
-            </div>
-            {mode === 'vocab' && (
-              <div>
-                <div className="card" style={{padding:'1rem',textAlign:'center',marginBottom:'0.5rem'}}>
-                  <div style={{fontWeight:'600',fontSize:'1.2rem'}}>{BIELER_VOCAB[index].term}</div>
-                  {showDef ? (
-                    <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{BIELER_VOCAB[index].def}</div>
-                  ) : (
-                    <div style={{marginTop:'0.5rem',fontStyle:'italic',color:'var(--ink-light)'}}>Press Reveal to show definition.</div>
-                  )}
-                </div>
-                <div style={{display:'flex',justifyContent:'center',gap:'0.5rem',marginBottom:'0.5rem'}}>
-                  <button className="btn btn-primary" onClick={() => setShowDef(true)}>Reveal</button>
-                  <button className="btn btn-secondary" onClick={prev}>Previous</button>
-                  <button className="btn btn-primary" onClick={next}>Next</button>
-                </div>
-                <div style={{textAlign:'center',fontSize:'0.8rem',color:'var(--ink-light)'}}>Card {index+1} / {BIELER_VOCAB.length}</div>
-              </div>
-            )}
-            {mode === 'concept' && (
-              <div>
-                <div style={{fontSize:'0.8rem',color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreC} / {answeredC}</div>
-                <div style={{fontWeight:'600',marginBottom:'0.5rem'}}>{conceptQ.prompt}</div>
-                <div role="radiogroup" aria-label="Concept options">
-                  {conceptQ.options.map((opt,i) => (
-                    <OptionButton key={i} label={opt} selected={false} onClick={() => answerConcept(opt)} />
-                  ))}
-                </div>
-              </div>
-            )}
-            {mode === 'apply' && (
-              <div>
-                <div style={{fontSize:'0.8rem',color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreA} / {answeredA}</div>
-                <div style={{fontWeight:'600',marginBottom:'0.5rem'}}>Scenario:</div>
-                <div style={{marginBottom:'0.5rem',color:'var(--ink)'}}>{applyQ.prompt}</div>
-                <div role="radiogroup" aria-label="Application options">
-                  {applyQ.options.map((opt,i) => (
-                    <OptionButton key={i} label={opt} selected={false} onClick={() => answerApply(opt)} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <button className="btn btn-secondary" onClick={onBack}>Back</button>
-        </div>
-      );
-    }
-
-    /* =========================================================
-       Bieler Method Lab Component
-    ========================================================== */
-    function BielerLab({onBack}){
-      // Mode can be 'vocab', 'concept', or 'apply'
-      const [mode,setMode]=React.useState('vocab');
-      // index and reveal state for vocabulary
-      const [vi,setVi]=React.useState(0);
-      const [reveal,setReveal]=React.useState(false);
-      // concept/apply question state
-      const pickConcept=React.useCallback(()=>{
-        const item=getRandom(BIELER_CONCEPT_QA);
-        const opts=shuffle([item.a, ...shuffle(item.wrong).slice(0,3)]);
-        return {prompt:item.q,correct:item.a,options:opts};
-      },[]);
-      const pickApply=React.useCallback(()=>{
-        const item=getRandom(BIELER_APPLY);
-        const opts=shuffle([item.answer, ...shuffle(item.wrong).slice(0,3)]);
-        return {prompt:item.scenario,correct:item.answer,options:opts};
-      },[]);
-      const [conceptQ,setConceptQ]=React.useState(()=>pickConcept());
-      const [applyQ,setApplyQ]=React.useState(()=>pickApply());
-      // scores
-      const [scoreC,setScoreC]=React.useState(0);
-      const [answeredC,setAnsweredC]=React.useState(0);
-      const [scoreA,setScoreA]=React.useState(0);
-      const [answeredA,setAnsweredA]=React.useState(0);
-
-      // handlers
-      const nextVocab=()=>{
-        setReveal(false);
-        setVi((vi+1)%BIELER_VOCAB.length);
-      };
-      const prevVocab=()=>{
-        setReveal(false);
-        setVi((vi-1+BIELER_VOCAB.length)%BIELER_VOCAB.length);
-      };
-      const answerConcept=(opt)=>{
-        if(opt===conceptQ.correct){ setScoreC(s=>s+1); }
-        setAnsweredC(a=>a+1);
-        document.getElementById('sr').textContent = (opt===conceptQ.correct)? 'Correct' : 'Incorrect';
-        // slight delay before next question to allow reading
-        setTimeout(()=>{ setConceptQ(pickConcept()); },400);
-      };
-      const answerApply=(opt)=>{
-        if(opt===applyQ.correct){ setScoreA(s=>s+1); }
-        setAnsweredA(a=>a+1);
-        document.getElementById('sr').textContent = (opt===applyQ.correct)? 'Correct' : 'Incorrect';
-        setTimeout(()=>{ setApplyQ(pickApply()); },400);
-      };
-      // keyboard: allow escape to go back and arrow left/right for vocab cards
-      React.useEffect(()=>{
-        const handler=(e)=>{
-          if(e.key==='Escape'){ onBack(); }
-          if(mode==='vocab'){
-            if(e.key==='ArrowRight'){ nextVocab(); }
-            if(e.key==='ArrowLeft'){ prevVocab(); }
-          }
-        };
-        window.addEventListener('keydown',handler);
-        return ()=>window.removeEventListener('keydown',handler);
-      },[mode,vi]);
-      return (
-        <div className="card">
-          <h2>Bieler Method Lab</h2>
-          <p style={{color:'var(--ink-light)',marginBottom:'0.5rem'}}>Progressive study of Ida Bieler’s approach</p>
-          <div style={{marginBottom:'0.8rem'}}>
-            <button className="btn btn-primary" onClick={()=>setMode('vocab')} style={{marginRight:'0.4rem'}} disabled={mode==='vocab'}>Vocabulary</button>
-            <button className="btn btn-primary" onClick={()=>setMode('concept')} style={{marginRight:'0.4rem'}} disabled={mode==='concept'}>Concept</button>
-            <button className="btn btn-primary" onClick={()=>setMode('apply')} disabled={mode==='apply'}>Apply</button>
-          </div>
-          {mode==='vocab' && (
-            <div>
-              <div className="card" style={{marginBottom:'0.5rem'}}>
-                <div style={{fontWeight:'600',fontSize:'1.1rem'}}>{BIELER_VOCAB[vi].term}</div>
-                <div style={{marginTop:'0.5rem',minHeight:'2rem'}}>{reveal ? BIELER_VOCAB[vi].def : <em style={{color:'var(--ink-light)'}}>Press Reveal to show definition.</em>}</div>
-              </div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:'0.5rem',justifyContent:'center'}}>
-                <button className="btn btn-primary" onClick={()=>setReveal(true)}>Reveal</button>
-                <button className="btn btn-secondary" onClick={prevVocab}>Previous</button>
-                <button className="btn btn-secondary" onClick={nextVocab}>Next</button>
-              </div>
-              <p style={{textAlign:'center',fontSize:'0.8rem',marginTop:'0.4rem',color:'var(--ink-light)'}}>Card {vi+1} / {BIELER_VOCAB.length}</p>
-            </div>
-          )}
-          {mode==='concept' && (
-            <div>
-              <p style={{color:'var(--ink-light)',fontSize:'0.8rem',marginBottom:'0.4rem'}}>Score: {scoreC} / {answeredC}</p>
-              <p style={{fontWeight:'600',marginBottom:'0.4rem'}}>{conceptQ.prompt}</p>
-              <div role="radiogroup" aria-label="Answer choices">
-                {conceptQ.options.map((o,idx)=>(
-                  <OptionButton key={idx} label={o} selected={false} onClick={()=>answerConcept(o)}/>
-                ))}
-              </div>
-            </div>
-          )}
-          {mode==='apply' && (
-            <div>
-              <p style={{color:'var(--ink-light)',fontSize:'0.8rem',marginBottom:'0.4rem'}}>Score: {scoreA} / {answeredA}</p>
-              <p style={{fontWeight:'600',marginBottom:'0.2rem'}}>Choose the best practice approach:</p>
-              <div style={{marginBottom:'0.3rem'}}><em>Scenario:</em> {applyQ.prompt}</div>
-              <div role="radiogroup" aria-label="Answer choices">
-                {applyQ.options.map((o,idx)=>(
-                  <OptionButton key={idx} label={o} selected={false} onClick={()=>answerApply(o)}/>
-                ))}
-              </div>
-            </div>
-          )}
-          <button className="btn btn-secondary" style={{marginTop:'1rem'}} onClick={onBack}>Back</button>
-        </div>
-      );
-    }
     function TempoTrainer({onBack}){
       const [i,setI]=React.useState(0);
       const [show,setShow]=React.useState(false);
@@ -1359,7 +1092,6 @@ const TIME_SIGNATURES=[
                   <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('bielerLab')}>Bieler Lab</button>
                 </div>
                 <div className="card">
                   <h2>📊 Progress & Settings</h2>
@@ -1385,7 +1117,6 @@ const TIME_SIGNATURES=[
           {page==='keyTester'&&<KeyTester onBack={()=>setPage('theoryHome')}/>}
           {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>}
           {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>}
-          {page==='bielerLab'&&<BielerLab onBack={()=>setPage('home')}/>}        
         </div>
       );
     }
