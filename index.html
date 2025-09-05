@@ -78,7 +78,8 @@ const MIDI_BASE={ G:55, D:62, A:69, E:76 };
 // Audio engine for simple oscillator notes and intervals
 class AudioEngine{
   constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
-  ensure(){ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); return this.ctx; }
+  ensure(){ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); if(this.ctx.state==='suspended') this.ctx.resume(); return this.ctx; }
+  }
   playNote({midi,durationMs=800}){
     if(this.mute) return; const ctx=this.ensure(); const now=ctx.currentTime; const freq=440*Math.pow(2,(midi-69)/12);
     const osc=ctx.createOscillator(); const gain=ctx.createGain(); osc.frequency.value=freq; osc.type='sine';
