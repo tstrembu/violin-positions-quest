@@ -171,7 +171,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
                   <rect key={key}
                     x={4} y={fi*fingerH+4} width={posW-8} height={fingerH-8} rx="3"
                     fill={color(kind)} stroke="var(--border)"
-                    tabIndex={disabled?-1:0} role="button"
+                    tabIndex={disabled?-1:0} role="gridcell" aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
                     aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
                     onClick={()=>!disabled && onSelect?.({s,p,f})}
                     onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}/>
