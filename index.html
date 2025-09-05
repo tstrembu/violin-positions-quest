@@ -126,18 +126,21 @@ const FLASH_DURATIONS={
     const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
 
     // Hook for keyboard shortcuts
-    function useAnswerHotkeys(enabled,onIndex,onBack){
+    function useAnswerHotkeys(enabled,onIndex,onBack,count=4){
       React.useEffect(()=>{
         if(!enabled) return;
         const handler=(e)=>{
           const k=e.key;
-          if(k>='1' && k<='4') onIndex(Number(k)-1);
+          if(k>='1' && k<='9'){
+            const idx=Number(k)-1;
+            if(idx < (count??4)) onIndex(idx);
+          }
           else if(k==='Enter') onIndex(0);
           else if(k==='Escape') onBack();
         };
         window.addEventListener('keydown',handler);
         return ()=>window.removeEventListener('keydown',handler);
-      },[enabled,onIndex,onBack]);
+      },[enabled,onIndex,onBack,count]);
     }
 
     function OptionButton({label,selected,onClick}){
@@ -155,7 +158,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
                 : k==='distractor' ? 'var(--warning)'
                 : 'var(--card)';
   return (
-    <svg width={W} height={H} style={{maxWidth:'100%'}} aria-label="Fingerboard">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" aria-label="Fingerboard">
       {['G','D','A','E'].map((s,si)=>(
         <g key={s} transform={`translate(0,${(3-si)*strH})`}>
           {POSITIONS.map(p=>(
@@ -382,6 +385,11 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
         const diff=Math.abs(BASE_OFF[b]-BASE_OFF[a]);
         const type= diff===1? 'half':'whole';
         setQ({s,p,a,b,type}); setSelected(null);
+        // play the interval (ear training)
+        try {
+          const root = MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[a];
+          audioEngine.playInterval({rootMidi: root, semitones: Math.abs(BASE_OFF[b]-BASE_OFF[a])});
+        } catch {}
       };
       React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]);
       const answer=(choice,idx)=>{
@@ -396,7 +404,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           pick();
         },200);
       };
-      useAnswerHotkeys(!!q,(i)=>{ if(q){ const opt=i===0?'half':'whole'; answer(opt,i); } },onBack);
+      useAnswerHotkeys(!!q,(i)=>{ if(q){ const opt=i===0?'half':'whole'; answer(opt,i); } },onBack,2);
       if(time===0) return <div className="card"><h2>Interval Sprint Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       const noteA=canonicalBase(q.s,q.p,q.a);
@@ -409,6 +417,14 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
             <p>In {ordinal(q.p)} pos on {q.s} string, between {noteA} and {noteB}: Half or Whole step?</p>
             <OptionButton label="Half Step" selected={selected===0} onClick={()=>answer('half',0)}/>
             <OptionButton label="Whole Step" selected={selected===1} onClick={()=>answer('whole',1)}/>
+            {q && (
+            <button className="btn btn-secondary" onClick={() => {
+              try {
+                const root = MIDI_BASE[q.s] + POS_SHIFT[q.p] + BASE_OFF[q.a];
+                audioEngine.playInterval({ rootMidi: root, semitones: Math.abs(BASE_OFF[q.b]-BASE_OFF[q.a]) });
+              } catch {}
+            }}>Play Again</button>
+            )}
           </div>
           <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
@@ -457,7 +473,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           pick();
         },450);
       };
-      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack);
+      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
       if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       return (
@@ -550,7 +566,52 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
       const isCellKey=k=>{
         const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
       const filteredStats=Object.fromEntries(Object.entries(stats).filter(([k,_])=>isCellKey(k)));
-      return (<div><div className="card"><h2>Your Progress</h2><p>Level {lvl} (XP {xp-prev}/{next-prev})</p><div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}><div style={{height:'100%',width:`${Math.min(100,pct*100)}%`,background:'var(--primary)'}}></div></div></div>{STRINGS.map(s=>(<div className="card" key={s}><h3>{s} string</h3><div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem'}}>{POSITIONS.map(p=>(<div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>{FINGERS.map(f=>{ const k=`${s}:${p}:${f}`; const st=filteredStats[k]||{correct:0,total:0}; const acc= st.total? st.correct/st.total:0; let col; if(st.total===0) col='var(--neutral)'; else if(acc<0.5) col='var(--danger)'; else if(acc<0.75) col='var(--warning)'; else col='var(--success)'; const label=st.total? `${Math.round(acc*100)}%`:''; return <div key={f} className="heat-cell" style={{background:col,fontSize:'0.65rem'}} title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>; })}</div>))}</div></div>))}<button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      return (
+        <div>
+          <div className="card">
+            <h2>Your Progress</h2>
+            <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
+            <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${Math.min(100,pct*100)}%`,background:'var(--primary)'}}></div>
+            </div>
+          </div>
+          {STRINGS.map(s=>(
+            <div className="card" key={s}>
+              <h3>{s} string</h3>
+              <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem'}}>
+                {POSITIONS.map(p=>(
+                  <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
+                    {FINGERS.map(f=>{
+                      const k=`${s}:${p}:${f}`;
+                      const st=filteredStats[k]||{correct:0,total:0};
+                      const acc= st.total? st.correct/st.total:0;
+                      let col, ink = '#fff';
+                      if(st.total===0) {
+                        col='var(--neutral)';
+                      } else if(acc<0.5) {
+                        col='var(--danger)';
+                      } else if(acc<0.75) {
+                        col='var(--warning)';
+                        ink='#111';
+                      } else {
+                        col='var(--success)';
+                      }
+                      const label=st.total? `${Math.round(acc*100)}%`:'';
+                      return (
+                        <div key={f}
+                             className="heat-cell"
+                             style={{background:col,color:ink,fontSize:'0.65rem'}}
+                             title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
@@ -600,7 +661,21 @@ const TIME_SIGNATURES=[
     function TempoTrainer({onBack}){ const [i,setI]=React.useState(0); const [show,setShow]=React.useState(false); const next=()=>{ setShow(false); setI((i+1)%TEMPOS.length); }; const prev=()=>{ setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); }; const t=TEMPOS[i]; const speak=(txt)=>{ try{ const u=new SpeechSynthesisUtterance(txt); u.rate=0.9; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch{} }; return (<div><div className="card"><h2>Tempo Trainer</h2><p><strong>{t.it}</strong></p>{show? (<p>{t.en} — {t.range}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}<div style={{marginTop:'0.5rem'}}><button className="btn btn-secondary" onClick={prev}>Prev</button><button className="btn btn-primary" onClick={next}>Next</button><button className="btn btn-success" onClick={()=>{ speak(t.it); speak(t.en); }}>Speak</button></div></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>); }
     function TempoTester({onBack}){ const [time,setTime]=React.useState(60); const [score,setScore]=React.useState(0); const [answered,setAnswered]=React.useState(0); const [q,setQ]=React.useState(null); const [selected,setSelected]=React.useState(null); const pick=()=>{ const term=getRandom(TEMPOS); const correct=term.en; const opts=shuffle([correct,...shuffle(TEMPOS.map(x=>x.en).filter(x=>x!==correct)).slice(0,3)]); setQ({term:term.it,correct,options:opts}); setSelected(null); }; React.useEffect(()=>{ pick(); const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[]); const answer=(opt,idx)=>{ setSelected(idx); setTimeout(()=>{ const ok=opt===q.correct; document.getElementById('sr').textContent = ok? 'Correct' : 'Try again'; setAnswered(a=>a+1); if(ok) setScore(s=>s+1); addXP(ok?5:2); pick(); },200); }; useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack);
       if(time===0) return <div className="card"><h2>Tempo Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div><div className="card"><h2>Tempo Tester</h2><p>Time {time}s | Score {score}/{answered}</p>{q && (<div><p>What does {q.term} mean?</p>{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+      return (
+        <div>
+          <div className="card">
+            <h2>Tempo Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            {q && (
+              <div>
+                <p>What does {q.term} mean?</p>
+                {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     // ===== Theory modules =====
@@ -681,7 +756,7 @@ const TIME_SIGNATURES=[
           pick();
         },200);
       };
-      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack);
+      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
       if(time===0) return <div className="card"><h2>Intervals Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       return (
         <div>
