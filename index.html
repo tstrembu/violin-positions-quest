@@ -14,6 +14,7 @@
     - Improved button consistency using OptionButton across settings.
     - Added progress bars to theory trainers.
     - Various minor bug fixes and accessibility improvements.
+    - Added Bieler Method Lab with vocabulary, concept check, and application modes.
   -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
@@ -38,12 +39,10 @@
     @media(min-width:640px){ .grid-cols-2 { grid-template-columns: repeat(2,1fr); } }
     .heat-cell { height:2rem; display:flex; align-items:center; justify-content:center; font-size:0.7rem; color:#fff; border-radius:4px; }
     .option-btn { width:100%; padding:0.6rem; border-radius:9999px; margin:0.25rem 0; color:#fff; border:none; cursor:pointer; font-weight:600; }
-    /* Focus visibility */
     .btn:focus-visible, .option-btn:focus-visible { outline:3px solid var(--primary); outline-offset:2px; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
   </style>
   <script>
-    // Theme persistence
     (function(){
       const KEY='vmq.theme';
       const saved=localStorage.getItem(KEY);
@@ -71,56 +70,49 @@
     const BASE_OFF={1:2,2:4,3:5,4:7};
     const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
     const NOTE_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
-// MIDI base values for open strings
-const MIDI_BASE={ G:55, D:62, A:69, E:76 };
+    const MIDI_BASE={ G:55, D:62, A:69, E:76 };
 
-// Audio engine for simple oscillator notes and intervals
-class AudioEngine{
-  constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
-  ensure(){ 
-    if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); 
-    // resume suspended context to enable playback after user gesture
-    if(this.ctx.state==='suspended') this.ctx.resume(); 
-    return this.ctx; 
-  }
-  playNote({midi,durationMs=800}){
-    if(this.mute) return;
-    const ctx=this.ensure();
-    const now=ctx.currentTime;
-    const freq=440*Math.pow(2,(midi-69)/12);
-    const osc=ctx.createOscillator();
-    const gain=ctx.createGain();
-    osc.frequency.value=freq;
-    osc.type='sine';
-    // ADSR envelope
-    gain.gain.setValueAtTime(0,now);
-    gain.gain.linearRampToValueAtTime(0.8,now+0.01);
-    gain.gain.exponentialRampToValueAtTime(0.1,now+durationMs/1000*0.8);
-    gain.gain.linearRampToValueAtTime(0,now+durationMs/1000);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now+durationMs/1000);
-    // cleanup: disconnect nodes after playback
-    osc.onended = () => {
-      try { osc.disconnect(); gain.disconnect(); } catch {}
-    };
-  }
-  playInterval({rootMidi,semitones,gapMs=150,durationMs=600}){
-    if(this.mute) return;
-    // ensure context is running
-    this.ensure();
-    // play first note
-    this.playNote({midi:rootMidi, durationMs});
-    const midi2 = rootMidi + semitones;
-    // schedule second note after gap
-    setTimeout(() => {
-      this.playNote({midi:midi2, durationMs});
-    }, gapMs);
-  }
-  setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
-}
-const audioEngine=new AudioEngine();
+    // Audio engine for simple oscillator notes and intervals
+    class AudioEngine{
+      constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
+      ensure(){ 
+        if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); 
+        if(this.ctx.state==='suspended') this.ctx.resume(); 
+        return this.ctx; 
+      }
+      playNote({midi,durationMs=800}){
+        if(this.mute) return;
+        const ctx=this.ensure();
+        const now=ctx.currentTime;
+        const freq=440*Math.pow(2,(midi-69)/12);
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.frequency.value=freq;
+        osc.type='sine';
+        gain.gain.setValueAtTime(0,now);
+        gain.gain.linearRampToValueAtTime(0.8,now+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.1,now+durationMs/1000*0.8);
+        gain.gain.linearRampToValueAtTime(0,now+durationMs/1000);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now+durationMs/1000);
+        osc.onended = () => {
+          try { osc.disconnect(); gain.disconnect(); } catch {}
+        };
+      }
+      playInterval({rootMidi,semitones,gapMs=150,durationMs=600}){
+        if(this.mute) return;
+        this.ensure();
+        this.playNote({midi:rootMidi, durationMs});
+        const midi2 = rootMidi + semitones;
+        setTimeout(() => {
+          this.playNote({midi:midi2, durationMs});
+        }, gapMs);
+      }
+      setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
+    }
+    const audioEngine=new AudioEngine();
 
     const canonicalBase=(s,p,f)=>{ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return NOTE_NAME[((semi%12)+12)%12]; };
     const CELLS=[]; for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f,canon:canonicalBase(s,p,f)}); }
@@ -136,21 +128,18 @@ const audioEngine=new AudioEngine();
     const shuffle=a=>{ const arr=[...a]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
     const getRandom=a=>a[Math.floor(Math.random()*a.length)];
     const ordinal=n=>{ const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
-// Default preferences including flash duration level for Snapshot (Beginner→Master)
-const defaultPrefs={
-  strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
-  positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
-  flashLevel:'Professional' // options: Beginner, Intermediate, Advanced, Professional, Master
-};
-
-// Mapping from flash level to milliseconds for Snapshot memorization duration
-const FLASH_DURATIONS={
-  Beginner:3000,
-  Intermediate:2000,
-  Advanced:1200,
-  Professional:800,
-  Master:500
-};
+    const defaultPrefs={
+      strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
+      positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
+      flashLevel:'Professional'
+    };
+    const FLASH_DURATIONS={
+      Beginner:3000,
+      Intermediate:2000,
+      Advanced:1200,
+      Professional:800,
+      Master:500
+    };
     const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
 
     // Hook for keyboard shortcuts
@@ -158,7 +147,6 @@ const FLASH_DURATIONS={
       React.useEffect(()=>{
         if(!enabled) return;
         const handler=(e)=>{
-          // Ignore hotkeys when user is typing in form fields or contentEditable
           const t = e.target;
           const tag = (t && t.tagName || '').toLowerCase();
           if(tag==='input' || tag==='select' || tag==='textarea' || (t && t.isContentEditable)) return;
@@ -192,45 +180,205 @@ const FLASH_DURATIONS={
       );
     }
 
-// Visual fingerboard component: renders 5 positions and 4 strings with finger lanes.
-function VisualFingerboard({highlight=[],onSelect,disabled}) {
-  const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
-  const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
-  const color = k => k==='correct' ? 'var(--success)'
-                : k==='chosen' ? 'var(--primary)'
-                : k==='distractor' ? 'var(--warning)'
-                : 'var(--card)';
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
-      {['G','D','A','E'].map((s,si)=>(
-        <g key={s} transform={`translate(0,${(3-si)*strH})`}>
-          {POSITIONS.map(p=>(
-            <g key={p} transform={`translate(${(p-1)*posW},0)`}>
-              {FINGERS.map((f,fi)=>{
-                const key=`${s}:${p}:${f}`;
-                const kind=hiMap[key];
-                return (
-                  <rect key={key}
-                    x={4} y={fi*fingerH+4} width={posW-8} height={fingerH-8} rx="3"
-                    fill={color(kind)} stroke="var(--border)"
-                    tabIndex={disabled?-1:0} role="gridcell" aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
-                    aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
-                    onClick={()=>!disabled && onSelect?.({s,p,f})}
-                    onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}/>
-                );
-              })}
+    // =========================================================
+    // Bieler Method definitions and lab component
+    // =========================================================
+    // Vocabulary terms and definitions for the Bieler Method.
+    const BIELER_VOCAB = [
+      { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
+      { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
+      { term:'Hand Frame', def:'Stable spacing of fingers across semitone/whole-tone patterns; frame travels during shifts.' },
+      { term:'First Trained Function', def:'Accurate finger placement (intonation and spacing) within a stable frame.' },
+      { term:'Second Trained Function', def:'Finger independence and agility (lifting/placing without disturbing neighbors).' },
+      { term:'Third Trained Function', def:'Shifting—moving the whole hand while preserving the frame and sound line.' },
+      { term:'Fourth Trained Function', def:'Vibrato—finger/hand oscillation integrated with intonation and tone aim.' },
+      { term:'Bow Hold', def:'Flexible, pronation-ready grip with curved fingers and mobile thumb.' },
+      { term:'Contact Point', def:'Soundpoint between bridge and fingerboard; chosen by speed/pressure/tilt.' },
+      { term:'Bow Angles', def:'String crossings via forearm/upper arm levels; keep hair tangent to soundpoint.' },
+      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
+      { term:'Legato', def:'Multiple notes under one bow with seamless changes.' },
+      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
+      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
+      { term:'Spiccato', def:'Controlled bounce near the balance point—vertical energy, horizontal timing.' },
+      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
+      { term:'Ricochet', def:'Thrown bow that rebounds multiple times with one impulse.' },
+      { term:'Firm Staccato', def:'In-the-string articulated stops in one bow direction.' },
+      { term:'Flying Staccato', def:'Off-the-string successive stops in a single bow.' },
+      { term:'Nature', def:'Use body’s natural alignments—economy, ease, resonance.' },
+      { term:'Nurture', def:'Stepwise training—patterns before speed; stability before flourish.' },
+      { term:'Knowledge', def:'Clear mental models: maps, sound ideals, mechanics.' },
+      { term:'Necessity', def:'Technique serves musical intent; choose tools by purpose.' },
+    ];
+    // Concept and application questions for the Bieler Method.
+    const BIELER_CONCEPT_QA = [
+      { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
+      { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
+      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
+      { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
+    ];
+    // Scenario-based application questions for the Bieler Method.
+    const BIELER_APPLY = [
+      { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
+      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
+      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
+    ];
+    // Bieler Method Lab component
+    function BielerLab({ onBack }) {
+      const [mode,setMode] = React.useState('vocab');
+      const [vi,setVi] = React.useState(0);
+      const [reveal,setReveal] = React.useState(false);
+      const nextV=()=>{ setReveal(false); setVi((vi+1)%BIELER_VOCAB.length); };
+      const prevV=()=>{ setReveal(false); setVi((vi-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
+      const makeConceptQ = React.useCallback(()=>{
+        const item = getRandom(BIELER_CONCEPT_QA);
+        return { prompt:item.q, correct:item.a, options: shuffle([item.a, ...shuffle(item.wrong).slice(0,3)]) };
+      },[]);
+      const makeApplyQ = React.useCallback(()=>{
+        const item = getRandom(BIELER_APPLY);
+        return { prompt:item.scenario, correct:item.answer, options: shuffle([item.answer, ...shuffle(item.wrong).slice(0,3)]) };
+      },[]);
+      const [cq,setCq] = React.useState(makeConceptQ);
+      const [aq,setAq] = React.useState(makeApplyQ);
+      const [selC,setSelC] = React.useState(null);
+      const [selA,setSelA] = React.useState(null);
+      const [scoreC,setScoreC] = React.useState(0), [answeredC,setAnsweredC] = React.useState(0);
+      const [scoreA,setScoreA] = React.useState(0), [answeredA,setAnsweredA] = React.useState(0);
+      const answerConcept=(opt,idx)=>{
+        if(selC!==null) return;
+        setSelC(idx);
+        const ok = opt===cq.correct;
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+        setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); addXP(ok?4:1);
+        setTimeout(()=>{ setCq(makeConceptQ()); setSelC(null); }, ok?350:700);
+      };
+      const answerApply=(opt,idx)=>{
+        if(selA!==null) return;
+        setSelA(idx);
+        const ok = opt===aq.correct;
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+        setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); addXP(ok?5:2);
+        setTimeout(()=>{ setAq(makeApplyQ()); setSelA(null); }, ok?350:700);
+      };
+      useAnswerHotkeys(
+        mode!=='vocab',
+        (i)=>{
+          if(mode==='concept' && cq.options[i]) answerConcept(cq.options[i], i);
+          if(mode==='apply'   && aq.options[i]) answerApply(aq.options[i], i);
+        },
+        onBack,
+        mode==='concept' ? (cq.options?.length||4) : (aq.options?.length||4)
+      );
+      React.useEffect(()=>{
+        const onKey=(e)=>{
+          if(e.key==='Escape'){ onBack(); }
+          if(mode==='vocab'){
+            if(e.key==='ArrowRight') nextV();
+            if(e.key==='ArrowLeft')  prevV();
+          }
+        };
+        window.addEventListener('keydown',onKey);
+        return ()=>window.removeEventListener('keydown',onKey);
+      },[mode,vi,onBack]);
+      return (
+        <div>
+          <div className="card">
+            <h2>Bieler Method Lab</h2>
+            <p style={{color:'var(--ink-light)',marginTop:-6}}>
+              Progressive study: build vocabulary → check concepts → apply to musical/technique scenarios.
+            </p>
+            <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',margin:'0.5rem 0 1rem'}}>
+              <button className="btn btn-primary" onClick={()=>setMode('vocab')}   aria-pressed={mode==='vocab'}>Vocabulary</button>
+              <button className="btn btn-primary" onClick={()=>setMode('concept')} aria-pressed={mode==='concept'}>Concept Check</button>
+              <button className="btn btn-primary" onClick={()=>setMode('apply')}   aria-pressed={mode==='apply'}>Applications</button>
+            </div>
+            {mode==='vocab' && (
+              <div>
+                <div className="card" style={{padding:'1rem',textAlign:'center',marginBottom:'0.5rem'}}>
+                  <div style={{fontWeight:700,fontSize:'1.15rem'}}>{BIELER_VOCAB[vi].term}</div>
+                  {reveal
+                    ? <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{BIELER_VOCAB[vi].def}</div>
+                    : <div style={{marginTop:'0.5rem',fontStyle:'italic',color:'var(--ink-light)'}}>Press Reveal to show definition.</div>}
+                </div>
+                <div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}>
+                  <button className="btn btn-primary"   onClick={()=>setReveal(true)}>Reveal</button>
+                  <button className="btn btn-secondary" onClick={prevV}>Previous</button>
+                  <button className="btn btn-secondary" onClick={nextV}>Next</button>
+                </div>
+                <div style={{marginTop:'0.5rem',textAlign:'center',color:'var(--ink-light)'}}>
+                  <small>Card {vi+1} / {BIELER_VOCAB.length}</small>
+                  <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}>
+                    <div style={{width:`${((vi+1)/BIELER_VOCAB.length)*100}%`,height:'100%',background:'var(--primary)'}}/>
+                  </div>
+                </div>
+              </div>
+            )}
+            {mode==='concept' && (
+              <div>
+                <div style={{color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreC} / {answeredC}</div>
+                <p style={{fontWeight:600}}>{cq.prompt}</p>
+                <div role="radiogroup" aria-label="Concept answers">
+                  {cq.options.map((opt,i)=>(
+                    <OptionButton key={i} label={opt} selected={selC===i} onClick={()=>answerConcept(opt,i)} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {mode==='apply' && (
+              <div>
+                <div style={{color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreA} / {answeredA}</div>
+                <p><em>Scenario:</em> {aq.prompt}</p>
+                <p style={{fontWeight:600, marginTop:'0.25rem'}}>Choose the best practice approach:</p>
+                <div role="radiogroup" aria-label="Application answers">
+                  {aq.options.map((opt,i)=>(
+                    <OptionButton key={i} label={opt} selected={selA===i} onClick={()=>answerApply(opt,i)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    // Visual fingerboard component: renders 5 positions and 4 strings with finger lanes.
+    function VisualFingerboard({highlight=[],onSelect,disabled}) {
+      const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
+      const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
+      const color = k => k==='correct' ? 'var(--success)'
+                    : k==='chosen' ? 'var(--primary)'
+                    : k==='distractor' ? 'var(--warning)'
+                    : 'var(--card)';
+      return (
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
+          {['G','D','A','E'].map((s,si)=>(
+            <g key={s} transform={`translate(0,${(3-si)*strH})`}>
+              {POSITIONS.map(p=>(
+                <g key={p} transform={`translate(${(p-1)*posW},0)`}>
+                  {FINGERS.map((f,fi)=>{
+                    const key=`${s}:${p}:${f}`;
+                    const kind=hiMap[key];
+                    return (
+                      <rect key={key}
+                        x={4} y={fi*fingerH+4} width={posW-8} height={fingerH-8} rx="3"
+                        fill={color(kind)} stroke="var(--border)"
+                        tabIndex={disabled?-1:0} role="gridcell" aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
+                        aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
+                        onClick={()=>!disabled && onSelect?.({s,p,f})}
+                        onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}/>
+                    );
+                  })}
+                </g>
+              ))}
             </g>
           ))}
-        </g>
-      ))}
-    </svg>
-  );
-}
+        </svg>
+      );
+    }
 
     function SpeedDrill({prefs,onBack}){
       const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
-      // stabilize the filtered cells so deps don't change every render
-			const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
+      const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
       const [time,setTime]=React.useState(90);
       const [paused,setPaused]=React.useState(false);
       const [score,setScore]=React.useState(0);
@@ -252,8 +400,7 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
           audioEngine.playNote({midi});
         }catch{}
       },[cells,stats]);
-      // Start (or re-pick) when the available cells actually change
-			React.useEffect(()=>{ pick(); },[cells]); // or [] if you want only on mount
+      React.useEffect(()=>{ pick(); },[cells]);
       React.useEffect(()=>{
         if(paused) return;
         const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
@@ -595,13 +742,11 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
               }}/>
             ))}</div>
             <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
-
             <h3>Audio</h3>
             <button className="btn btn-primary" onClick={()=>audioEngine.ensure()}>Enable Sound</button>
             <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>
               {audioEngine.mute? 'Unmute' : 'Mute'}
             </button>
-
             <h3>Data Tools</h3>
             <button className="btn btn-primary" onClick={()=>{
               const data={}; Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>{ data[k]=localStorage.getItem(k); });
@@ -641,7 +786,6 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
       const lvl=levelForXP(xp);
       const prev=lvl>1? nextLevelXP(lvl-1):0;
       const next=nextLevelXP(lvl);
-      // Clamp progress percentage between 0 and 1 and guard against NaN
       const pct=Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
       const isCellKey=k=>{
         const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
@@ -695,48 +839,48 @@ function VisualFingerboard({highlight=[],onSelect,disabled}) {
 
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
 
-// Interval, key signature and time signature data for theory trainers/testers
-const INTERVALS=[
-  {name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},
-  {name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},
-  {name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},
-  {name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},
-  {name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},
-  {name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},
-  {name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},
-  {name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},
-  {name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},
-  {name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},
-  {name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},
-  {name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}
-];
+    const INTERVALS=[
+      {name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},
+      {name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},
+      {name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},
+      {name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},
+      {name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},
+      {name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},
+      {name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},
+      {name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},
+      {name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},
+      {name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},
+      {name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},
+      {name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}
+    ];
 
-const KEY_SIGNATURES=[
-  {key:'C Major', type:'none', count:0},
-  {key:'G Major', type:'sharp', count:1},
-  {key:'D Major', type:'sharp', count:2},
-  {key:'A Major', type:'sharp', count:3},
-  {key:'E Major', type:'sharp', count:4},
-  {key:'B Major', type:'sharp', count:5},
-  {key:'F# Major', type:'sharp', count:6},
-  {key:'C# Major', type:'sharp', count:7},
-  {key:'F Major', type:'flat', count:1},
-  {key:'Bb Major', type:'flat', count:2},
-  {key:'Eb Major', type:'flat', count:3},
-  {key:'Ab Major', type:'flat', count:4},
-  {key:'Db Major', type:'flat', count:5},
-  {key:'Gb Major', type:'flat', count:6},
-  {key:'Cb Major', type:'flat', count:7}
-];
+    const KEY_SIGNATURES=[
+      {key:'C Major', type:'none', count:0},
+      {key:'G Major', type:'sharp', count:1},
+      {key:'D Major', type:'sharp', count:2},
+      {key:'A Major', type:'sharp', count:3},
+      {key:'E Major', type:'sharp', count:4},
+      {key:'B Major', type:'sharp', count:5},
+      {key:'F# Major', type:'sharp', count:6},
+      {key:'C# Major', type:'sharp', count:7},
+      {key:'F Major', type:'flat', count:1},
+      {key:'Bb Major', type:'flat', count:2},
+      {key:'Eb Major', type:'flat', count:3},
+      {key:'Ab Major', type:'flat', count:4},
+      {key:'Db Major', type:'flat', count:5},
+      {key:'Gb Major', type:'flat', count:6},
+      {key:'Cb Major', type:'flat', count:7}
+    ];
 
-const TIME_SIGNATURES=[
-  {sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},
-  {sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},
-  {sig:'4/4', description:'4 quarter-note beats per measure (common time)'},
-  {sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},
-  {sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},
-  {sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}
-];
+    const TIME_SIGNATURES=[
+      {sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},
+      {sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},
+      {sig:'4/4', description:'4 quarter-note beats per measure (common time)'},
+      {sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},
+      {sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},
+      {sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}
+    ];
+
     function TempoTrainer({onBack}){
       const [i,setI]=React.useState(0);
       const [show,setShow]=React.useState(false);
@@ -796,7 +940,6 @@ const TIME_SIGNATURES=[
       );
     }
 
-    // ===== Theory modules =====
     function TheoryHome({onBack,onNavigate}){
       return (
         <div>
@@ -848,7 +991,7 @@ const TIME_SIGNATURES=[
       const [selected,setSelected]=React.useState(null);
       const pick=()=>{
         const item=getRandom(INTERVALS);
-        let prompt, correct, opts, semitones;
+        let prompt, correct, opts;
         if(Math.random()<0.5){
           correct=item.name;
           opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
@@ -859,7 +1002,7 @@ const TIME_SIGNATURES=[
           opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
           prompt=`Which interval matches the cue “${cue}”?`;
         }
-        semitones=item.semitones;
+        const semitones=item.semitones;
         const rootMidi = 64 + Math.floor(Math.random()*6);
         setQ({prompt,correct,options:opts,semitones,rootMidi});
         setSelected(null);
@@ -1092,6 +1235,7 @@ const TIME_SIGNATURES=[
                   <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Bieler Lab</button>
                 </div>
                 <div className="card">
                   <h2>📊 Progress & Settings</h2>
@@ -1117,6 +1261,7 @@ const TIME_SIGNATURES=[
           {page==='keyTester'&&<KeyTester onBack={()=>setPage('theoryHome')}/>}
           {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>}
           {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>}
+          {page==='bieler'&&<BielerLab onBack={()=>setPage('home')}/>}
         </div>
       );
     }
