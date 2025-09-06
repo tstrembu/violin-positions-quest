@@ -1325,99 +1325,262 @@
      * directly to note names in each position.
      */
     function PositionReference({ onBack }) {
-		  // Position selector (1–5)
+		  // position selection
 		  const [pos, setPos] = React.useState(1);
+		
+		  // UI controls
+		  const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
+		  const [colorMode, setColorMode]   = React.useState('strings'); // 'strings' | 'notes' | 'none'
+		
 		  const next = () => setPos((p) => (p === 5 ? 1 : p + 1));
 		  const prev = () => setPos((p) => (p === 1 ? 5 : p - 1));
 		
-		  // NEW: Layout + color controls
-		  // layout: 'columnsStrings' (default) or 'columnsFingers'
-		  const [layout, setLayout] = React.useState('columnsStrings');
-		  // colorMode: 'strings' (default) | 'notes' | 'none'
-		  const [colorMode, setColorMode] = React.useState('strings');
+		  // --- helpers --------------------------------------------------------------
 		
-		  // String tints (subtle, color-blind friendly, already in your palette vibe)
-		  const stringColors = {
-		    E: 'rgba(58,91,160,0.15)',   // subtle blue
-		    A: 'rgba(230,159,0,0.15)',   // orange
-		    D: 'rgba(0,158,115,0.15)',   // green
-		    G: 'rgba(213,94,0,0.15)',    // red/orange
+		  // Pitch-class (0–11) at string s, position p, finger f
+		  const pcAt = (s, p, f) => {
+		    const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
+		    return ((semi % 12) + 12) % 12;
 		  };
 		
-		  // Reverse lookup from NOTE_NAME -> pitch class index (0–11)
-		  const NOTE_TO_PC = React.useMemo(() => {
-		    const m = {};
-		    Object.keys(NOTE_NAME).forEach((pc) => {
-		      m[NOTE_NAME[pc]] = Number(pc);
-		    });
-		    return m;
-		  }, []);
+		  // Enharmonic labels (unicodes for clarity)
+		  const ENH = {
+		    0: 'C',
+		    1: 'C♯/D♭',
+		    2: 'D',
+		    3: 'D♯/E♭',
+		    4: 'E',
+		    5: 'F',
+		    6: 'F♯/G♭',
+		    7: 'G',
+		    8: 'G♯/A♭',
+		    9: 'A',
+		    10: 'A♯/B♭',
+		    11: 'B',
+		  };
+		  const labelFor = (pc) => ENH[pc] || NOTE_NAME[pc];
 		
-		  // Accessible note tint (distinct hue per pitch class + light stripes to double-encode)
-		  const noteTint = (note) => {
-		    const pc = NOTE_TO_PC[note] ?? 0;
-		    const hue = (pc * 30) % 360; // 12 * 30 = 360
-		    return `hsla(${hue}, 80%, 50%, 0.18)`; // gentle background tint
+		  // Soft tints per string (work in light & dark)
+		  const stringTint = {
+		    E: 'rgba(58,91,160,0.15)',
+		    A: 'rgba(230,159,0,0.15)',
+		    D: 'rgba(0,158,115,0.15)',
+		    G: 'rgba(213,94,0,0.15)',
 		  };
 		
-		  // Build a cell style & small non-color cue badge for the current color mode
-		  const cellRender = (s, f) => {
-		    const note = canonicalBase(s, pos, f);
-		    const baseStyle = {
-		      padding: '0.45rem 0.55rem',
-		      border: '1px solid var(--border)',
-		      borderRadius: '4px',
-		      textAlign: 'center',
-		      whiteSpace: 'nowrap',
-		    };
-		
-		    let style = { ...baseStyle };
-		    let badge = null;
-		
-		    if (colorMode === 'strings') {
-		      style.backgroundColor = stringColors[s];
-		      // Tiny pill badge with the string letter (non-color cue)
-		      badge = (
-		        <span style={{
-		          fontSize: '0.7rem',
-		          lineHeight: 1,
-		          border: '1px solid var(--border)',
-		          borderRadius: '9999px',
-		          padding: '0.05rem 0.4rem',
-		          marginLeft: '0.35rem',
-		          opacity: 0.8,
-		        }}>{s}</span>
-		      );
-		    } else if (colorMode === 'notes') {
-		      style.backgroundColor = noteTint(note);
-		      // Light diagonal stripes over the tint (re-using the “striped option” idea from the fingerboard)
-		      style.backgroundImage = 'repeating-linear-gradient(45deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 4px)';
-		      // Tiny striped square as an extra cue in the legend-like fashion
-		      badge = (
-		        <span style={{
-		          display: 'inline-block',
-		          width: '12px',
-		          height: '12px',
-		          marginLeft: '0.35rem',
-		          border: '1px solid var(--border)',
-		          backgroundColor: noteTint(note),
-		          backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.08) 0 2px, transparent 2px 4px)',
-		          borderRadius: '2px',
-		          verticalAlign: 'middle',
-		        }} aria-hidden="true" />
-		      );
-		    } else {
-		      // 'none' — neutral card background
-		      style.backgroundColor = 'var(--card)';
-		    }
-		
-		    return (
-		      <td key={`${s}:${f}`} style={style}>
-		        <span style={{ fontWeight: 600 }}>{note}</span>
-		        {badge}
-		      </td>
-		    );
+		  // Solid hues per pitch class (no stripes)
+		  const noteHue = (pc) => {
+		    // evenly spaced hues; light alpha for readability
+		    const h = (pc * 30) % 360;
+		    return `hsla(${h}, 65%, 70%, 0.28)`;
 		  };
+		
+		  const bgForCell = (s, pc) => {
+		    if (colorMode === 'none') return 'transparent';
+		    if (colorMode === 'strings') return stringTint[s];
+		    // colorMode === 'notes'
+		    return noteHue(pc);
+		  };
+		
+		  // Layout plumbing
+		  const cols =
+		    layoutCols === 'strings'
+		      ? STRINGS // columns: G D A E
+		      : FINGERS; // columns: 1 2 3 4
+		
+		  const rows =
+		    layoutCols === 'strings'
+		      ? FINGERS // rows labeled 1st–4th finger
+		      : STRINGS; // rows labeled G/D/A/E
+		
+		  // column header label
+		  const colHead = (c) =>
+		    layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
+		
+		  // row header label
+		  const rowHead = (r) =>
+		    layoutCols === 'strings' ? `${ordinal(r)} finger` : `${r} string`;
+		
+		  // Compute a cell’s string + finger based on current layout
+		  const cellSF = (row, col) =>
+		    layoutCols === 'strings'
+		      ? { s: col, f: row } // rows are fingers, cols are strings
+		      : { s: row, f: col }; // rows are strings, cols are fingers
+		
+		  // --- render ---------------------------------------------------------------
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Position Reference</h2>
+		        <p>Notes in the {ordinal(pos)} position:</p>
+		
+		        {/* compact controls */}
+		        <div
+		          className="grid"
+		          style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.5rem' }}
+		        >
+		          <div>
+		            <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout (columns)</div>
+		            <OptionButton
+		              label="Strings"
+		              selected={layoutCols === 'strings'}
+		              onClick={() => setLayoutCols('strings')}
+		            />
+		            <OptionButton
+		              label="Fingers"
+		              selected={layoutCols === 'fingers'}
+		              onClick={() => setLayoutCols('fingers')}
+		            />
+		          </div>
+		          <div>
+		            <div style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
+		            <OptionButton
+		              label="Strings"
+		              selected={colorMode === 'strings'}
+		              onClick={() => setColorMode('strings')}
+		            />
+		            <OptionButton
+		              label="Notes"
+		              selected={colorMode === 'notes'}
+		              onClick={() => setColorMode('notes')}
+		            />
+		            <OptionButton
+		              label="None"
+		              selected={colorMode === 'none'}
+		              onClick={() => setColorMode('none')}
+		            />
+		          </div>
+		        </div>
+		
+		        {/* position nav */}
+		        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
+		          <button className="btn btn-secondary" onClick={prev}>Prev</button>
+		          <button className="btn btn-primary" onClick={next}>Next</button>
+		        </div>
+		
+		        {/* table */}
+		        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '8px' }}>
+		          <thead>
+		            <tr>
+		              <th style={{ width: 120 }}></th>
+		              {cols.map((c) => (
+		                <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
+		                  {colHead(c)}
+		                </th>
+		              ))}
+		            </tr>
+		          </thead>
+		          <tbody>
+		            {rows.map((r) => (
+		              <tr key={String(r)}>
+		                <th
+		                  style={{
+		                    textAlign: 'right',
+		                    paddingRight: 8,
+		                    whiteSpace: 'nowrap',
+		                    fontWeight: 600,
+		                  }}
+		                >
+		                  {rowHead(r)}
+		                </th>
+		                {cols.map((c) => {
+		                  const { s, f } = cellSF(r, c);
+		                  const pc = pcAt(s, pos, f);
+		                  const text = labelFor(pc);
+		                  const bg = bgForCell(s, pc);
+		                  return (
+		                    <td key={`${s}-${f}`} style={{ padding: 0 }}>
+		                      <div
+		                        style={{
+		                          border: '1px solid var(--border)',
+		                          background: bg,
+		                          borderRadius: 10,
+		                          padding: '10px 12px',
+		                          textAlign: 'center',
+		                          fontWeight: 600,
+		                          lineHeight: 1.2,
+		                        }}
+		                        title={`${s} string • ${ordinal(f)} finger`}
+		                      >
+		                        {text}
+		                      </div>
+		                    </td>
+		                  );
+		                })}
+		              </tr>
+		            ))}
+		          </tbody>
+		        </table>
+		
+		        {/* tiny legend */}
+		        <div
+		          style={{
+		            display: 'flex',
+		            alignItems: 'center',
+		            gap: '1rem',
+		            flexWrap: 'wrap',
+		            marginTop: '0.75rem',
+		            color: 'var(--ink-light)',
+		            fontSize: '0.85rem',
+		          }}
+		        >
+		          {/* strings swatches */}
+		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+		            {['G', 'D', 'A', 'E'].map((s) => (
+		              <span
+		                key={s}
+		                title={`${s} string tint`}
+		                style={{
+		                  width: 16,
+		                  height: 16,
+		                  borderRadius: 4,
+		                  background: stringTint[s],
+		                  border: '1px solid var(--border)',
+		                  display: 'inline-block',
+		                  marginRight: 4,
+		                }}
+		              />
+		            ))}
+		            Strings tint
+		          </span>
+		
+		          {/* notes swatch (solid hue, no stripes) */}
+		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+		            <span
+		              style={{
+		                width: 16,
+		                height: 16,
+		                borderRadius: 4,
+		                background: noteHue(8), // sample (G♯/A♭)
+		                border: '1px solid var(--border)',
+		                display: 'inline-block',
+		              }}
+		            />
+		            Notes hue
+		          </span>
+		
+		          {/* none swatch */}
+		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+		            <span
+		              style={{
+		                width: 16,
+		                height: 16,
+		                borderRadius: 4,
+		                background: 'transparent',
+		                border: '1px solid var(--border)',
+		                display: 'inline-block',
+		              }}
+		            />
+		            No color
+		          </span>
+		        </div>
+		      </div>
+		
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
 		
 		  // Table header builders for both orientations
 		  const HeaderCells = () => {
