@@ -1422,6 +1422,23 @@
 		    whiteSpace: 'nowrap', // keep enharmonics on one line
 		  };
 		
+		  // Make the table horizontally scrollable on very small screens
+		  const SCROLLER_STYLE = {
+		    overflowX: 'auto',
+		    WebkitOverflowScrolling: 'touch',
+		    margin: '0 -0.25rem',
+		    padding: '0 0.25rem',
+		  };
+		
+		  // Ensure enough width so cells never wrap (fits "C♯/D♭")
+		  const TABLE_STYLE = {
+		    width: '100%',
+		    minWidth: 560,              // <-- key line; guarantees wide-enough columns
+		    borderCollapse: 'separate',
+		    borderSpacing: '8px',
+		    tableLayout: 'fixed',       // uniform column widths
+		  };
+		
 		  // --- render ---------------------------------------------------------------
 		
 		  return (
@@ -1474,58 +1491,54 @@
 		          <button className="btn btn-primary" onClick={next}>Next</button>
 		        </div>
 		
-		        {/* table */}
-		        <table
-		          style={{
-		            width: '100%',
-		            borderCollapse: 'separate',
-		            borderSpacing: '8px',
-		            tableLayout: 'fixed', // equal column widths
-		          }}
-		        >
-		          <thead>
-		            <tr>
-		              <th style={{ width: 120 }}></th>
-		              {cols.map((c) => (
-		                <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
-		                  {colHead(c)}
-		                </th>
-		              ))}
-		            </tr>
-		          </thead>
-		          <tbody>
-		            {rows.map((r) => (
-		              <tr key={String(r)}>
-		                <th
-		                  style={{
-		                    textAlign: 'right',
-		                    paddingRight: 8,
-		                    whiteSpace: 'nowrap',
-		                    fontWeight: 600,
-		                  }}
-		                >
-		                  {rowHead(r)}
-		                </th>
-		                {cols.map((c) => {
-		                  const { s, f } = cellSF(r, c);
-		                  const pc = pcAt(s, pos, f);
-		                  const text = labelFor(pc);
-		                  const bg = bgForCell(s, pc);
-		                  return (
-		                    <td key={`${s}-${f}`} style={{ padding: 0 }}>
-		                      <div
-		                        style={{ ...CELL_STYLE, background: bg }}
-		                        title={`${s} string • ${ordinal(f)} finger`}
-		                      >
-		                        {text}
-		                      </div>
-		                    </td>
-		                  );
-		                })}
+		        {/* responsive table (with horizontal scroll fallback) */}
+		        <div style={SCROLLER_STYLE}>
+		          <table style={TABLE_STYLE}>
+		            <thead>
+		              <tr>
+		                {/* Responsive label column: shrinks on phones, stops at 120px on wide screens */}
+		                <th style={{ width: 'clamp(88px, 22vw, 120px)' }}></th>
+		                {cols.map((c) => (
+		                  <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
+		                    {colHead(c)}
+		                  </th>
+		                ))}
 		              </tr>
-		            ))}
-		          </tbody>
-		        </table>
+		            </thead>
+		            <tbody>
+		              {rows.map((r) => (
+		                <tr key={String(r)}>
+		                  <th
+		                    style={{
+		                      textAlign: 'right',
+		                      paddingRight: 8,
+		                      whiteSpace: 'nowrap',
+		                      fontWeight: 600,
+		                    }}
+		                  >
+		                    {rowHead(r)}
+		                  </th>
+		                  {cols.map((c) => {
+		                    const { s, f } = cellSF(r, c);
+		                    const pc = pcAt(s, pos, f);
+		                    const text = labelFor(pc);
+		                    const bg = bgForCell(s, pc);
+		                    return (
+		                      <td key={`${s}-${f}`} style={{ padding: 0 }}>
+		                        <div
+		                          style={{ ...CELL_STYLE, background: bg }}
+		                          title={`${s} string • ${ordinal(f)} finger`}
+		                        >
+		                          {text}
+		                        </div>
+		                      </td>
+		                    );
+		                  })}
+		                </tr>
+		              ))}
+		            </tbody>
+		          </table>
+		        </div>
 		
 		        {/* tiny legend */}
 		        <div
