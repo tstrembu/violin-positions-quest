@@ -2,19 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Enhanced Trainer (v5)</title>
+  <title>Violin Mastery Quest – Enhanced Trainer (v5+ with Improvements)</title>
   <!--
-    v5 Changelog (2025-09-04):
-    - Redesigned home page into three large cards: Play, Study, Progress & Settings with emoji icons.
-    - Added VisualFingerboard component skeleton (SVG grid for strings/positions/fingers). Highlights support and click-to-select capability.
-    - Added basic AudioEngine stub with mute toggle; plays notes and intervals (oscillator based).
-    - Added Mute toggle and Data export/import/reset utilities in Settings.
-    - Snapshot difficulty control retained; added cleanup on unmount.
-    - Interval Sprint prompt now uses actual note names instead of finger numbers.
-    - Improved button consistency using OptionButton across settings.
-    - Added progress bars to theory trainers.
-    - Various minor bug fixes and accessibility improvements.
-    - Added Bieler Method Lab with vocabulary, concept check, and application modes.
+    This file contains an evolved version of the Violin Mastery Quest code which
+    implements several of the expert panel’s recommendations.  In particular
+    it:
+    • Adds encouraging feedback messages and a simple audible beep when a user
+      answers correctly or incorrectly.  The AudioEngine now includes a
+      `playFeedback` method that produces a high‑pitched beep for correct
+      responses and a low‑pitched beep for wrong answers.  Each quiz and drill
+      calls this method when marking answers.
+    • Adjusts the screen reader text to be more positive ("Correct, great
+      job!" or "Oops, almost!") rather than plain "Correct"/"Incorrect".
+    • Fixes the cell height in the VisualFingerboard component so that
+      highlights show up properly.  Previously the subtraction of eight
+      pixels sometimes resulted in zero‑height rectangles on small screens;
+      this has been reduced.
+    • Displays simple badge icons on the stats page.  Each player level is
+      represented as a star (⭐) so students can see their progress at a
+      glance.  While not a full badge system, this responds to the panel
+      suggestion to reward learners with visual symbols.
+    The overall structure remains intact; these changes are incremental and
+    designed to illustrate how the app could evolve to incorporate more
+    motivational and pedagogical features.
   -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
@@ -72,7 +82,7 @@
     const NOTE_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
     const MIDI_BASE={ G:55, D:62, A:69, E:76 };
 
-    // Audio engine for simple oscillator notes and intervals
+    // Audio engine for simple oscillator notes, intervals and feedback beeps
     class AudioEngine{
       constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
       ensure(){ 
@@ -111,6 +121,31 @@
         }, gapMs);
       }
       setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
+      /**
+       * Plays a short beep to reinforce correct or incorrect answers.  The
+       * frequency is higher for correct answers (880Hz) and lower for
+       * incorrect answers (220Hz).  The envelope decays quickly so as not to
+       * distract from the next question.
+       * @param {boolean} ok - whether the answer was correct
+       */
+      playFeedback(ok){
+        if(this.mute) return;
+        const ctx=this.ensure();
+        const now=ctx.currentTime;
+        const freq = ok ? 880 : 220;
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.frequency.value=freq;
+        osc.type='square';
+        gain.gain.setValueAtTime(0,now);
+        gain.gain.linearRampToValueAtTime(0.3,now+0.01);
+        gain.gain.linearRampToValueAtTime(0,now+0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now+0.2);
+        osc.onended=()=>{ try{osc.disconnect(); gain.disconnect();}catch{} };
+      }
     }
     const audioEngine=new AudioEngine();
 
@@ -123,6 +158,11 @@
     const FLASH_KEY='vmq.v4.flashcards';
     const levelForXP=(xp)=>Math.floor(Math.pow(xp/300,0.75))+1;
     const nextLevelXP=(lvl)=>Math.round(300*Math.pow(lvl,1.4));
+    /**
+     * Adds experience points and returns the new total.  XP is used to
+     * determine the player's level and badge count.  This method could
+     * incorporate additional logic for achievements in the future.
+     */
     const addXP=(amt)=>{ const xp=loadJSON(XP_KEY,0)+amt; saveJSON(XP_KEY,xp); return xp; };
     const updateStat=(key,ok)=>{ const stats=loadJSON(STATS_KEY,{}); const st=stats[key]||{correct:0,total:0}; st.total+=1; if(ok) st.correct+=1; stats[key]=st; saveJSON(STATS_KEY,stats); };
     const shuffle=a=>{ const arr=[...a]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
@@ -181,9 +221,8 @@
     }
 
     // =========================================================
-    // Bieler Method definitions and lab component
+    // Bieler Method definitions and lab component (unchanged except feedback)
     // =========================================================
-    // Vocabulary terms and definitions for the Bieler Method.
     const BIELER_VOCAB = [
       { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
       { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
@@ -209,20 +248,17 @@
       { term:'Knowledge', def:'Clear mental models: maps, sound ideals, mechanics.' },
       { term:'Necessity', def:'Technique serves musical intent; choose tools by purpose.' },
     ];
-    // Concept and application questions for the Bieler Method.
     const BIELER_CONCEPT_QA = [
       { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
       { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
       { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
       { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
     ];
-    // Scenario-based application questions for the Bieler Method.
     const BIELER_APPLY = [
       { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
       { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
       { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
     ];
-    // Bieler Method Lab component
     function BielerLab({ onBack }) {
       const [mode,setMode] = React.useState('vocab');
       const [vi,setVi] = React.useState(0);
@@ -247,16 +283,22 @@
         if(selC!==null) return;
         setSelC(idx);
         const ok = opt===cq.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
-        setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); addXP(ok?4:1);
+        document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+        if(ok) setScoreC(s=>s+1);
+        setAnsweredC(a=>a+1);
+        addXP(ok?4:1);
+        audioEngine.playFeedback(ok);
         setTimeout(()=>{ setCq(makeConceptQ()); setSelC(null); }, ok?350:700);
       };
       const answerApply=(opt,idx)=>{
         if(selA!==null) return;
         setSelA(idx);
         const ok = opt===aq.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
-        setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); addXP(ok?5:2);
+        document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+        if(ok) setScoreA(s=>s+1);
+        setAnsweredA(a=>a+1);
+        addXP(ok?5:2);
+        audioEngine.playFeedback(ok);
         setTimeout(()=>{ setAq(makeApplyQ()); setSelA(null); }, ok?350:700);
       };
       useAnswerHotkeys(
@@ -346,9 +388,9 @@
       const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
       const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
       const color = k => k==='correct' ? 'var(--success)'
-                    : k==='chosen' ? 'var(--primary)'
-                    : k==='distractor' ? 'var(--warning)'
-                    : 'var(--card)';
+                        : k==='chosen' ? 'var(--primary)'
+                        : k==='distractor' ? 'var(--warning)'
+                        : 'var(--card)';
       return (
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
           {['G','D','A','E'].map((s,si)=>(
@@ -360,7 +402,7 @@
                     const kind=hiMap[key];
                     return (
                       <rect key={key}
-                        x={4} y={fi*fingerH+4} width={posW-8} height={fingerH-8} rx="3"
+                        x={4} y={fi*fingerH+4} width={posW-8} height={Math.max(6,fingerH-6)} rx="3"
                         fill={color(kind)} stroke="var(--border)"
                         tabIndex={disabled?-1:0} role="gridcell" aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
                         aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
@@ -411,7 +453,8 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok= opt===q.cell.canon;
-          document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           setStats(prev=>{
@@ -468,7 +511,8 @@
             if(c===card){ const newInt= known? Math.min(28,c.interval*2) : 1; return {...c, interval:newInt, due: Date.now()+newInt*24*3600*1000}; } return c; }); saveJSON(FLASH_KEY,upd); return upd;
         });
         addXP(known?5:1);
-        document.getElementById('sr').textContent = known ? 'Correct' : 'Oops, almost!';
+        document.getElementById('sr').textContent = known ? 'Correct, great job!' : 'Oops, almost!';
+        audioEngine.playFeedback(known);
         pick();
       };
       if(!deck.length) return <div className="card"><h2>No cards</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
@@ -520,7 +564,8 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.s}:${q.p}:${q.f}`, ok);
@@ -555,6 +600,10 @@
                   const correct=flash.labels[f];
                   const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
                   setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
+                  try {
+                    const midi=MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[f];
+                    audioEngine.playNote({midi});
+                  }catch{}
                 }}>Ready</button>
               </div>
             )}
@@ -605,7 +654,8 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=choice===q.type;
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.s}:${q.p}:${q.a}-${q.b}`, ok);
@@ -682,7 +732,8 @@
           })
         });
         setTimeout(()=>{
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
@@ -798,6 +849,7 @@
             <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
               <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div>
             </div>
+            <p style={{marginTop:'0.5rem'}}>Badges: {'⭐'.repeat(lvl)}</p>
           </div>
           {STRINGS.map(s=>(
             <div className="card" key={s}>
@@ -838,48 +890,9 @@
     }
 
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
-
-    const INTERVALS=[
-      {name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},
-      {name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},
-      {name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},
-      {name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},
-      {name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},
-      {name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},
-      {name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},
-      {name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},
-      {name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},
-      {name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},
-      {name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},
-      {name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}
-    ];
-
-    const KEY_SIGNATURES=[
-      {key:'C Major', type:'none', count:0},
-      {key:'G Major', type:'sharp', count:1},
-      {key:'D Major', type:'sharp', count:2},
-      {key:'A Major', type:'sharp', count:3},
-      {key:'E Major', type:'sharp', count:4},
-      {key:'B Major', type:'sharp', count:5},
-      {key:'F# Major', type:'sharp', count:6},
-      {key:'C# Major', type:'sharp', count:7},
-      {key:'F Major', type:'flat', count:1},
-      {key:'Bb Major', type:'flat', count:2},
-      {key:'Eb Major', type:'flat', count:3},
-      {key:'Ab Major', type:'flat', count:4},
-      {key:'Db Major', type:'flat', count:5},
-      {key:'Gb Major', type:'flat', count:6},
-      {key:'Cb Major', type:'flat', count:7}
-    ];
-
-    const TIME_SIGNATURES=[
-      {sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},
-      {sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},
-      {sig:'4/4', description:'4 quarter-note beats per measure (common time)'},
-      {sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},
-      {sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},
-      {sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}
-    ];
+    const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
+    const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
+    const TIME_SIGNATURES=[{sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},{sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},{sig:'4/4', description:'4 quarter-note beats per measure (common time)'},{sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},{sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},{sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}];
 
     function TempoTrainer({onBack}){
       const [i,setI]=React.useState(0);
@@ -913,7 +926,8 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?5:2);
@@ -1019,7 +1033,8 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
@@ -1107,7 +1122,8 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
@@ -1183,7 +1199,8 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Oops, almost!';
+          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
@@ -1245,22 +1262,22 @@
               </div>
             </div>
           )}
-          {page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>}
-          {page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>}
-          {page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>}
-          {page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>}
-          {page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>}
-          {page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>}
-          {page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>}
-          {page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>}
-          {page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>}
-          {page==='theoryHome'&&<TheoryHome onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>}
-          {page==='intervalTrainer'&&<IntervalTrainer onBack={()=>setPage('theoryHome')}/>}
-          {page==='intervalTester'&&<IntervalTester onBack={()=>setPage('theoryHome')}/>}
-          {page==='keyTrainer'&&<KeyTrainer onBack={()=>setPage('theoryHome')}/>}
-          {page==='keyTester'&&<KeyTester onBack={()=>setPage('theoryHome')}/>}
-          {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>}
-          {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>}
+          {page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>} 
+          {page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>} 
+          {page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>} 
+          {page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>} 
+          {page==='theoryHome'&&<TheoryHome onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>} 
+          {page==='intervalTrainer'&&<IntervalTrainer onBack={()=>setPage('theoryHome')}/>} 
+          {page==='intervalTester'&&<IntervalTester onBack={()=>setPage('theoryHome')}/>} 
+          {page==='keyTrainer'&&<KeyTrainer onBack={()=>setPage('theoryHome')}/>} 
+          {page==='keyTester'&&<KeyTester onBack={()=>setPage('theoryHome')}/>} 
+          {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>} 
+          {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>} 
           {page==='bieler'&&<BielerLab onBack={()=>setPage('home')}/>}
         </div>
       );
