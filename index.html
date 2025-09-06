@@ -247,7 +247,7 @@
         if(selC!==null) return;
         setSelC(idx);
         const ok = opt===cq.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
         setScoreC(s=>s+(ok?1:0)); setAnsweredC(a=>a+1); addXP(ok?4:1);
         setTimeout(()=>{ setCq(makeConceptQ()); setSelC(null); }, ok?350:700);
       };
@@ -255,7 +255,7 @@
         if(selA!==null) return;
         setSelA(idx);
         const ok = opt===aq.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+        document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
         setScoreA(s=>s+(ok?1:0)); setAnsweredA(a=>a+1); addXP(ok?5:2);
         setTimeout(()=>{ setAq(makeApplyQ()); setSelA(null); }, ok?350:700);
       };
@@ -411,7 +411,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok= opt===q.cell.canon;
-          document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           setStats(prev=>{
@@ -468,7 +468,7 @@
             if(c===card){ const newInt= known? Math.min(28,c.interval*2) : 1; return {...c, interval:newInt, due: Date.now()+newInt*24*3600*1000}; } return c; }); saveJSON(FLASH_KEY,upd); return upd;
         });
         addXP(known?5:1);
-        document.getElementById('sr').textContent = known ? 'Correct' : 'Incorrect';
+        document.getElementById('sr').textContent = known ? 'Correct' : 'Oops, almost!';
         pick();
       };
       if(!deck.length) return <div className="card"><h2>No cards</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
@@ -520,7 +520,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent = ok ? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent = ok ? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.s}:${q.p}:${q.f}`, ok);
@@ -605,7 +605,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=choice===q.type;
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent = ok? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.s}:${q.p}:${q.a}-${q.b}`, ok);
@@ -682,7 +682,7 @@
           })
         });
         setTimeout(()=>{
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent = ok? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
@@ -913,7 +913,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent = ok? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent = ok? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?5:2);
@@ -1019,7 +1019,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
@@ -1107,7 +1107,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
@@ -1183,7 +1183,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct' : 'Incorrect';
+          document.getElementById('sr').textContent= ok? 'Correct' : 'Oops, almost!';
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
