@@ -32,8 +32,40 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --bg:#f8fafc; --card:#fff; --ink:#0f172a; --ink-light:#475569; --primary:#6d28d9; --primary-dark:#5b21b6; --success:#16a34a; --warning:#fbbf24; --danger:#dc2626; --neutral:#9ca3af; --border:rgba(0,0,0,0.1); }
-    :root.dark { --bg:#0b1426; --card:#0f1f3d; --ink:#e2e8f0; --ink-light:#94a3b8; --primary:#a78bfa; --primary-dark:#7c3aed; --success:#22c55e; --warning:#facc15; --danger:#ef4444; --neutral:#6b7280; --border:rgba(255,255,255,0.15); }
+    /*
+      Updated colour palette for accessibility. The success, warning and danger
+      colours now use a colour‑blind friendly palette (green, orange and red).  A
+      neutral grey is defined for low‑information elements.  In dark mode the
+      palette is mirrored with brighter tints.  See colour‑blind guidance for
+      details【408173630527642†L99-L134】.
+    */
+    :root {
+      --bg:#f8fafc;
+      --card:#fff;
+      --ink:#0f172a;
+      --ink-light:#475569;
+      --primary:#3a5ba0;
+      --primary-dark:#2f4b7e;
+      /* Accessible colours for feedback */
+      --success:#009e73; /* green – colour‑blind friendly */
+      --warning:#e69f00; /* orange – high contrast */
+      --danger:#d55e00; /* red/orange – avoids pure red */
+      --neutral:#6c757d; /* mid grey */
+      --border:rgba(0,0,0,0.1);
+    }
+    :root.dark {
+      --bg:#0b1426;
+      --card:#0f1f3d;
+      --ink:#e2e8f0;
+      --ink-light:#94a3b8;
+      --primary:#7a9fcc;
+      --primary-dark:#5d79a7;
+      --success:#00b58a;
+      --warning:#f3ae3d;
+      --danger:#d5672f;
+      --neutral:#6b7280;
+      --border:rgba(255,255,255,0.15);
+    }
     body { margin:0; font-family: 'Inter', sans-serif; background:var(--bg); color:var(--ink); padding-bottom:60px; }
     .container { max-width: 960px; margin:auto; padding:1rem; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; box-shadow:0 4px 20px rgba(0,0,0,0.05); }
@@ -386,28 +418,60 @@
     // Visual fingerboard component: renders 5 positions and 4 strings with finger lanes.
     function VisualFingerboard({highlight=[],onSelect,disabled}) {
       const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
+      // Build a lookup for highlighted cells and their kind
       const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
-      const color = k => k==='correct' ? 'var(--success)'
-                        : k==='chosen' ? 'var(--primary)'
-                        : k==='distractor' ? 'var(--warning)'
-                        : 'var(--card)';
+      // Determine fill for each kind; use a pattern for distractors to aid colour‑blind users
+      const fillForKind = k => {
+        if(k==='correct') return 'var(--success)';
+        if(k==='chosen') return 'var(--primary)';
+        if(k==='distractor') return 'url(#distractorPattern)';
+        return 'var(--card)';
+      };
       return (
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
+          {/* Define a simple diagonal pattern for distractor cells.  Colour‑blind users can rely on the pattern rather than colour to distinguish it【408173630527642†L99-L124】. */}
+          <defs>
+            <pattern id="distractorPattern" patternUnits="userSpaceOnUse" width="8" height="8">
+              <rect width="8" height="8" fill="var(--warning)" />
+              <path d="M0 0 L8 8 M8 0 L0 8" stroke="var(--card)" strokeWidth="1" />
+            </pattern>
+          </defs>
           {['G','D','A','E'].map((s,si)=>(
             <g key={s} transform={`translate(0,${(3-si)*strH})`}>
               {POSITIONS.map(p=>(
                 <g key={p} transform={`translate(${(p-1)*posW},0)`}>
                   {FINGERS.map((f,fi)=>{
-                    const key=`${s}:${p}:${f}`;
-                    const kind=hiMap[key];
+                    const cellKey=`${s}:${p}:${f}`;
+                    const kind=hiMap[cellKey];
+                    const fill=fillForKind(kind);
+                    // x,y coordinates for text overlay
+                    const cx = (posW/2);
+                    const cy = fi*fingerH + fingerH*0.6;
                     return (
-                      <rect key={key}
-                        x={4} y={fi*fingerH+4} width={posW-8} height={Math.max(6,fingerH-6)} rx="3"
-                        fill={color(kind)} stroke="var(--border)"
-                        tabIndex={disabled?-1:0} role="gridcell" aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
-                        aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
-                        onClick={()=>!disabled && onSelect?.({s,p,f})}
-                        onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}/>
+                      <g key={cellKey}>
+                        <rect
+                          x={4}
+                          y={fi*fingerH+4}
+                          width={posW-8}
+                          height={Math.max(6,fingerH-6)}
+                          rx="3"
+                          fill={fill}
+                          stroke="var(--border)"
+                          tabIndex={disabled?-1:0}
+                          role="gridcell"
+                          aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
+                          aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
+                          onClick={()=>!disabled && onSelect?.({s,p,f})}
+                          onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}
+                        />
+                        {/* Add simple text icons for correct and chosen cells to assist users who cannot rely on colour alone */}
+                        {kind==='correct' && (
+                          <text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✓</text>
+                        )}
+                        {kind==='chosen' && kind!=='correct' && (
+                          <text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✕</text>
+                        )}
+                      </g>
                     );
                   })}
                 </g>
@@ -753,11 +817,29 @@
             <p>Where can you play {q.note}? Click the fingerboard:</p>
             <VisualFingerboard
               highlight={(q.feedback || q.options).map(o=>({
-                s:o.s, p:o.p, f:o.f, kind:o.kind || 'distractor'
+                s:o.s,
+                p:o.p,
+                f:o.f,
+                kind:o.kind || 'distractor'
               }))}
               disabled={!!q.feedback}
               onSelect={(cell)=>answer(cell,0)}
             />
+            {/* Legend explaining the icons and patterns used on the fingerboard.  Colours alone are insufficient for some users, so we provide text and symbols to aid interpretation【408173630527642†L99-L124】. */}
+            <div style={{display:'flex',gap:'0.75rem',alignItems:'center',marginTop:'0.5rem',flexWrap:'wrap',fontSize:'0.75rem',color:'var(--ink-light)'}}>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--success)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✓</span>
+                Correct
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--primary)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✕</span>
+                Your choice
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--warning)',borderRadius:'3px',padding:'0 4px',backgroundImage:'linear-gradient(45deg, var(--warning) 25%, var(--card) 25%, var(--card) 50%, var(--warning) 50%, var(--warning) 75%, var(--card) 75%, var(--card) 100%)',backgroundSize:'8px 8px',height:'1em',width:'1em'}}></span>
+                Option
+              </span>
+            </div>
             <details style={{marginTop:'0.5rem'}}>
               <summary>List options</summary>
               {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
