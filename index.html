@@ -1311,6 +1311,71 @@
       );
     }
 
+
+    /**
+     * Position Reference component
+     *
+     * Displays a table of notes for each string and finger in the selected position.
+     * Users can navigate through positions 1–5.  The note names are computed
+     * using canonicalBase() so they exactly match the fingering layout.  Each
+     * string row has a subtle background colour to aid differentiation without
+     * relying solely on colour intensity.  A header row labels the finger
+     * numbers to make the layout intuitive.  This tool is intended as a
+     * reference rather than a drill, connecting the mental fingerboard map
+     * directly to note names in each position.
+     */
+    function PositionReference({onBack}){
+      const [pos,setPos] = React.useState(1);
+      const next=()=>setPos(p=>p===5?1:p+1);
+      const prev=()=>setPos(p=>p===1?5:p-1);
+      const stringColors={
+        E:'rgba(58,91,160,0.15)', // subtle blue tint for E string
+        A:'rgba(230,159,0,0.15)', // orange tint for A string
+        D:'rgba(0,158,115,0.15)', // green tint for D string
+        G:'rgba(213,94,0,0.15)' // red/orange tint for G string
+      };
+      return (
+        <div>
+          <div className="card">
+            <h2>Position Reference</h2>
+            <p>Notes in the {ordinal(pos)} position:</p>
+            <table style={{width:'100%',borderCollapse:'collapse',textAlign:'center'}}>
+              <thead>
+                <tr>
+                  <th style={{textAlign:'left'}}></th>
+                  {FINGERS.map(f=>(
+                    <th key={f} style={{padding:'0.25rem 0.5rem',fontWeight:'600'}}>{ordinal(f)} finger</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {STRINGS.map(s=>{
+                  return (
+                    <tr key={s}>
+                      <th style={{textAlign:'right',padding:'0.25rem 0.5rem',fontWeight:'600'}}>{s} string</th>
+                      {FINGERS.map(f=>{
+                        const note=canonicalBase(s,pos,f);
+                        return (
+                          <td key={f} style={{padding:'0.4rem 0.5rem',background:stringColors[s],border:'1px solid var(--border)',borderRadius:'4px'}}>
+                            {note}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.75rem'}}>
+              <button className="btn btn-secondary" onClick={prev}>Prev</button>
+              <button className="btn btn-primary" onClick={next}>Next</button>
+            </div>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
     function App(){
       const [page,setPage]=React.useState('home');
       const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY,defaultPrefs));
@@ -1335,6 +1400,7 @@
                   <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
                   <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
                   <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Bieler Lab</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('positionRef')}>Position Reference</button>
                 </div>
                 <div className="card">
                   <h2>📊 Progress & Settings</h2>
@@ -1361,6 +1427,7 @@
           {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>} 
           {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>} 
           {page==='bieler'&&<BielerLab onBack={()=>setPage('home')}/>}
+          {page==='positionRef'&&<PositionReference onBack={()=>setPage('home')}/>}
         </div>
       );
     }
