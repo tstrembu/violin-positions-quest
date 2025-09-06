@@ -9,14 +9,14 @@
     it:
     • Adds encouraging feedback messages and a simple audible beep when a user
       answers correctly or incorrectly.  The AudioEngine now includes a
-      `playFeedback` method that produces a high‑pitched beep for correct
-      responses and a low‑pitched beep for wrong answers.  Each quiz and drill
+      `playFeedback` method that produces a high‐pitched beep for correct
+      responses and a low‐pitched beep for wrong answers.  Each quiz and drill
       calls this method when marking answers.
     • Adjusts the screen reader text to be more positive ("Correct, great
       job!" or "Oops, almost!") rather than plain "Correct"/"Incorrect".
     • Fixes the cell height in the VisualFingerboard component so that
       highlights show up properly.  Previously the subtraction of eight
-      pixels sometimes resulted in zero‑height rectangles on small screens;
+      pixels sometimes resulted in zero‐height rectangles on small screens;
       this has been reduced.
     • Displays simple badge icons on the stats page.  Each player level is
       represented as a star (⭐) so students can see their progress at a
@@ -34,9 +34,9 @@
   <style>
     /*
       Updated colour palette for accessibility. The success, warning and danger
-      colours now use a colour‑blind friendly palette (green, orange and red).  A
-      neutral grey is defined for low‑information elements.  In dark mode the
-      palette is mirrored with brighter tints.  See colour‑blind guidance for
+      colours now use a colour‐blind friendly palette (green, orange and red).  A
+      neutral grey is defined for low‐information elements.  In dark mode the
+      palette is mirrored with brighter tints.  See colour‐blind guidance for
       details【408173630527642†L99-L134】.
     */
     :root {
@@ -47,7 +47,7 @@
       --primary:#3a5ba0;
       --primary-dark:#2f4b7e;
       /* Accessible colours for feedback */
-      --success:#009e73; /* green – colour‑blind friendly */
+      --success:#009e73; /* green – colour‐blind friendly */
       --warning:#e69f00; /* orange – high contrast */
       --danger:#d55e00; /* red/orange – avoids pure red */
       --neutral:#6c757d; /* mid grey */
@@ -266,12 +266,12 @@
       { term:'Bow Hold', def:'Flexible, pronation-ready grip with curved fingers and mobile thumb.' },
       { term:'Contact Point', def:'Soundpoint between bridge and fingerboard; chosen by speed/pressure/tilt.' },
       { term:'Bow Angles', def:'String crossings via forearm/upper arm levels; keep hair tangent to soundpoint.' },
-      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
+      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
       { term:'Legato', def:'Multiple notes under one bow with seamless changes.' },
-      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
-      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
+      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
+      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
       { term:'Spiccato', def:'Controlled bounce near the balance point—vertical energy, horizontal timing.' },
-      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
+      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
       { term:'Ricochet', def:'Thrown bow that rebounds multiple times with one impulse.' },
       { term:'Firm Staccato', def:'In-the-string articulated stops in one bow direction.' },
       { term:'Flying Staccato', def:'Off-the-string successive stops in a single bow.' },
@@ -283,13 +283,13 @@
     const BIELER_CONCEPT_QA = [
       { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
       { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
-      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
+      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
       { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
     ];
     const BIELER_APPLY = [
       { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
-      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
-      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
+      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
+      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
     ];
     function BielerLab({ onBack }) {
       const [mode,setMode] = React.useState('vocab');
@@ -420,7 +420,7 @@
       const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
       // Build a lookup for highlighted cells and their kind
       const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
-      // Determine fill for each kind; use a pattern for distractors to aid colour‑blind users
+      // Determine fill for each kind; use a pattern for distractors to aid colour‐blind users
       const fillForKind = k => {
         if(k==='correct') return 'var(--success)';
         if(k==='chosen') return 'var(--primary)';
@@ -429,7 +429,7 @@
       };
       return (
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
-          {/* Define a simple diagonal pattern for distractor cells.  Colour‑blind users can rely on the pattern rather than colour to distinguish it【408173630527642†L99-L124】. */}
+          {/* Define a simple diagonal pattern for distractor cells.  Colour‐blind users can rely on the pattern rather than colour to distinguish it【408173630527642†L99-L124】. */}
           <defs>
             <pattern id="distractorPattern" patternUnits="userSpaceOnUse" width="8" height="8">
               <rect width="8" height="8" fill="var(--warning)" />
@@ -972,7 +972,7 @@
     }
 
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
-    const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
+    const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
     const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
     const TIME_SIGNATURES=[{sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},{sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},{sig:'4/4', description:'4 quarter-note beats per measure (common time)'},{sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},{sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},{sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}];
 
@@ -1324,57 +1324,279 @@
      * reference rather than a drill, connecting the mental fingerboard map
      * directly to note names in each position.
      */
-    function PositionReference({onBack}){
-      const [pos,setPos] = React.useState(1);
-      const next=()=>setPos(p=>p===5?1:p+1);
-      const prev=()=>setPos(p=>p===1?5:p-1);
-      const stringColors={
-        E:'rgba(58,91,160,0.15)', // subtle blue tint for E string
-        A:'rgba(230,159,0,0.15)', // orange tint for A string
-        D:'rgba(0,158,115,0.15)', // green tint for D string
-        G:'rgba(213,94,0,0.15)' // red/orange tint for G string
-      };
-      return (
-        <div>
-          <div className="card">
-            <h2>Position Reference</h2>
-            <p>Notes in the {ordinal(pos)} position:</p>
-            <table style={{width:'100%',borderCollapse:'collapse',textAlign:'center'}}>
-              <thead>
-                <tr>
-                  <th style={{textAlign:'left'}}></th>
-                  {FINGERS.map(f=>(
-                    <th key={f} style={{padding:'0.25rem 0.5rem',fontWeight:'600'}}>{ordinal(f)} finger</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {STRINGS.map(s=>{
-                  return (
-                    <tr key={s}>
-                      <th style={{textAlign:'right',padding:'0.25rem 0.5rem',fontWeight:'600'}}>{s} string</th>
-                      {FINGERS.map(f=>{
-                        const note=canonicalBase(s,pos,f);
-                        return (
-                          <td key={f} style={{padding:'0.4rem 0.5rem',background:stringColors[s],border:'1px solid var(--border)',borderRadius:'4px'}}>
-                            {note}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.75rem'}}>
-              <button className="btn btn-secondary" onClick={prev}>Prev</button>
-              <button className="btn btn-primary" onClick={next}>Next</button>
-            </div>
-          </div>
-          <button className="btn btn-secondary" onClick={onBack}>Back</button>
-        </div>
-      );
-    }
+    function PositionReference({ onBack }) {
+		  // Position selector (1–5)
+		  const [pos, setPos] = React.useState(1);
+		  const next = () => setPos((p) => (p === 5 ? 1 : p + 1));
+		  const prev = () => setPos((p) => (p === 1 ? 5 : p - 1));
+		
+		  // NEW: Layout + color controls
+		  // layout: 'columnsStrings' (default) or 'columnsFingers'
+		  const [layout, setLayout] = React.useState('columnsStrings');
+		  // colorMode: 'strings' (default) | 'notes' | 'none'
+		  const [colorMode, setColorMode] = React.useState('strings');
+		
+		  // String tints (subtle, color-blind friendly, already in your palette vibe)
+		  const stringColors = {
+		    E: 'rgba(58,91,160,0.15)',   // subtle blue
+		    A: 'rgba(230,159,0,0.15)',   // orange
+		    D: 'rgba(0,158,115,0.15)',   // green
+		    G: 'rgba(213,94,0,0.15)',    // red/orange
+		  };
+		
+		  // Reverse lookup from NOTE_NAME -> pitch class index (0–11)
+		  const NOTE_TO_PC = React.useMemo(() => {
+		    const m = {};
+		    Object.keys(NOTE_NAME).forEach((pc) => {
+		      m[NOTE_NAME[pc]] = Number(pc);
+		    });
+		    return m;
+		  }, []);
+		
+		  // Accessible note tint (distinct hue per pitch class + light stripes to double-encode)
+		  const noteTint = (note) => {
+		    const pc = NOTE_TO_PC[note] ?? 0;
+		    const hue = (pc * 30) % 360; // 12 * 30 = 360
+		    return `hsla(${hue}, 80%, 50%, 0.18)`; // gentle background tint
+		  };
+		
+		  // Build a cell style & small non-color cue badge for the current color mode
+		  const cellRender = (s, f) => {
+		    const note = canonicalBase(s, pos, f);
+		    const baseStyle = {
+		      padding: '0.45rem 0.55rem',
+		      border: '1px solid var(--border)',
+		      borderRadius: '4px',
+		      textAlign: 'center',
+		      whiteSpace: 'nowrap',
+		    };
+		
+		    let style = { ...baseStyle };
+		    let badge = null;
+		
+		    if (colorMode === 'strings') {
+		      style.backgroundColor = stringColors[s];
+		      // Tiny pill badge with the string letter (non-color cue)
+		      badge = (
+		        <span style={{
+		          fontSize: '0.7rem',
+		          lineHeight: 1,
+		          border: '1px solid var(--border)',
+		          borderRadius: '9999px',
+		          padding: '0.05rem 0.4rem',
+		          marginLeft: '0.35rem',
+		          opacity: 0.8,
+		        }}>{s}</span>
+		      );
+		    } else if (colorMode === 'notes') {
+		      style.backgroundColor = noteTint(note);
+		      // Light diagonal stripes over the tint (re-using the “striped option” idea from the fingerboard)
+		      style.backgroundImage = 'repeating-linear-gradient(45deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 4px)';
+		      // Tiny striped square as an extra cue in the legend-like fashion
+		      badge = (
+		        <span style={{
+		          display: 'inline-block',
+		          width: '12px',
+		          height: '12px',
+		          marginLeft: '0.35rem',
+		          border: '1px solid var(--border)',
+		          backgroundColor: noteTint(note),
+		          backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.08) 0 2px, transparent 2px 4px)',
+		          borderRadius: '2px',
+		          verticalAlign: 'middle',
+		        }} aria-hidden="true" />
+		      );
+		    } else {
+		      // 'none' — neutral card background
+		      style.backgroundColor = 'var(--card)';
+		    }
+		
+		    return (
+		      <td key={`${s}:${f}`} style={style}>
+		        <span style={{ fontWeight: 600 }}>{note}</span>
+		        {badge}
+		      </td>
+		    );
+		  };
+		
+		  // Table header builders for both orientations
+		  const HeaderCells = () => {
+		    if (layout === 'columnsStrings') {
+		      return (
+		        <>
+		          <th style={{ textAlign: 'left' }}></th>
+		          {STRINGS.map((s) => (
+		            <th key={s} style={{ padding: '0.25rem 0.5rem', fontWeight: 600 }}>{s}</th>
+		          ))}
+		        </>
+		      );
+		    }
+		    // columnsFingers
+		    return (
+		      <>
+		        <th style={{ textAlign: 'left' }}></th>
+		        {FINGERS.map((f) => (
+		          <th key={f} style={{ padding: '0.25rem 0.5rem', fontWeight: 600 }}>{ordinal(f)} finger</th>
+		        ))}
+		      </>
+		    );
+		  };
+		
+		  // Table body builders
+		  const BodyRows = () => {
+		    if (layout === 'columnsStrings') {
+		      // Rows = fingers, Columns = strings
+		      return (
+		        <>
+		          {FINGERS.map((f) => (
+		            <tr key={`row-f${f}`}>
+		              <th style={{ textAlign: 'right', padding: '0.25rem 0.5rem', fontWeight: 600 }}>
+		                {ordinal(f)} finger
+		              </th>
+		              {STRINGS.map((s) => cellRender(s, f))}
+		            </tr>
+		          ))}
+		        </>
+		      );
+		    }
+		    // Rows = strings, Columns = fingers
+		    return (
+		      <>
+		        {STRINGS.map((s) => (
+		          <tr key={`row-s${s}`}>
+		            <th style={{ textAlign: 'right', padding: '0.25rem 0.5rem', fontWeight: 600 }}>
+		              {s} string
+		            </th>
+		            {FINGERS.map((f) => cellRender(s, f))}
+		          </tr>
+		        ))}
+		      </>
+		    );
+		  };
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Position Reference</h2>
+		        <p>Notes in the {ordinal(pos)} position:</p>
+		
+		        {/* Controls */}
+		        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
+		          <div>
+		            <small style={{ display: 'block', color: 'var(--ink-light)', marginBottom: 4 }}>
+		              Layout (columns)
+		            </small>
+		            <div role="radiogroup" aria-label="Layout columns">
+		              <OptionButton
+		                label="Strings"
+		                selected={layout === 'columnsStrings'}
+		                onClick={() => setLayout('columnsStrings')}
+		              />
+		              <OptionButton
+		                label="Fingers"
+		                selected={layout === 'columnsFingers'}
+		                onClick={() => setLayout('columnsFingers')}
+		              />
+		            </div>
+		          </div>
+		
+		          <div>
+		            <small style={{ display: 'block', color: 'var(--ink-light)', marginBottom: 4 }}>
+		              Colors
+		            </small>
+		            <div role="radiogroup" aria-label="Color mode">
+		              <OptionButton
+		                label="Strings"
+		                selected={colorMode === 'strings'}
+		                onClick={() => setColorMode('strings')}
+		              />
+		              <OptionButton
+		                label="Notes"
+		                selected={colorMode === 'notes'}
+		                onClick={() => setColorMode('notes')}
+		              />
+		              <OptionButton
+		                label="None"
+		                selected={colorMode === 'none'}
+		                onClick={() => setColorMode('none')}
+		              />
+		            </div>
+		          </div>
+		
+		          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+		            <button className="btn btn-secondary" onClick={prev}>Prev</button>
+		            <button className="btn btn-primary" onClick={next}>Next</button>
+		          </div>
+		        </div>
+		
+		        {/* Table */}
+		        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '4px', textAlign: 'center' }}>
+		          <thead>
+		            <tr>
+		              <HeaderCells />
+		            </tr>
+		          </thead>
+		          <tbody>
+		            <BodyRows />
+		          </tbody>
+		        </table>
+		
+		        {/* Legend — tiny, double-encoded */}
+		        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.6rem', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--ink-light)' }}>
+		          {/* Strings legend: all four tints + letter pill (non-color cue) */}
+		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+		            {[...'GDAE'].map((s) => (
+		              <span key={s} title={`${s} string`} style={{
+		                display: 'inline-flex',
+		                alignItems: 'center',
+		                justifyContent: 'center',
+		                padding: '0.1rem 0.35rem',
+		                borderRadius: '4px',
+		                border: '1px solid var(--border)',
+		                background: stringColors[s],
+		                fontSize: '0.7rem',
+		                lineHeight: 1,
+		                marginRight: '0.15rem'
+		              }}>
+		                {s}
+		              </span>
+		            ))}
+		            <span>Strings tint</span>
+		          </span>
+		
+		          {/* Notes legend: striped swatch like in fingerboard options */}
+		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+		            <span aria-hidden="true" style={{
+		              width: '16px',
+		              height: '16px',
+		              display: 'inline-block',
+		              border: '1px solid var(--border)',
+		              backgroundColor: noteTint('C'),
+		              backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.08) 0 2px, transparent 2px 4px)',
+		              borderRadius: '3px'
+		            }} />
+		            <span>Notes hue + stripes</span>
+		          </span>
+		
+		          {/* None legend */}
+		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+		            <span aria-hidden="true" style={{
+		              width: '16px',
+		              height: '16px',
+		              display: 'inline-block',
+		              border: '1px solid var(--border)',
+		              background: 'var(--card)',
+		              borderRadius: '3px'
+		            }} />
+		            <span>No color</span>
+		          </span>
+		        </div>
+		      </div>
+		
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
 
     function App(){
       const [page,setPage]=React.useState('home');
