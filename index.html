@@ -1324,7 +1324,7 @@
      * reference rather than a drill, connecting the mental fingerboard map
      * directly to note names in each position.
      */
-    function PositionReference({ onBack }) {
+		function PositionReference({ onBack }) {
 		  // position selection
 		  const [pos, setPos] = React.useState(1);
 		
@@ -1370,8 +1370,7 @@
 		
 		  // Solid hues per pitch class (no stripes)
 		  const noteHue = (pc) => {
-		    // evenly spaced hues; light alpha for readability
-		    const h = (pc * 30) % 360;
+		    const h = (pc * 30) % 360; // evenly spaced hues
 		    return `hsla(${h}, 65%, 70%, 0.28)`;
 		  };
 		
@@ -1406,6 +1405,22 @@
 		    layoutCols === 'strings'
 		      ? { s: col, f: row } // rows are fingers, cols are strings
 		      : { s: row, f: col }; // rows are strings, cols are fingers
+		
+		  // 🔧 shared size for all cells (fits enharmonics like "C♯/D♭")
+		  const CELL_STYLE = {
+		    height: 56,
+		    minHeight: 56,
+		    border: '1px solid var(--border)',
+		    borderRadius: 10,
+		    padding: '10px 12px',
+		    display: 'flex',
+		    alignItems: 'center',
+		    justifyContent: 'center',
+		    textAlign: 'center',
+		    fontWeight: 600,
+		    lineHeight: 1.1,
+		    whiteSpace: 'nowrap', // keep enharmonics on one line
+		  };
 		
 		  // --- render ---------------------------------------------------------------
 		
@@ -1460,7 +1475,14 @@
 		        </div>
 		
 		        {/* table */}
-		        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '8px' }}>
+		        <table
+		          style={{
+		            width: '100%',
+		            borderCollapse: 'separate',
+		            borderSpacing: '8px',
+		            tableLayout: 'fixed', // equal column widths
+		          }}
+		        >
 		          <thead>
 		            <tr>
 		              <th style={{ width: 120 }}></th>
@@ -1492,15 +1514,7 @@
 		                  return (
 		                    <td key={`${s}-${f}`} style={{ padding: 0 }}>
 		                      <div
-		                        style={{
-		                          border: '1px solid var(--border)',
-		                          background: bg,
-		                          borderRadius: 10,
-		                          padding: '10px 12px',
-		                          textAlign: 'center',
-		                          fontWeight: 600,
-		                          lineHeight: 1.2,
-		                        }}
+		                        style={{ ...CELL_STYLE, background: bg }}
 		                        title={`${s} string • ${ordinal(f)} finger`}
 		                      >
 		                        {text}
@@ -1581,7 +1595,6 @@
 		    </div>
 		  );
 		}
-
     function App(){
       const [page,setPage]=React.useState('home');
       const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY,defaultPrefs));
