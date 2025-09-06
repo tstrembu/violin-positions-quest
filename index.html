@@ -1330,8 +1330,10 @@
     
       // UI controls
       const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
-      const [colorMode, setColorMode]   = React.useState('strings'); // 'strings' | 'notes'
-      const POS_MAX = 5;
+      const [colorMode, setColorMode]   = React.useState('strings');  // 'strings' | 'notes'
+    
+      const next = () => setPos((p) => (p === 5 ? 1 : p + 1));
+      const prev = () => setPos((p) => (p === 1 ? 5 : p - 1));
     
       // --- helpers --------------------------------------------------------------
     
@@ -1358,7 +1360,7 @@
       };
       const labelFor = (pc) => ENH[pc] || NOTE_NAME[pc];
     
-      // Soft tints per string
+      // Soft tints per string (work in light & dark)
       const stringTint = {
         E: 'rgba(58,91,160,0.15)',
         A: 'rgba(230,159,0,0.15)',
@@ -1374,7 +1376,8 @@
     
       const bgForCell = (s, pc) => {
         if (colorMode === 'strings') return stringTint[s];
-        return noteHue(pc); // colorMode === 'notes'
+        // colorMode === 'notes'
+        return noteHue(pc);
       };
     
       // Layout plumbing
@@ -1385,15 +1388,18 @@
     
       const rows =
         layoutCols === 'strings'
-          ? FINGERS // rows: 1–4
-          : STRINGS; // rows: G/D/A/E
+          ? FINGERS // rows labeled 1st–4th
+          : STRINGS; // rows labeled G/D/A/E
+    
+      const ordShort = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || `${n}th`);
     
       // column header label
-      const colHead = (c) =>
-        layoutCols === 'strings' ? c : `${ordinal(c)}`;
+      const colHead = (c) => (layoutCols === 'strings' ? c : `${ordinal(c)} finger`);
     
-      // row header label (short), with screen-reader detail
-      const rowHead = (r) => ordinal(r);
+      // visible row label (short), with SR-friendly aria-label
+      const rowHeadVisible = (r) => (layoutCols === 'strings' ? ordShort(r) : r);
+      const rowHeadAria = (r) =>
+        layoutCols === 'strings' ? `${ordinal(r)} finger` : `${r} string`;
     
       // Compute a cell’s string + finger based on current layout
       const cellSF = (row, col) =>
@@ -1401,7 +1407,7 @@
           ? { s: col, f: row } // rows are fingers, cols are strings
           : { s: row, f: col }; // rows are strings, cols are fingers
     
-      // Shared size for all cells (fits enharmonics like "C♯/D♭")
+      // 🔧 shared size for all cells (fits enharmonics like "C♯/D♭")
       const CELL_STYLE = {
         height: 56,
         minHeight: 56,
@@ -1417,50 +1423,43 @@
         whiteSpace: 'nowrap',
       };
     
-      const goPrev = () => setPos((p) => (p === 1 ? POS_MAX : p - 1));
-      const goNext = () => setPos((p) => (p === POS_MAX ? 1 : p + 1));
+      // compact chip for the subtitle
+      const SUBTITLE_CHIP = (
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '0.25rem 0 0.5rem' }}>
+          <span
+            aria-label={`Notes of ${ordinal(pos)} Position`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '0.35rem 0.75rem',
+              borderRadius: 9999,
+              border: '1px solid var(--border)',
+              fontWeight: 700,
+              letterSpacing: '.01em',
+              color: 'var(--ink)',
+              background: 'var(--card)',
+              boxShadow: '0 1px 0 rgba(0,0,0,0.02)',
+            }}
+          >
+            {ordinal(pos)} Position
+          </span>
+        </div>
+      );
+    
+      // responsive width for the left header column to reduce gutter on mobile
+      const HEAD_COL_W = 'clamp(56px, 12vw, 84px)';
     
       // --- render ---------------------------------------------------------------
     
       return (
         <div>
           <div className="card">
-            {/* Title row with bold position chip on the right */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-                marginBottom: '0.25rem',
-              }}
-            >
-              <h2 style={{ margin: 0 }}>Position Reference</h2>
-              <span
-                aria-label={`Notes of ${ordinal(pos)} Position`}
-                title={`${ordinal(pos)} Position`}
-                style={{
-                  fontWeight: 700,
-                  fontSize: '1rem',
-                  padding: '0.2rem 0.6rem',
-                  borderRadius: 9999,
-                  background: 'var(--border)',
-                  color: 'var(--ink)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {ordinal(pos)} Position
-              </span>
-            </div>
+            <h2>Position Reference</h2>
     
             {/* compact controls */}
             <div
               className="grid"
-              style={{
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem',
-                marginBottom: '0.25rem',
-              }}
+              style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.25rem' }}
             >
               <div>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout (columns)</div>
@@ -1487,110 +1486,86 @@
                   selected={colorMode === 'notes'}
                   onClick={() => setColorMode('notes')}
                 />
-                {/*
-                  If you ever want the neutral look back, re-enable this:
-                  <OptionButton label="None" selected={false} onClick={() => setColorMode('none')} />
-                */}
               </div>
             </div>
     
-            {/* table in a horizontal-scroll wrapper for small phones */}
-            <div
+            {/* centered subtitle chip */}
+            {SUBTITLE_CHIP}
+    
+            {/* table */}
+            <table
               style={{
-                overflowX: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                marginTop: '0.25rem',
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: '8px',
+                tableLayout: 'fixed', // equal column widths for data columns
               }}
             >
-              <table
-                style={{
-                  width: '100%',
-                  minWidth: 560,
-                  borderCollapse: 'separate',
-                  borderSpacing: '8px',
-                  tableLayout: 'fixed',
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th style={{ width: 'clamp(64px,16vw,96px)' }}></th>
-                    {cols.map((c) => (
-                      <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
-                        {colHead(c)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={String(r)}>
-                      <th
-                        scope="row"
-                        aria-label={`${ordinal(r)} finger`}
-                        title={`${ordinal(r)} finger`}
-                        style={{
-                          textAlign: 'right',
-                          paddingRight: 8,
-                          whiteSpace: 'nowrap',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {rowHead(r)}
-                      </th>
-                      {cols.map((c) => {
-                        const { s, f } = cellSF(r, c);
-                        const pc = pcAt(s, pos, f);
-                        const text = labelFor(pc);
-                        const bg = bgForCell(s, pc);
-                        return (
-                          <td key={`${s}-${f}`} style={{ padding: 0 }}>
-                            <div
-                              style={{ ...CELL_STYLE, background: bg }}
-                              title={`${s} string • ${ordinal(f)} finger`}
-                            >
-                              {text}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
+              <thead>
+                <tr>
+                  <th style={{ width: HEAD_COL_W }}></th>
+                  {cols.map((c) => (
+                    <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
+                      {colHead(c)}
+                    </th>
                   ))}
-                </tbody>
-              </table>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={String(r)}>
+                    <th
+                      aria-label={rowHeadAria(r)}
+                      style={{
+                        width: HEAD_COL_W,
+                        textAlign: 'right',
+                        paddingRight: 8,
+                        whiteSpace: 'nowrap',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {rowHeadVisible(r)}
+                    </th>
+                    {cols.map((c) => {
+                      const { s, f } = cellSF(r, c);
+                      const pc = pcAt(s, pos, f);
+                      const text = labelFor(pc);
+                      const bg = bgForCell(s, pc);
+                      return (
+                        <td key={`${s}-${f}`} style={{ padding: 0 }}>
+                          <div
+                            style={{ ...CELL_STYLE, background: bg }}
+                            title={`${s} string • ${ordinal(f)} finger`}
+                          >
+                            {text}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+    
+            {/* quick-jump positions */}
+            <div
+              role="radiogroup"
+              aria-label="Select position"
+              style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem' }}
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <OptionButton key={n} label={String(n)} selected={pos === n} onClick={() => setPos(n)} />
+              ))}
             </div>
     
-            {/* position jump (primary) + prev/next (secondary) BELOW the table */}
-            <div style={{ marginTop: '0.75rem' }}>
-              <div
-                role="radiogroup"
-                aria-label="Choose position"
-                style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}
-              >
-                {POSITIONS.map((p) => (
-                  <button
-                    key={p}
-                    className="btn"
-                    onClick={() => setPos(p)}
-                    aria-pressed={pos === p ? 'true' : 'false'}
-                    title={`${ordinal(p)} position`}
-                    style={{
-                      background: pos === p ? 'var(--primary-dark)' : 'var(--primary)',
-                      padding: '0.45rem 0.75rem',
-                      minWidth: 44,
-                    }}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
-                <button className="btn btn-secondary" onClick={goPrev} aria-label="Previous position">
-                  Prev
-                </button>
-                <button className="btn btn-primary" onClick={goNext} aria-label="Next position">
-                  Next
-                </button>
-              </div>
+            {/* primary nav (thumb-friendly, under the table) */}
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={prev} aria-label="Previous position">
+                Prev
+              </button>
+              <button className="btn btn-primary" onClick={next} aria-label="Next position">
+                Next
+              </button>
             </div>
           </div>
     
