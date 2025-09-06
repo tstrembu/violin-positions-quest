@@ -1325,289 +1325,279 @@
      * directly to note names in each position.
      */
 		function PositionReference({ onBack }) {
-		  // position selection
-		  const [pos, setPos] = React.useState(1);
-		
-		  // UI controls
-		  const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
-		  const [colorMode, setColorMode]   = React.useState('strings'); // 'strings' | 'notes' | 'none'
-		
-		  const next = () => setPos((p) => (p === 5 ? 1 : p + 1));
-		  const prev = () => setPos((p) => (p === 1 ? 5 : p - 1));
-		
-		  // --- helpers --------------------------------------------------------------
-		
-		  // Pitch-class (0–11) at string s, position p, finger f
-		  const pcAt = (s, p, f) => {
-		    const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-		    return ((semi % 12) + 12) % 12;
-		  };
-		
-		  // Enharmonic labels (unicodes for clarity)
-		  const ENH = {
-		    0: 'C',
-		    1: 'C♯/D♭',
-		    2: 'D',
-		    3: 'D♯/E♭',
-		    4: 'E',
-		    5: 'F',
-		    6: 'F♯/G♭',
-		    7: 'G',
-		    8: 'G♯/A♭',
-		    9: 'A',
-		    10: 'A♯/B♭',
-		    11: 'B',
-		  };
-		  const labelFor = (pc) => ENH[pc] || NOTE_NAME[pc];
-		
-		  // Soft tints per string (work in light & dark)
-		  const stringTint = {
-		    E: 'rgba(58,91,160,0.15)',
-		    A: 'rgba(230,159,0,0.15)',
-		    D: 'rgba(0,158,115,0.15)',
-		    G: 'rgba(213,94,0,0.15)',
-		  };
-		
-		  // Solid hues per pitch class (no stripes)
-		  const noteHue = (pc) => {
-		    const h = (pc * 30) % 360; // evenly spaced hues
-		    return `hsla(${h}, 65%, 70%, 0.28)`;
-		  };
-		
-		  const bgForCell = (s, pc) => {
-		    if (colorMode === 'none') return 'transparent';
-		    if (colorMode === 'strings') return stringTint[s];
-		    // colorMode === 'notes'
-		    return noteHue(pc);
-		  };
-		
-		  // Layout plumbing
-		  const cols =
-		    layoutCols === 'strings'
-		      ? STRINGS // columns: G D A E
-		      : FINGERS; // columns: 1 2 3 4
-		
-		  const rows =
-		    layoutCols === 'strings'
-		      ? FINGERS // rows labeled 1st–4th finger
-		      : STRINGS; // rows labeled G/D/A/E
-		
-		  // column header label
-		  const colHead = (c) =>
-		    layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
-		
-		  // row header label
-		  const rowHead = (r) =>
-		    layoutCols === 'strings' ? `${ordinal(r)} finger` : `${r} string`;
-		
-		  // Compute a cell’s string + finger based on current layout
-		  const cellSF = (row, col) =>
-		    layoutCols === 'strings'
-		      ? { s: col, f: row } // rows are fingers, cols are strings
-		      : { s: row, f: col }; // rows are strings, cols are fingers
-		
-		  // 🔧 shared size for all cells (fits enharmonics like "C♯/D♭")
-		  const CELL_STYLE = {
-		    height: 56,
-		    minHeight: 56,
-		    border: '1px solid var(--border)',
-		    borderRadius: 10,
-		    padding: '10px 12px',
-		    display: 'flex',
-		    alignItems: 'center',
-		    justifyContent: 'center',
-		    textAlign: 'center',
-		    fontWeight: 600,
-		    lineHeight: 1.1,
-		    whiteSpace: 'nowrap', // keep enharmonics on one line
-		  };
-		
-		  // Make the table horizontally scrollable on very small screens
-		  const SCROLLER_STYLE = {
-		    overflowX: 'auto',
-		    WebkitOverflowScrolling: 'touch',
-		    margin: '0 -0.25rem',
-		    padding: '0 0.25rem',
-		  };
-		
-		  // Ensure enough width so cells never wrap (fits "C♯/D♭")
-		  const TABLE_STYLE = {
-		    width: '100%',
-		    minWidth: 560,              // <-- key line; guarantees wide-enough columns
-		    borderCollapse: 'separate',
-		    borderSpacing: '8px',
-		    tableLayout: 'fixed',       // uniform column widths
-		  };
-		
-		  // --- render ---------------------------------------------------------------
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Position Reference</h2>
-		        <p>Notes in the {ordinal(pos)} position:</p>
-		
-		        {/* compact controls */}
-		        <div
-		          className="grid"
-		          style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.5rem' }}
-		        >
-		          <div>
-		            <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout (columns)</div>
-		            <OptionButton
-		              label="Strings"
-		              selected={layoutCols === 'strings'}
-		              onClick={() => setLayoutCols('strings')}
-		            />
-		            <OptionButton
-		              label="Fingers"
-		              selected={layoutCols === 'fingers'}
-		              onClick={() => setLayoutCols('fingers')}
-		            />
-		          </div>
-		          <div>
-		            <div style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
-		            <OptionButton
-		              label="Strings"
-		              selected={colorMode === 'strings'}
-		              onClick={() => setColorMode('strings')}
-		            />
-		            <OptionButton
-		              label="Notes"
-		              selected={colorMode === 'notes'}
-		              onClick={() => setColorMode('notes')}
-		            />
-		            <OptionButton
-		              label="None"
-		              selected={colorMode === 'none'}
-		              onClick={() => setColorMode('none')}
-		            />
-		          </div>
-		        </div>
-		
-		        {/* position nav */}
-		        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
-		          <button className="btn btn-secondary" onClick={prev}>Prev</button>
-		          <button className="btn btn-primary" onClick={next}>Next</button>
-		        </div>
-		
-		        {/* responsive table (with horizontal scroll fallback) */}
-		        <div style={SCROLLER_STYLE}>
-		          <table style={TABLE_STYLE}>
-		            <thead>
-		              <tr>
-		                {/* Responsive label column: shrinks on phones, stops at 120px on wide screens */}
-		                <th style={{ width: 'clamp(88px, 22vw, 120px)' }}></th>
-		                {cols.map((c) => (
-		                  <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
-		                    {colHead(c)}
-		                  </th>
-		                ))}
-		              </tr>
-		            </thead>
-		            <tbody>
-		              {rows.map((r) => (
-		                <tr key={String(r)}>
-		                  <th
-		                    style={{
-		                      textAlign: 'right',
-		                      paddingRight: 8,
-		                      whiteSpace: 'nowrap',
-		                      fontWeight: 600,
-		                    }}
-		                  >
-		                    {rowHead(r)}
-		                  </th>
-		                  {cols.map((c) => {
-		                    const { s, f } = cellSF(r, c);
-		                    const pc = pcAt(s, pos, f);
-		                    const text = labelFor(pc);
-		                    const bg = bgForCell(s, pc);
-		                    return (
-		                      <td key={`${s}-${f}`} style={{ padding: 0 }}>
-		                        <div
-		                          style={{ ...CELL_STYLE, background: bg }}
-		                          title={`${s} string • ${ordinal(f)} finger`}
-		                        >
-		                          {text}
-		                        </div>
-		                      </td>
-		                    );
-		                  })}
-		                </tr>
-		              ))}
-		            </tbody>
-		          </table>
-		        </div>
-		
-		        {/* tiny legend */}
-		        <div
-		          style={{
-		            display: 'flex',
-		            alignItems: 'center',
-		            gap: '1rem',
-		            flexWrap: 'wrap',
-		            marginTop: '0.75rem',
-		            color: 'var(--ink-light)',
-		            fontSize: '0.85rem',
-		          }}
-		        >
-		          {/* strings swatches */}
-		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-		            {['G', 'D', 'A', 'E'].map((s) => (
-		              <span
-		                key={s}
-		                title={`${s} string tint`}
-		                style={{
-		                  width: 16,
-		                  height: 16,
-		                  borderRadius: 4,
-		                  background: stringTint[s],
-		                  border: '1px solid var(--border)',
-		                  display: 'inline-block',
-		                  marginRight: 4,
-		                }}
-		              />
-		            ))}
-		            Strings tint
-		          </span>
-		
-		          {/* notes swatch (solid hue, no stripes) */}
-		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-		            <span
-		              style={{
-		                width: 16,
-		                height: 16,
-		                borderRadius: 4,
-		                background: noteHue(8), // sample (G♯/A♭)
-		                border: '1px solid var(--border)',
-		                display: 'inline-block',
-		              }}
-		            />
-		            Notes hue
-		          </span>
-		
-		          {/* none swatch */}
-		          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-		            <span
-		              style={{
-		                width: 16,
-		                height: 16,
-		                borderRadius: 4,
-		                background: 'transparent',
-		                border: '1px solid var(--border)',
-		                display: 'inline-block',
-		              }}
-		            />
-		            No color
-		          </span>
-		        </div>
-		      </div>
-		
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		}
+      // position selection
+      const [pos, setPos] = React.useState(1);
+    
+      // UI controls
+      const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
+      const [colorMode, setColorMode]   = React.useState('strings'); // 'strings' | 'notes'
+      const POS_MAX = 5;
+    
+      // --- helpers --------------------------------------------------------------
+    
+      // Pitch-class (0–11) at string s, position p, finger f
+      const pcAt = (s, p, f) => {
+        const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
+        return ((semi % 12) + 12) % 12;
+      };
+    
+      // Enharmonic labels (unicodes for clarity)
+      const ENH = {
+        0: 'C',
+        1: 'C♯/D♭',
+        2: 'D',
+        3: 'D♯/E♭',
+        4: 'E',
+        5: 'F',
+        6: 'F♯/G♭',
+        7: 'G',
+        8: 'G♯/A♭',
+        9: 'A',
+        10: 'A♯/B♭',
+        11: 'B',
+      };
+      const labelFor = (pc) => ENH[pc] || NOTE_NAME[pc];
+    
+      // Soft tints per string
+      const stringTint = {
+        E: 'rgba(58,91,160,0.15)',
+        A: 'rgba(230,159,0,0.15)',
+        D: 'rgba(0,158,115,0.15)',
+        G: 'rgba(213,94,0,0.15)',
+      };
+    
+      // Solid hues per pitch class
+      const noteHue = (pc) => {
+        const h = (pc * 30) % 360;
+        return `hsla(${h}, 65%, 70%, 0.28)`;
+      };
+    
+      const bgForCell = (s, pc) => {
+        if (colorMode === 'strings') return stringTint[s];
+        return noteHue(pc); // colorMode === 'notes'
+      };
+    
+      // Layout plumbing
+      const cols =
+        layoutCols === 'strings'
+          ? STRINGS // columns: G D A E
+          : FINGERS; // columns: 1 2 3 4
+    
+      const rows =
+        layoutCols === 'strings'
+          ? FINGERS // rows: 1–4
+          : STRINGS; // rows: G/D/A/E
+    
+      // column header label
+      const colHead = (c) =>
+        layoutCols === 'strings' ? c : `${ordinal(c)}`;
+    
+      // row header label (short), with screen-reader detail
+      const rowHead = (r) => ordinal(r);
+    
+      // Compute a cell’s string + finger based on current layout
+      const cellSF = (row, col) =>
+        layoutCols === 'strings'
+          ? { s: col, f: row } // rows are fingers, cols are strings
+          : { s: row, f: col }; // rows are strings, cols are fingers
+    
+      // Shared size for all cells (fits enharmonics like "C♯/D♭")
+      const CELL_STYLE = {
+        height: 56,
+        minHeight: 56,
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        padding: '10px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        fontWeight: 600,
+        lineHeight: 1.1,
+        whiteSpace: 'nowrap',
+      };
+    
+      const goPrev = () => setPos((p) => (p === 1 ? POS_MAX : p - 1));
+      const goNext = () => setPos((p) => (p === POS_MAX ? 1 : p + 1));
+    
+      // --- render ---------------------------------------------------------------
+    
+      return (
+        <div>
+          <div className="card">
+            {/* Title row with bold position chip on the right */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+                marginBottom: '0.25rem',
+              }}
+            >
+              <h2 style={{ margin: 0 }}>Position Reference</h2>
+              <span
+                aria-label={`Notes of ${ordinal(pos)} Position`}
+                title={`${ordinal(pos)} Position`}
+                style={{
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: 9999,
+                  background: 'var(--border)',
+                  color: 'var(--ink)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {ordinal(pos)} Position
+              </span>
+            </div>
+    
+            {/* compact controls */}
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: '1fr 1fr',
+                gap: '1rem',
+                marginBottom: '0.25rem',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout (columns)</div>
+                <OptionButton
+                  label="Strings"
+                  selected={layoutCols === 'strings'}
+                  onClick={() => setLayoutCols('strings')}
+                />
+                <OptionButton
+                  label="Fingers"
+                  selected={layoutCols === 'fingers'}
+                  onClick={() => setLayoutCols('fingers')}
+                />
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
+                <OptionButton
+                  label="Strings"
+                  selected={colorMode === 'strings'}
+                  onClick={() => setColorMode('strings')}
+                />
+                <OptionButton
+                  label="Notes"
+                  selected={colorMode === 'notes'}
+                  onClick={() => setColorMode('notes')}
+                />
+                {/*
+                  If you ever want the neutral look back, re-enable this:
+                  <OptionButton label="None" selected={false} onClick={() => setColorMode('none')} />
+                */}
+              </div>
+            </div>
+    
+            {/* table in a horizontal-scroll wrapper for small phones */}
+            <div
+              style={{
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                marginTop: '0.25rem',
+              }}
+            >
+              <table
+                style={{
+                  width: '100%',
+                  minWidth: 560,
+                  borderCollapse: 'separate',
+                  borderSpacing: '8px',
+                  tableLayout: 'fixed',
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={{ width: 'clamp(64px,16vw,96px)' }}></th>
+                    {cols.map((c) => (
+                      <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
+                        {colHead(c)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={String(r)}>
+                      <th
+                        scope="row"
+                        aria-label={`${ordinal(r)} finger`}
+                        title={`${ordinal(r)} finger`}
+                        style={{
+                          textAlign: 'right',
+                          paddingRight: 8,
+                          whiteSpace: 'nowrap',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {rowHead(r)}
+                      </th>
+                      {cols.map((c) => {
+                        const { s, f } = cellSF(r, c);
+                        const pc = pcAt(s, pos, f);
+                        const text = labelFor(pc);
+                        const bg = bgForCell(s, pc);
+                        return (
+                          <td key={`${s}-${f}`} style={{ padding: 0 }}>
+                            <div
+                              style={{ ...CELL_STYLE, background: bg }}
+                              title={`${s} string • ${ordinal(f)} finger`}
+                            >
+                              {text}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+    
+            {/* position jump (primary) + prev/next (secondary) BELOW the table */}
+            <div style={{ marginTop: '0.75rem' }}>
+              <div
+                role="radiogroup"
+                aria-label="Choose position"
+                style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}
+              >
+                {POSITIONS.map((p) => (
+                  <button
+                    key={p}
+                    className="btn"
+                    onClick={() => setPos(p)}
+                    aria-pressed={pos === p ? 'true' : 'false'}
+                    title={`${ordinal(p)} position`}
+                    style={{
+                      background: pos === p ? 'var(--primary-dark)' : 'var(--primary)',
+                      padding: '0.45rem 0.75rem',
+                      minWidth: 44,
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+                <button className="btn btn-secondary" onClick={goPrev} aria-label="Previous position">
+                  Prev
+                </button>
+                <button className="btn btn-primary" onClick={goNext} aria-label="Next position">
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+    
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
     function App(){
       const [page,setPage]=React.useState('home');
       const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY,defaultPrefs));
