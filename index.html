@@ -2,31 +2,87 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest — v7 (single file)</title>
+  <title>Violin Mastery Quest – Enhanced Trainer (v5+ with Improvements)</title>
+  <!--
+    This file contains an evolved version of the Violin Mastery Quest code which
+    implements several of the expert panel’s recommendations.  In particular
+    it:
+    • Adds encouraging feedback messages and a simple audible beep when a user
+      answers correctly or incorrectly.  The AudioEngine now includes a
+      `playFeedback` method that produces a high‐pitched beep for correct
+      responses and a low‐pitched beep for wrong answers.  Each quiz and drill
+      calls this method when marking answers.
+    • Adjusts the screen reader text to be more positive ("Correct, great
+      job!" or "Oops, almost!") rather than plain "Correct"/"Incorrect".
+    • Fixes the cell height in the VisualFingerboard component so that
+      highlights show up properly.  Previously the subtraction of eight
+      pixels sometimes resulted in zero‐height rectangles on small screens;
+      this has been reduced.
+    • Displays simple badge icons on the stats page.  Each player level is
+      represented as a star (⭐) so students can see their progress at a
+      glance.  While not a full badge system, this responds to the panel
+      suggestion to reward learners with visual symbols.
+    The overall structure remains intact; these changes are incremental and
+    designed to illustrate how the app could evolve to incorporate more
+    motivational and pedagogical features.
+  -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --bg:#f8fafc; --card:#fff; --ink:#0f172a; --ink-light:#475569; --primary:#3a5ba0; --primary-dark:#2f4b7e; --success:#009e73; --warning:#e69f00; --danger:#d55e00; --neutral:#6c757d; --border:rgba(0,0,0,0.1); }
-    :root.dark { --bg:#0b1426; --card:#0f1f3d; --ink:#e2e8f0; --ink-light:#94a3b8; --primary:#7a9fcc; --primary-dark:#5d79a7; --success:#00b58a; --warning:#f3ae3d; --danger:#d5672f; --neutral:#6b7280; --border:rgba(255,255,255,0.15); }
-    *{box-sizing:border-box}
-    body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); padding-bottom:64px; }
+    /*
+      Updated colour palette for accessibility. The success, warning and danger
+      colours now use a colour‐blind friendly palette (green, orange and red).  A
+      neutral grey is defined for low‐information elements.  In dark mode the
+      palette is mirrored with brighter tints.  See colour‐blind guidance for
+      details【408173630527642†L99-L134】.
+    */
+    :root {
+      --bg:#f8fafc;
+      --card:#fff;
+      --ink:#0f172a;
+      --ink-light:#475569;
+      --primary:#3a5ba0;
+      --primary-dark:#2f4b7e;
+      /* Accessible colours for feedback */
+      --success:#009e73; /* green – colour‐blind friendly */
+      --warning:#e69f00; /* orange – high contrast */
+      --danger:#d55e00; /* red/orange – avoids pure red */
+      --neutral:#6c757d; /* mid grey */
+      --border:rgba(0,0,0,0.1);
+    }
+    :root.dark {
+      --bg:#0b1426;
+      --card:#0f1f3d;
+      --ink:#e2e8f0;
+      --ink-light:#94a3b8;
+      --primary:#7a9fcc;
+      --primary-dark:#5d79a7;
+      --success:#00b58a;
+      --warning:#f3ae3d;
+      --danger:#d5672f;
+      --neutral:#6b7280;
+      --border:rgba(255,255,255,0.15);
+    }
+    body { margin:0; font-family: 'Inter', sans-serif; background:var(--bg); color:var(--ink); padding-bottom:60px; }
     .container { max-width: 960px; margin:auto; padding:1rem; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.25rem; box-shadow:0 4px 20px rgba(0,0,0,0.05); }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem 1.5rem; margin-bottom:1.5rem; box-shadow:0 4px 20px rgba(0,0,0,0.05); }
     .btn { display:inline-flex; align-items:center; justify-content:center; padding:0.6rem 1rem; border-radius:9999px; margin:0.25rem; border:none; font-weight:600; cursor:pointer; color:#fff; }
-    .btn-primary{background:var(--primary)} .btn-primary:hover{background:var(--primary-dark)}
-    .btn-secondary{background:var(--ink-light)} .btn-secondary:hover{background:var(--ink)}
-    .btn-success{background:var(--success)} .btn-warning{background:var(--warning)} .btn-danger{background:var(--danger)}
-    .btn:focus-visible,.option-btn:focus-visible{ outline:3px solid var(--primary); outline-offset:2px; }
-    .toolbar{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center}
-    .option-btn { width:100%; padding:0.6rem; border-radius:9999px; margin:0.25rem 0; color:#fff; border:none; cursor:pointer; font-weight:600; }
-    .grid{display:grid; gap:1rem}
-    @media(min-width:640px){ .grid-2{grid-template-columns:repeat(2,1fr)} .grid-3{grid-template-columns:repeat(3,1fr)} }
+    .btn-primary { background:var(--primary); }
+    .btn-primary:hover { background:var(--primary-dark); }
+    .btn-secondary { background:var(--ink-light); }
+    .btn-secondary:hover { background:var(--ink); }
+    .btn-success { background:var(--success); }
+    .btn-warning { background:var(--warning); }
+    .btn-danger { background:var(--danger); }
+    .grid { display:grid; gap:1rem; }
+    @media(min-width:640px){ .grid-cols-2 { grid-template-columns: repeat(2,1fr); } }
     .heat-cell { height:2rem; display:flex; align-items:center; justify-content:center; font-size:0.7rem; color:#fff; border-radius:4px; }
+    .option-btn { width:100%; padding:0.6rem; border-radius:9999px; margin:0.25rem 0; color:#fff; border:none; cursor:pointer; font-weight:600; }
+    .btn:focus-visible, .option-btn:focus-visible { outline:3px solid var(--primary); outline-offset:2px; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-    header .chip{background:var(--card); border:1px solid var(--border); border-radius:9999px; padding:.25rem .6rem; display:inline-flex; gap:.5rem; align-items:center}
   </style>
   <script>
     (function(){
@@ -43,117 +99,138 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;margin:.5rem 0 0.75rem">
-      <h1 style="margin:.2rem 0;font-size:1.25rem">🎻 Violin Mastery Quest <small style="color:var(--ink-light);font-weight:600">v7</small></h1>
-      <div class="toolbar">
-        <span class="chip" role="status" aria-live="polite" id="levelChip">Level —</span>
-        <button class="btn btn-primary" onclick="window.__setTheme(!document.documentElement.classList.contains('dark'))">Toggle Theme</button>
-      </div>
-    </header>
-  </div>
-
-  <div id="root" class="container"></div>
+  <div id="root"></div>
   <div id="sr" class="sr-only" aria-live="polite"></div>
-
   <script type="text/babel">
-    // ───────────────────────── helpers & data ─────────────────────────
+    // Helpers
     const loadJSON=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? fb; }catch{return fb;} };
     const saveJSON=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
-    const shuffle=a=>{ const arr=[...a]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
-    const getRandom=a=>a[Math.floor(Math.random()*a.length)];
-    const ordinal=n=>{ const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
-
     const STRINGS=['G','D','A','E'];
-    const POSITIONS=[1,2,3,4,5,6,7];
+    const POSITIONS=[1,2,3,4,5];
     const FINGERS=[1,2,3,4];
-
-    // pitch classes for open strings (C=0)
-    const OPEN_PC={ G:7, D:2, A:9, E:4 };
-    // base finger offsets inside a position
-    const BASE_OFF={ 1:2, 2:4, 3:5, 4:7 };
-    // 1st-finger landing map across positions
-    const POS_SHIFT={ 1:0, 2:2, 3:3, 4:5, 5:7, 6:9, 7:10 };
-
-    // Labels
-    const PC_SHARP={0:'C',1:'C♯',2:'D',3:'D♯',4:'E',5:'F',6:'F♯',7:'G',8:'G♯',9:'A',10:'A♯',11:'B'};
-    const PC_FLAT ={0:'C',1:'D♭',2:'D',3:'E♭',4:'E',5:'F',6:'G♭',7:'G',8:'A♭',9:'A',10:'B♭',11:'B'};
-    const PC_BOTH ={0:'C',1:'C♯/D♭',2:'D',3:'D♯/E♭',4:'E',5:'F',6:'F♯/G♭',7:'G',8:'G♯/A♭',9:'A',10:'A♯/B♭',11:'B'};
-
+    const OPEN_PC={G:7,D:2,A:9,E:4};
+    const BASE_OFF={1:2,2:4,3:5,4:7};
+    const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
+    const NOTE_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
     const MIDI_BASE={ G:55, D:62, A:69, E:76 };
 
-    const KEY_SIGNATURES=[
-      {key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},
-      {key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},
-      {key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},
-      {key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},
-      {key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}
-    ];
-
-    function pcAt(s,p,f,delta=0){ const semi = OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]+delta; return ((semi%12)+12)%12; }
-    function preferSharpsOrFlatsForKey(keyName){
-      const k=KEY_SIGNATURES.find(x=>x.key===keyName); if(!k) return 'sharp';
-      if(k.count===0) return 'sharp'; return k.type;
+    // Audio engine for simple oscillator notes, intervals and feedback beeps
+    class AudioEngine{
+      constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
+      ensure(){ 
+        if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); 
+        if(this.ctx.state==='suspended') this.ctx.resume(); 
+        return this.ctx; 
+      }
+      playNote({midi,durationMs=800}){
+        if(this.mute) return;
+        const ctx=this.ensure();
+        const now=ctx.currentTime;
+        const freq=440*Math.pow(2,(midi-69)/12);
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.frequency.value=freq;
+        osc.type='sine';
+        gain.gain.setValueAtTime(0,now);
+        gain.gain.linearRampToValueAtTime(0.8,now+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.1,now+durationMs/1000*0.8);
+        gain.gain.linearRampToValueAtTime(0,now+durationMs/1000);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now+durationMs/1000);
+        osc.onended = () => {
+          try { osc.disconnect(); gain.disconnect(); } catch {}
+        };
+      }
+      playInterval({rootMidi,semitones,gapMs=150,durationMs=600}){
+        if(this.mute) return;
+        this.ensure();
+        this.playNote({midi:rootMidi, durationMs});
+        const midi2 = rootMidi + semitones;
+        setTimeout(() => {
+          this.playNote({midi:midi2, durationMs});
+        }, gapMs);
+      }
+      setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
+      /**
+       * Plays a short beep to reinforce correct or incorrect answers.  The
+       * frequency is higher for correct answers (880Hz) and lower for
+       * incorrect answers (220Hz).  The envelope decays quickly so as not to
+       * distract from the next question.
+       * @param {boolean} ok - whether the answer was correct
+       */
+      playFeedback(ok){
+        if(this.mute) return;
+        const ctx=this.ensure();
+        const now=ctx.currentTime;
+        const freq = ok ? 880 : 220;
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.frequency.value=freq;
+        osc.type='square';
+        gain.gain.setValueAtTime(0,now);
+        gain.gain.linearRampToValueAtTime(0.3,now+0.01);
+        gain.gain.linearRampToValueAtTime(0,now+0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now+0.2);
+        osc.onended=()=>{ try{osc.disconnect(); gain.disconnect();}catch{} };
+      }
     }
-    function labelPC(pc,mode='both',keyName='C Major'){
-      let m=mode; if(mode==='key') m=preferSharpsOrFlatsForKey(keyName);
-      if(m==='sharp') return PC_SHARP[pc]; if(m==='flat') return PC_FLAT[pc]; return PC_BOTH[pc];
-    }
-    const canonicalBase=(s,p,f)=> labelPC(pcAt(s,p,f),'both');
+    const audioEngine=new AudioEngine();
 
+    const canonicalBase=(s,p,f)=>{ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return NOTE_NAME[((semi%12)+12)%12]; };
     const CELLS=[]; for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f,canon:canonicalBase(s,p,f)}); }
-
-    // Storage & XP
     const XP_KEY='vmq.v4.xp';
     const STATS_KEY='vmq.v4.stats';
     const PREFS_KEY='vmq.v4.prefs';
     const FLASH_SIG_KEY='vmq.v4.flashcards.sig';
     const FLASH_KEY='vmq.v4.flashcards';
-
     const levelForXP=(xp)=>Math.floor(Math.pow(xp/300,0.75))+1;
     const nextLevelXP=(lvl)=>Math.round(300*Math.pow(lvl,1.4));
+    /**
+     * Adds experience points and returns the new total.  XP is used to
+     * determine the player's level and badge count.  This method could
+     * incorporate additional logic for achievements in the future.
+     */
     const addXP=(amt)=>{ const xp=loadJSON(XP_KEY,0)+amt; saveJSON(XP_KEY,xp); return xp; };
     const updateStat=(key,ok)=>{ const stats=loadJSON(STATS_KEY,{}); const st=stats[key]||{correct:0,total:0}; st.total+=1; if(ok) st.correct+=1; stats[key]=st; saveJSON(STATS_KEY,stats); };
-
-    // Audio
-    class AudioEngine{
-      constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
-      ensure(){ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); if(this.ctx.state==='suspended') this.ctx.resume(); return this.ctx; }
-      setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
-      playNote({midi,durationMs=800}){ if(this.mute) return; const ctx=this.ensure(); const now=ctx.currentTime; const freq=440*Math.pow(2,(midi-69)/12);
-        const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=freq; o.type='sine';
-        g.gain.setValueAtTime(0,now); g.gain.linearRampToValueAtTime(0.8,now+0.01); g.gain.exponentialRampToValueAtTime(0.1,now+durationMs/1000*0.8); g.gain.linearRampToValueAtTime(0,now+durationMs/1000);
-        o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now+durationMs/1000); o.onended=()=>{ try{o.disconnect(); g.disconnect();}catch{} };
-      }
-      playInterval({rootMidi,semitones,gapMs=150,durationMs=600}){ if(this.mute) return; this.ensure(); this.playNote({midi:rootMidi, durationMs}); setTimeout(()=>this.playNote({midi:rootMidi+semitones, durationMs}), gapMs); }
-      playFeedback(ok){ if(this.mute) return; const ctx=this.ensure(); const now=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain();
-        o.frequency.value= ok? 880 : 220; o.type='square'; g.gain.setValueAtTime(0,now); g.gain.linearRampToValueAtTime(0.3,now+0.01); g.gain.linearRampToValueAtTime(0,now+0.2);
-        o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now+0.2); o.onended=()=>{ try{o.disconnect(); g.disconnect();}catch{} };
-      }
-    }
-    const audioEngine=new AudioEngine();
-
-    // Prefs
+    const shuffle=a=>{ const arr=[...a]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
+    const getRandom=a=>a[Math.floor(Math.random()*a.length)];
+    const ordinal=n=>{ const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
     const defaultPrefs={
       strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
       positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
-      flashLevel:'Professional',
-      spellingMode:'both',   // 'both' | 'sharp' | 'flat' | 'key'
-      spellingKey:'C Major'
+      flashLevel:'Professional'
     };
-    const hydratePrefs=(p)=>{ const cur={...defaultPrefs, ...(p||{})}; POSITIONS.forEach(pos=>{ if(!(pos in cur.positions)) cur.positions[pos]=true; }); return cur; };
+    const FLASH_DURATIONS={
+      Beginner:3000,
+      Intermediate:2000,
+      Advanced:1200,
+      Professional:800,
+      Master:500
+    };
+    const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
 
-    // Hotkeys
+    // Hook for keyboard shortcuts
     function useAnswerHotkeys(enabled,onIndex,onBack,count=4){
       React.useEffect(()=>{
         if(!enabled) return;
         const handler=(e)=>{
-          const t = e.target; const tag=(t&&t.tagName||'').toLowerCase();
-          if(tag==='input'||tag==='select'||tag==='textarea'||(t&&t.isContentEditable)) return;
+          const t = e.target;
+          const tag = (t && t.tagName || '').toLowerCase();
+          if(tag==='input' || tag==='select' || tag==='textarea' || (t && t.isContentEditable)) return;
           const k=e.key;
-          if(k>='1' && k<='9'){ const idx=Number(k)-1; if(idx < (count??4)) onIndex(idx); }
-          else if(k==='Enter'){ onIndex(0); }
-          else if(k==='Escape'){ onBack(); }
+          if(k>='1' && k<='9'){
+            const idx=Number(k)-1;
+            if(idx < (count??4)) onIndex(idx);
+          } else if(k==='Enter') {
+            onIndex(0);
+          } else if(k==='Escape') {
+            onBack();
+          }
         };
         window.addEventListener('keydown',handler);
         return ()=>window.removeEventListener('keydown',handler);
@@ -162,51 +239,22 @@
 
     function OptionButton({label,selected,onClick}){
       const bg=selected? 'var(--primary-dark)' : 'var(--primary)';
-      return (<button className="option-btn" role="radio" aria-checked={selected?'true':'false'} style={{background:bg}} onClick={onClick}>{label}</button>);
-    }
-
-    // ───────────────────────── components ─────────────────────────
-    function VisualFingerboard({highlight=[],onSelect,disabled}) {
-      const posW=72, strH=32, fingerH=strH/4, W=posW*POSITIONS.length, H=strH*4;
-      const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
-      const fillForKind = k => k==='correct'?'var(--success)': k==='chosen'?'var(--primary)': k==='distractor'?'url(#distractorPattern)':'var(--card)';
       return (
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount={POSITIONS.length}>
-          <defs>
-            <pattern id="distractorPattern" patternUnits="userSpaceOnUse" width="8" height="8">
-              <rect width="8" height="8" fill="var(--warning)" />
-              <path d="M0 0 L8 8 M8 0 L0 8" stroke="var(--card)" strokeWidth="1" />
-            </pattern>
-          </defs>
-          {['G','D','A','E'].map((s,si)=>(
-            <g key={s} transform={`translate(0,${(3-si)*strH})`}>
-              {POSITIONS.map(p=>(
-                <g key={p} transform={`translate(${(p-1)*posW},0)`}>
-                  {FINGERS.map((f,fi)=>{
-                    const key=`${s}:${p}:${f}`; const kind=hiMap[key]; const fill=fillForKind(kind);
-                    const cx = (posW/2); const cy = fi*fingerH + fingerH*0.6;
-                    return (
-                      <g key={key}>
-                        <rect x={4} y={fi*fingerH+4} width={posW-8} height={Math.max(6,fingerH-6)} rx="3"
-                              fill={fill} stroke="var(--border)" tabIndex={disabled?-1:0} role="gridcell"
-                              aria-selected={kind==='chosen'||kind==='correct'?'true':'false'}
-                              aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
-                              onClick={()=>!disabled && onSelect?.({s,p,f})}
-                              onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }} />
-                        {kind==='correct' && (<text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✓</text>)}
-                        {kind==='chosen' && kind!=='correct' && (<text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✕</text>)}
-                      </g>
-                    );
-                  })}
-                </g>
-              ))}
-            </g>
-          ))}
-        </svg>
+        <button
+          className="option-btn"
+          role="radio"
+          aria-checked={selected ? 'true' : 'false'}
+          style={{background:bg}}
+          onClick={onClick}
+        >
+          {label}
+        </button>
       );
     }
 
-    // Bieler Lab (same content as your v7 draft)
+    // =========================================================
+    // Bieler Method definitions and lab component (unchanged except feedback)
+    // =========================================================
     const BIELER_VOCAB = [
       { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
       { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
@@ -244,596 +292,1349 @@
       { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
     ];
     function BielerLab({ onBack }) {
-      const [mode,setMode]=React.useState('vocab');
-      const [vi,setVi]=React.useState(0); const [reveal,setReveal]=React.useState(false);
+      const [mode,setMode] = React.useState('vocab');
+      const [vi,setVi] = React.useState(0);
+      const [reveal,setReveal] = React.useState(false);
       const nextV=()=>{ setReveal(false); setVi((vi+1)%BIELER_VOCAB.length); };
       const prevV=()=>{ setReveal(false); setVi((vi-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
-      const makeConceptQ=React.useCallback(()=>{ const item=getRandom(BIELER_CONCEPT_QA); return {prompt:item.q, correct:item.a, options:shuffle([item.a,...shuffle(item.wrong).slice(0,3)])}; },[]);
-      const makeApplyQ=React.useCallback(()=>{ const item=getRandom(BIELER_APPLY); return {prompt:item.scenario, correct:item.answer, options:shuffle([item.answer,...shuffle(item.wrong).slice(0,3)])}; },[]);
-      const [cq,setCq]=React.useState(makeConceptQ); const [aq,setAq]=React.useState(makeApplyQ);
-      const [selC,setSelC]=React.useState(null); const [selA,setSelA]=React.useState(null);
-      const [scoreC,setScoreC]=React.useState(0), [answeredC,setAnsweredC]=React.useState(0);
-      const [scoreA,setScoreA]=React.useState(0), [answeredA,setAnsweredA]=React.useState(0);
-      const answerConcept=(opt,idx)=>{ if(selC!==null) return; setSelC(idx); const ok=opt===cq.correct; document.getElementById('sr').textContent=ok?'Correct, great job!':'Oops, almost!'; if(ok) setScoreC(s=>s+1); setAnsweredC(a=>a+1); addXP(ok?4:1); audioEngine.playFeedback(ok); setTimeout(()=>{ setCq(makeConceptQ()); setSelC(null); }, ok?350:700); };
-      const answerApply=(opt,idx)=>{ if(selA!==null) return; setSelA(idx); const ok=opt===aq.correct; document.getElementById('sr').textContent=ok?'Correct, great job!':'Oops, almost!'; if(ok) setScoreA(s=>s+1); setAnsweredA(a=>a+1); addXP(ok?5:2); audioEngine.playFeedback(ok); setTimeout(()=>{ setAq(makeApplyQ()); setSelA(null); }, ok?350:700); };
-      useAnswerHotkeys(mode!=='vocab',(i)=>{ if(mode==='concept'&&cq.options[i]) answerConcept(cq.options[i], i); if(mode==='apply'&&aq.options[i]) answerApply(aq.options[i], i); }, onBack, mode==='concept' ? (cq.options?.length||4) : (aq.options?.length||4));
-      React.useEffect(()=>{ const onKey=(e)=>{ if(e.key==='Escape'){ onBack(); } if(mode==='vocab'){ if(e.key==='ArrowRight') nextV(); if(e.key==='ArrowLeft') prevV(); } }; window.addEventListener('keydown',onKey); return ()=>window.removeEventListener('keydown',onKey); },[mode,vi,onBack]);
-      return (<div className="card">
-        <h2>Bieler Method Lab</h2>
-        <p style={{color:'var(--ink-light)',marginTop:-6}}>Vocabulary → Concept check → Apply.</p>
-        <div className="toolbar" style={{margin:'0.5rem 0 1rem'}}>
-          <button className="btn btn-primary" onClick={()=>setMode('vocab')}   aria-pressed={mode==='vocab'}>Vocabulary</button>
-          <button className="btn btn-primary" onClick={()=>setMode('concept')} aria-pressed={mode==='concept'}>Concept Check</button>
-          <button className="btn btn-primary" onClick={()=>setMode('apply')}   aria-pressed={mode==='apply'}>Applications</button>
-        </div>
-        {mode==='vocab' && (<div>
-          <div className="card" style={{padding:'1rem',textAlign:'center',marginBottom:'0.5rem'}}>
-            <div style={{fontWeight:700,fontSize:'1.15rem'}}>{BIELER_VOCAB[vi].term}</div>
-            {reveal ? <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{BIELER_VOCAB[vi].def}</div> : <div style={{marginTop:'0.5rem',fontStyle:'italic',color:'var(--ink-light)'}}>Press Reveal to show definition.</div>}
-          </div>
-          <div className="toolbar" style={{justifyContent:'center'}}>
-            <button className="btn btn-primary" onClick={()=>setReveal(true)}>Reveal</button>
-            <button className="btn btn-secondary" onClick={prevV}>Previous</button>
-            <button className="btn btn-secondary" onClick={nextV}>Next</button>
-          </div>
-          <div style={{marginTop:'0.5rem',textAlign:'center',color:'var(--ink-light)'}}>
-            <small>Card {vi+1} / {BIELER_VOCAB.length}</small>
-            <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}>
-              <div style={{width:`${((vi+1)/BIELER_VOCAB.length)*100}%`,height:'100%',background:'var(--primary)'}}/>
+      const makeConceptQ = React.useCallback(()=>{
+        const item = getRandom(BIELER_CONCEPT_QA);
+        return { prompt:item.q, correct:item.a, options: shuffle([item.a, ...shuffle(item.wrong).slice(0,3)]) };
+      },[]);
+      const makeApplyQ = React.useCallback(()=>{
+        const item = getRandom(BIELER_APPLY);
+        return { prompt:item.scenario, correct:item.answer, options: shuffle([item.answer, ...shuffle(item.wrong).slice(0,3)]) };
+      },[]);
+      const [cq,setCq] = React.useState(makeConceptQ);
+      const [aq,setAq] = React.useState(makeApplyQ);
+      const [selC,setSelC] = React.useState(null);
+      const [selA,setSelA] = React.useState(null);
+      const [scoreC,setScoreC] = React.useState(0), [answeredC,setAnsweredC] = React.useState(0);
+      const [scoreA,setScoreA] = React.useState(0), [answeredA,setAnsweredA] = React.useState(0);
+      const answerConcept=(opt,idx)=>{
+        if(selC!==null) return;
+        setSelC(idx);
+        const ok = opt===cq.correct;
+        document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+        if(ok) setScoreC(s=>s+1);
+        setAnsweredC(a=>a+1);
+        addXP(ok?4:1);
+        audioEngine.playFeedback(ok);
+        setTimeout(()=>{ setCq(makeConceptQ()); setSelC(null); }, ok?350:700);
+      };
+      const answerApply=(opt,idx)=>{
+        if(selA!==null) return;
+        setSelA(idx);
+        const ok = opt===aq.correct;
+        document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+        if(ok) setScoreA(s=>s+1);
+        setAnsweredA(a=>a+1);
+        addXP(ok?5:2);
+        audioEngine.playFeedback(ok);
+        setTimeout(()=>{ setAq(makeApplyQ()); setSelA(null); }, ok?350:700);
+      };
+      useAnswerHotkeys(
+        mode!=='vocab',
+        (i)=>{
+          if(mode==='concept' && cq.options[i]) answerConcept(cq.options[i], i);
+          if(mode==='apply'   && aq.options[i]) answerApply(aq.options[i], i);
+        },
+        onBack,
+        mode==='concept' ? (cq.options?.length||4) : (aq.options?.length||4)
+      );
+      React.useEffect(()=>{
+        const onKey=(e)=>{
+          if(e.key==='Escape'){ onBack(); }
+          if(mode==='vocab'){
+            if(e.key==='ArrowRight') nextV();
+            if(e.key==='ArrowLeft')  prevV();
+          }
+        };
+        window.addEventListener('keydown',onKey);
+        return ()=>window.removeEventListener('keydown',onKey);
+      },[mode,vi,onBack]);
+      return (
+        <div>
+          <div className="card">
+            <h2>Bieler Method Lab</h2>
+            <p style={{color:'var(--ink-light)',marginTop:-6}}>
+              Progressive study: build vocabulary → check concepts → apply to musical/technique scenarios.
+            </p>
+            <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',margin:'0.5rem 0 1rem'}}>
+              <button className="btn btn-primary" onClick={()=>setMode('vocab')}   aria-pressed={mode==='vocab'}>Vocabulary</button>
+              <button className="btn btn-primary" onClick={()=>setMode('concept')} aria-pressed={mode==='concept'}>Concept Check</button>
+              <button className="btn btn-primary" onClick={()=>setMode('apply')}   aria-pressed={mode==='apply'}>Applications</button>
             </div>
+            {mode==='vocab' && (
+              <div>
+                <div className="card" style={{padding:'1rem',textAlign:'center',marginBottom:'0.5rem'}}>
+                  <div style={{fontWeight:700,fontSize:'1.15rem'}}>{BIELER_VOCAB[vi].term}</div>
+                  {reveal
+                    ? <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{BIELER_VOCAB[vi].def}</div>
+                    : <div style={{marginTop:'0.5rem',fontStyle:'italic',color:'var(--ink-light)'}}>Press Reveal to show definition.</div>}
+                </div>
+                <div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}>
+                  <button className="btn btn-primary"   onClick={()=>setReveal(true)}>Reveal</button>
+                  <button className="btn btn-secondary" onClick={prevV}>Previous</button>
+                  <button className="btn btn-secondary" onClick={nextV}>Next</button>
+                </div>
+                <div style={{marginTop:'0.5rem',textAlign:'center',color:'var(--ink-light)'}}>
+                  <small>Card {vi+1} / {BIELER_VOCAB.length}</small>
+                  <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}>
+                    <div style={{width:`${((vi+1)/BIELER_VOCAB.length)*100}%`,height:'100%',background:'var(--primary)'}}/>
+                  </div>
+                </div>
+              </div>
+            )}
+            {mode==='concept' && (
+              <div>
+                <div style={{color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreC} / {answeredC}</div>
+                <p style={{fontWeight:600}}>{cq.prompt}</p>
+                <div role="radiogroup" aria-label="Concept answers">
+                  {cq.options.map((opt,i)=>(
+                    <OptionButton key={i} label={opt} selected={selC===i} onClick={()=>answerConcept(opt,i)} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {mode==='apply' && (
+              <div>
+                <div style={{color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreA} / {answeredA}</div>
+                <p><em>Scenario:</em> {aq.prompt}</p>
+                <p style={{fontWeight:600, marginTop:'0.25rem'}}>Choose the best practice approach:</p>
+                <div role="radiogroup" aria-label="Application answers">
+                  {aq.options.map((opt,i)=>(
+                    <OptionButton key={i} label={opt} selected={selA===i} onClick={()=>answerApply(opt,i)} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>)}
-        {mode==='concept' && (<div>
-          <div style={{color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreC} / {answeredC}</div>
-          <p style={{fontWeight:600}}>{cq.prompt}</p>
-          <div role="radiogroup" aria-label="Concept answers">
-            {cq.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selC===i} onClick={()=>answerConcept(opt,i)} />))}
-          </div>
-        </div>)}
-        {mode==='apply' && (<div>
-          <div style={{color:'var(--ink-light)',marginBottom:'0.25rem'}}>Score: {scoreA} / {answeredA}</div>
-          <p><em>Scenario:</em> {aq.prompt}</p>
-          <p style={{fontWeight:600, marginTop:'0.25rem'}}>Choose the best practice approach:</p>
-          <div role="radiogroup" aria-label="Application answers">
-            {aq.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selA===i} onClick={()=>answerApply(opt,i)} />))}
-          </div>
-        </div>)}
-      </div>);
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
-    const FLASH_DURATIONS={ Beginner:3000, Intermediate:2000, Advanced:1200, Professional:800, Master:500 };
-    const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
+    // Visual fingerboard component: renders 5 positions and 4 strings with finger lanes.
+    function VisualFingerboard({highlight=[],onSelect,disabled}) {
+      const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
+      // Build a lookup for highlighted cells and their kind
+      const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
+      // Determine fill for each kind; use a pattern for distractors to aid colour‐blind users
+      const fillForKind = k => {
+        if(k==='correct') return 'var(--success)';
+        if(k==='chosen') return 'var(--primary)';
+        if(k==='distractor') return 'url(#distractorPattern)';
+        return 'var(--card)';
+      };
+      return (
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
+          {/* Define a simple diagonal pattern for distractor cells.  Colour‐blind users can rely on the pattern rather than colour to distinguish it【408173630527642†L99-L124】. */}
+          <defs>
+            <pattern id="distractorPattern" patternUnits="userSpaceOnUse" width="8" height="8">
+              <rect width="8" height="8" fill="var(--warning)" />
+              <path d="M0 0 L8 8 M8 0 L0 8" stroke="var(--card)" strokeWidth="1" />
+            </pattern>
+          </defs>
+          {['G','D','A','E'].map((s,si)=>(
+            <g key={s} transform={`translate(0,${(3-si)*strH})`}>
+              {POSITIONS.map(p=>(
+                <g key={p} transform={`translate(${(p-1)*posW},0)`}>
+                  {FINGERS.map((f,fi)=>{
+                    const cellKey=`${s}:${p}:${f}`;
+                    const kind=hiMap[cellKey];
+                    const fill=fillForKind(kind);
+                    // x,y coordinates for text overlay
+                    const cx = (posW/2);
+                    const cy = fi*fingerH + fingerH*0.6;
+                    return (
+                      <g key={cellKey}>
+                        <rect
+                          x={4}
+                          y={fi*fingerH+4}
+                          width={posW-8}
+                          height={Math.max(6,fingerH-6)}
+                          rx="3"
+                          fill={fill}
+                          stroke="var(--border)"
+                          tabIndex={disabled?-1:0}
+                          role="gridcell"
+                          aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
+                          aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
+                          onClick={()=>!disabled && onSelect?.({s,p,f})}
+                          onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}
+                        />
+                        {/* Add simple text icons for correct and chosen cells to assist users who cannot rely on colour alone */}
+                        {kind==='correct' && (
+                          <text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✓</text>
+                        )}
+                        {kind==='chosen' && kind!=='correct' && (
+                          <text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✕</text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
+              ))}
+            </g>
+          ))}
+        </svg>
+      );
+    }
 
     function SpeedDrill({prefs,onBack}){
       const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
-      const cells=React.useMemo(()=>filteredCells(prefs),[prefs]);
-      const [time,setTime]=React.useState(90), [paused,setPaused]=React.useState(false);
-      const [score,setScore]=React.useState(0), [answered,setAnswered]=React.useState(0);
-      const [q,setQ]=React.useState(null), [selected,setSelected]=React.useState(null);
+      const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
+      const [time,setTime]=React.useState(90);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
       const pick=React.useCallback(()=>{
         if(!cells.length){ setQ(null); return; }
         const weight=c=>{ const k=`${c.s}:${c.p}:${c.f}`; const st=stats[k]||{correct:0,total:0}; const acc=st.total? st.correct/st.total : 0; return 1-acc+0.05; };
         const total=cells.reduce((sum,c)=>sum+weight(c),0);
         let r=Math.random()*total; let chosen=cells[cells.length-1];
         for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break;} }
-        const correct=chosen.canon; const pool=[...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct);
+        const correct=chosen.canon;
+        const pool=[...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct);
         const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
         setQ({cell:chosen,options:opts}); setSelected(null);
-        try{ audioEngine.playNote({midi:MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f]}); }catch{}
+        try {
+          const midi=MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f];
+          audioEngine.playNote({midi});
+        }catch{}
       },[cells,stats]);
-      React.useEffect(()=>{ pick(); },[pick]);
-      React.useEffect(()=>{ if(paused) return; const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[paused]);
-      const answer=(opt,idx)=>{ if(selected!==null) return; setSelected(idx); setTimeout(()=>{
-        const ok= opt===q.cell.canon;
-        document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!'; audioEngine.playFeedback(ok);
-        setAnswered(a=>a+1); if(ok) setScore(s=>s+1);
-        setStats(prev=>{ const k=`${q.cell.s}:${q.cell.p}:${q.cell.f}`; const st=prev[k]||{correct:0,total:0}; const next={...prev,[k]:{correct:st.correct+(ok?1:0), total:st.total+1}}; saveJSON(STATS_KEY,next); return next; });
-        addXP(ok?8:2); pick();
-      },200); };
+      React.useEffect(()=>{ pick(); },[cells]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok= opt===q.cell.canon;
+          document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          setStats(prev=>{
+            const k=`${q.cell.s}:${q.cell.p}:${q.cell.f}`;
+            const st=prev[k]||{correct:0,total:0};
+            const next={...prev,[k]:{correct:st.correct+(ok?1:0), total:st.total+1}};
+            saveJSON(STATS_KEY,next);
+            return next;
+          });
+          addXP(ok?8:2);
+          pick();
+        },200);
+      };
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
       if(time===0) return <div className="card"><h2>Speed Drill Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!cells.length) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div className="card"><h2>Speed Drill</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>{q && (<div><p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p><div role="radiogroup" aria-label="Answer choices">{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div></div>)}</div>);
+      return (<div><div className="card"><h2>Speed Drill</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>{q && (<div><p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p><div role="radiogroup" aria-label="Answer choices">{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
     function Flashcards({prefs,onBack}){
       const buildCards=React.useCallback(()=>{
-        const cells=filteredCells(prefs), cards=[];
+        const cells=filteredCells(prefs);
+        const cards=[];
         cells.forEach(c=>{ cards.push({type:'cell',q:`Note at ${ordinal(c.p)} pos, ${ordinal(c.f)} finger on ${c.s}`,a:c.canon,interval:1,due:Date.now()}); });
         const unique=[...new Set(cells.map(c=>c.canon))];
         unique.forEach(n=>{ cards.push({type:'note',q:`Locations for note ${n}?`,a:n,interval:1,due:Date.now()}); });
         return cards;
       },[prefs]);
       const [deck,setDeck]=React.useState(()=>{
-        const saved=loadJSON(FLASH_KEY,null), savedSig=localStorage.getItem(FLASH_SIG_KEY);
+        const saved=loadJSON(FLASH_KEY,null);
+        const savedSig=localStorage.getItem(FLASH_SIG_KEY);
         const curSig=JSON.stringify({strings:prefs.strings,positions:prefs.positions});
         if(saved && savedSig===curSig) return saved;
         const cards=buildCards(); saveJSON(FLASH_KEY,cards); localStorage.setItem(FLASH_SIG_KEY,curSig); return cards;
       });
-      React.useEffect(()=>{ const curSig=JSON.stringify({strings:prefs.strings,positions:prefs.positions}); const savedSig=localStorage.getItem(FLASH_SIG_KEY);
+      React.useEffect(()=>{
+        const curSig=JSON.stringify({strings:prefs.strings,positions:prefs.positions});
+        const savedSig=localStorage.getItem(FLASH_SIG_KEY);
         if(curSig!==savedSig){ const cards=buildCards(); saveJSON(FLASH_KEY,cards); localStorage.setItem(FLASH_SIG_KEY,curSig); setDeck(cards); }
       },[prefs,buildCards]);
-      const [card,setCard]=React.useState(null), [show,setShow]=React.useState(false);
-      const pick=()=>{ if(!deck.length){ setCard(null); return; } const now=Date.now(); const due=deck.filter(c=>c.due<=now).sort((a,b)=>a.due-b.due); const next= due.length? due[0] : getRandom(deck); setCard(next); setShow(false); };
+      const [card,setCard]=React.useState(null);
+      const [show,setShow]=React.useState(false);
+      const pick=()=>{
+        if(!deck.length){ setCard(null); return; }
+        const now=Date.now();
+        const due=deck.filter(c=>c.due<=now).sort((a,b)=>a.due-b.due);
+        const next= due.length? due[0] : getRandom(deck);
+        setCard(next); setShow(false);
+      };
       React.useEffect(()=>{ pick(); },[deck]);
-      const mark=(known)=>{ setDeck(prev=>{ const upd=prev.map(c=> c===card? {...c, interval: known? Math.min(28,c.interval*2) : 1, due: Date.now()+(known? c.interval*2 : 1)*24*3600*1000 } : c ); saveJSON(FLASH_KEY,upd); return upd; });
-        addXP(known?5:1); document.getElementById('sr').textContent = known ? 'Correct, great job!' : 'Oops, almost!'; audioEngine.playFeedback(known); pick();
+      const mark=(known)=>{
+        setDeck(prev=>{
+          const upd=prev.map(c=>{
+            if(c===card){ const newInt= known? Math.min(28,c.interval*2) : 1; return {...c, interval:newInt, due: Date.now()+newInt*24*3600*1000}; } return c; }); saveJSON(FLASH_KEY,upd); return upd;
+        });
+        addXP(known?5:1);
+        document.getElementById('sr').textContent = known ? 'Correct, great job!' : 'Oops, almost!';
+        audioEngine.playFeedback(known);
+        pick();
       };
       if(!deck.length) return <div className="card"><h2>No cards</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div className="card"><h2>Flashcards</h2>{card && (<div><p>{card.q}</p>{show? (<p style={{fontWeight:'bold',fontSize:'1.4rem'}}>{card.a}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}{show && (<div style={{marginTop:'0.5rem'}}><button className="btn btn-success" onClick={()=>mark(true)}>I knew it</button><button className="btn btn-secondary" onClick={()=>mark(false)}>I forgot</button></div>)}</div>)}</div>);
+      return (<div><div className="card"><h2>Flashcards</h2>{card && (<div><p>{card.q}</p>{show? (<p style={{fontWeight:'bold',fontSize:'1.4rem'}}>{card.a}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}{show && (<div style={{marginTop:'0.5rem'}}><button className="btn btn-success" onClick={()=>mark(true)}>I knew it</button><button className="btn btn-secondary" onClick={()=>mark(false)}>I forgot</button></div>)}</div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
 
     function Snapshot({prefs,onBack}){
       const cells=filteredCells(prefs);
-      const [time,setTime]=React.useState(60), [paused,setPaused]=React.useState(false);
-      const [score,setScore]=React.useState(0), [answered,setAnswered]=React.useState(0);
-      const [state,setState]=React.useState('flash'); const [flash,setFlash]=React.useState(null); const [q,setQ]=React.useState(null); const [selected,setSelected]=React.useState(null);
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [state,setState]=React.useState('flash');
+      const [flash,setFlash]=React.useState(null);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
       const flashRef=React.useRef(null);
-      const pick=()=>{ if(!cells.length){ setState('none'); return; } const s=getRandom(STRINGS.filter(s=>prefs.strings[s])); const p=getRandom(POSITIONS.filter(p=>prefs.positions[p]));
-        const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); }); setFlash({s,p,labels}); setState('flash'); setSelected(null);
+      const pick=()=>{
+        if(!cells.length){ setState('none'); return; }
+        const s=getRandom(STRINGS.filter(s=>prefs.strings[s]));
+        const p=getRandom(POSITIONS.filter(p=>prefs.positions[p]));
+        const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); });
+        setFlash({s,p,labels}); setState('flash'); setSelected(null);
         if(flashRef.current) clearTimeout(flashRef.current);
         const delay=FLASH_DURATIONS[prefs.flashLevel] || 1000;
-        flashRef.current=setTimeout(()=>{ const f=getRandom(FINGERS); const correct=labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
-          setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null); try{ audioEngine.playNote({midi:MIDI_BASE[s]+POS_SHIFT[p]+BASE_OFF[f]}); }catch{} },delay);
+        flashRef.current=setTimeout(()=>{
+          const f=getRandom(FINGERS);
+          const correct=labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
+          setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
+          try {
+            const midi=MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[f];
+            audioEngine.playNote({midi});
+          }catch{}
+        },delay);
       };
-      React.useEffect(()=>{ pick(); return ()=>{ if(flashRef.current){ clearTimeout(flashRef.current); flashRef.current=null; } }; },[]);
-      React.useEffect(()=>{ if(paused) return; const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[paused]);
-      const answer=(opt,idx)=>{ if(selected !== null) return; setSelected(idx); setTimeout(()=>{ const ok=opt===q.correct; document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!'; audioEngine.playFeedback(ok);
-        setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.p}:${q.f}`, ok); addXP(ok?6:2); pick(); },200); };
+      React.useEffect(()=>{
+        pick();
+        return () => {
+          if(flashRef.current){ clearTimeout(flashRef.current); flashRef.current=null; }
+        };
+      },[]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          updateStat(`${q.s}:${q.p}:${q.f}`, ok);
+          addXP(ok?6:2);
+          pick();
+        },200);
+      };
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
       if(time===0) return <div className="card"><h2>Snapshot Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(state==='none') return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div className="card"><h2>Snapshot</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-        {state==='flash' && flash && (<div><p>Memorize {flash.s} string {ordinal(flash.p)} pos:</p><div className="grid grid-2">{FINGERS.map(f=>(
-          <div key={f} className="card" style={{padding:'0.5rem',textAlign:'center',borderRadius:'8px'}}><small>F{f}</small><br/><strong>{flash.labels[f]}</strong></div>
-        ))}</div><button className="btn btn-primary" onClick={()=>{ if(flashRef.current){ clearTimeout(flashRef.current); flashRef.current=null; }
-          const s=flash.s; const p=flash.p; const f=getRandom(FINGERS); const correct=flash.labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
-          setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null); try{ audioEngine.playNote({midi:MIDI_BASE[s]+POS_SHIFT[p]+BASE_OFF[f]}); }catch{} }}>Ready</button></div>)}
-        {state==='question' && q && (<div><p>Which base note is F{q.f} at {ordinal(q.p)} pos on {q.s}?</p><div role="radiogroup" aria-label="Answer choices">{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div></div>)}
-      </div>);
+      return (
+        <div>
+          <div className="card">
+            <h2>Snapshot</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            {state==='flash' && flash && (
+              <div>
+                <p>Memorize {flash.s} string {ordinal(flash.p)} pos:</p>
+                <div className="grid grid-cols-2">
+                  {FINGERS.map(f=>(
+                    <div key={f} className="card" style={{padding:'0.5rem',textAlign:'center',borderRadius:'8px'}}>
+                      <small>F{f}</small><br/>
+                      <strong>{flash.labels[f]}</strong>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn btn-primary" onClick={()=>{
+                  if(flashRef.current){ clearTimeout(flashRef.current); flashRef.current=null; }
+                  const s=flash.s; const p=flash.p;
+                  const f=getRandom(FINGERS);
+                  const correct=flash.labels[f];
+                  const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
+                  setQ({s,p,f,correct,options:opts}); setState('question'); setSelected(null);
+                  try {
+                    const midi=MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[f];
+                    audioEngine.playNote({midi});
+                  }catch{}
+                }}>Ready</button>
+              </div>
+            )}
+            {state==='question' && q && (
+              <div>
+                <p>Which base note is F{q.f} at {ordinal(q.p)} pos on {q.s}?</p>
+                <div role="radiogroup" aria-label="Answer choices">
+                  {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     function IntervalSprint({prefs,onBack}){
-      const [time,setTime]=React.useState(60), [paused,setPaused]=React.useState(false);
-      const [score,setScore]=React.useState(0), [answered,setAnswered]=React.useState(0);
-      const [q,setQ]=React.useState(null), [selected,setSelected]=React.useState(null);
-      const pick=()=>{ const strings=STRINGS.filter(s=>prefs.strings[s]); const pos=POSITIONS.filter(p=>prefs.positions[p]); if(!strings.length||!pos.length){ setQ(null); return; }
-        const s=getRandom(strings), p=getRandom(pos); const [a,b]=getRandom([[1,2],[2,3],[3,4]]); const diff=Math.abs(BASE_OFF[b]-BASE_OFF[a]); const type= diff===1? 'half':'whole';
-        setQ({s,p,a,b,type}); setSelected(null); try{ const root=MIDI_BASE[s]+POS_SHIFT[p]+BASE_OFF[a]; audioEngine.playInterval({rootMidi:root, semitones:Math.abs(BASE_OFF[b]-BASE_OFF[a])}); }catch{}
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const strings=STRINGS.filter(s=>prefs.strings[s]);
+        const pos=POSITIONS.filter(p=>prefs.positions[p]);
+        if(!strings.length || !pos.length){ setQ(null); return; }
+        const s=getRandom(strings);
+        const p=getRandom(pos);
+        const [a,b]=getRandom([[1,2],[2,3],[3,4]]);
+        const diff=Math.abs(BASE_OFF[b]-BASE_OFF[a]);
+        const type= diff===1? 'half':'whole';
+        setQ({s,p,a,b,type}); setSelected(null);
+        try {
+          const root = MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[a];
+          audioEngine.playInterval({rootMidi: root, semitones: Math.abs(BASE_OFF[b]-BASE_OFF[a])});
+        } catch {}
       };
       React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(()=>{ if(paused) return; const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[paused]);
-      const answer=(choice,idx)=>{ if(selected!==null) return; setSelected(idx); setTimeout(()=>{ const ok=choice===q.type; document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!'; audioEngine.playFeedback(ok);
-        setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.s}:${q.p}:${q.a}-${q.b}`, ok); addXP(ok?4:1); pick(); },200); };
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(choice,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=choice===q.type;
+          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          updateStat(`${q.s}:${q.p}:${q.a}-${q.b}`, ok);
+          addXP(ok?4:1);
+          pick();
+        },200);
+      };
       useAnswerHotkeys(!!q,(i)=>{ if(q){ const opt=i===0?'half':'whole'; answer(opt,i); } },onBack,2);
       if(time===0) return <div className="card"><h2>Interval Sprint Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      const noteA=canonicalBase(q.s,q.p,q.a), noteB=canonicalBase(q.s,q.p,q.b);
-      return (<div className="card"><h2>Interval Sprint</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-        <p>In {ordinal(q.p)} pos on {q.s} string, between {noteA} and {noteB}: Half or Whole step?</p>
-        <div role="radiogroup" aria-label="Answer choices"><OptionButton label="Half Step"  selected={selected===0} onClick={()=>answer('half',0)}/><OptionButton label="Whole Step" selected={selected===1} onClick={()=>answer('whole',1)}/></div>
-        <button className="btn btn-secondary" onClick={()=>{ try{ const root=MIDI_BASE[q.s]+POS_SHIFT[q.p]+BASE_OFF[q.a]; audioEngine.playInterval({ rootMidi:root, semitones:Math.abs(BASE_OFF[q.b]-BASE_OFF[q.a]) }); }catch{} }}>Play Again</button>
-      </div>);
+      const noteA=canonicalBase(q.s,q.p,q.a);
+      const noteB=canonicalBase(q.s,q.p,q.b);
+      return (
+        <div>
+          <div className="card">
+            <h2>Interval Sprint</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            <p>In {ordinal(q.p)} pos on {q.s} string, between {noteA} and {noteB}: Half or Whole step?</p>
+            <div role="radiogroup" aria-label="Answer choices">
+              <OptionButton label="Half Step" selected={selected===0} onClick={()=>answer('half',0)}/>
+              <OptionButton label="Whole Step" selected={selected===1} onClick={()=>answer('whole',1)}/>
+            </div>
+            {q && (
+            <button className="btn btn-secondary" onClick={() => {
+              try {
+                const root = MIDI_BASE[q.s] + POS_SHIFT[q.p] + BASE_OFF[q.a];
+                audioEngine.playInterval({ rootMidi: root, semitones: Math.abs(BASE_OFF[q.b]-BASE_OFF[q.a]) });
+              } catch {}
+            }}>Play Again</button>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
     function NoteLocator({prefs,onBack}){
-      const [time,setTime]=React.useState(60), [paused,setPaused]=React.useState(false);
-      const [score,setScore]=React.useState(0), [answered,setAnswered]=React.useState(0);
-      const [q,setQ]=React.useState(null), [selected,setSelected]=React.useState(null);
-      const pick=()=>{ const strings=STRINGS.filter(s=>prefs.strings[s]); const pos=POSITIONS.filter(p=>prefs.positions[p]); if(!strings.length||!pos.length){ setQ(null); return; }
-        const cells=CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p]); const chosen=getRandom(cells); const note=chosen.canon;
-        const correct={s:chosen.s,p:chosen.p,f:chosen.f}; const samePitch=cells.filter(c=>c.canon===note && !(c.s===correct.s && c.p===correct.p && c.f===correct.f));
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const strings=STRINGS.filter(s=>prefs.strings[s]);
+        const pos=POSITIONS.filter(p=>prefs.positions[p]);
+        if(!strings.length || !pos.length){ setQ(null); return; }
+        const cells=CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p]);
+        const chosen=getRandom(cells);
+        const note=chosen.canon;
+        const correct={s:chosen.s,p:chosen.p,f:chosen.f};
+        const samePitch=cells.filter(c=>c.canon===note && !(c.s===correct.s && c.p===correct.p && c.f===correct.f));
         const distract= samePitch.length>=3? shuffle(samePitch).slice(0,3) : shuffle(cells.filter(c=>c.canon!==note)).slice(0,3);
         const opts=shuffle([{...correct},...distract.map(c=>({s:c.s,p:c.p,f:c.f}))]).slice(0,4);
         setQ({note,correct,options:opts}); setSelected(null);
       };
       React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(()=>{ if(paused) return; const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[paused]);
-      const answer=(opt,idx)=>{ if(selected !== null) return; setSelected(idx);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
         const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
-        setQ(prev => prev && { ...prev, feedback: prev.options.map(o => { const isCorrect=(o.s===prev.correct.s && o.p===prev.correct.p && o.f===prev.correct.f); const isChosen=(o.s===opt.s && o.p===opt.p && o.f===opt.f); return {...o, kind: isCorrect ? 'correct' : isChosen ? 'chosen' : 'distractor'}; })});
-        setTimeout(()=>{ document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!'; audioEngine.playFeedback(ok);
-          setAnswered(a=>a+1); if(ok) setScore(s=>s+1); updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok); addXP(ok?4:1); pick();
+        setQ(prev => prev && {
+          ...prev,
+          feedback: prev.options.map(o => {
+            const isCorrect = (o.s===prev.correct.s && o.p===prev.correct.p && o.f===prev.correct.f);
+            const isChosen  = (o.s===opt.s && o.p===opt.p && o.f===opt.f);
+            return {...o, kind: isCorrect ? 'correct' : isChosen ? 'chosen' : 'distractor'};
+          })
+        });
+        setTimeout(()=>{
+          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
+          addXP(ok?4:1);
+          pick();
         },450);
       };
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
       if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div className="card"><h2>Note Locator</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-        <p>Where can you play {q.note}? Click the fingerboard:</p>
-        <VisualFingerboard
-          highlight={(q.feedback || q.options).map(o=>({ s:o.s, p:o.p, f:o.f, kind:o.kind || 'distractor' }))}
-          disabled={!!q.feedback}
-          onSelect={(cell)=>answer(cell,0)}
-        />
-        <details style={{marginTop:'0.5rem'}}><summary>List options</summary>
-          {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
-        </details>
-      </div>);
+      return (
+        <div>
+          <div className="card">
+            <h2>Note Locator</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            <p>Where can you play {q.note}? Click the fingerboard:</p>
+            <VisualFingerboard
+              highlight={(q.feedback || q.options).map(o=>({
+                s:o.s,
+                p:o.p,
+                f:o.f,
+                kind:o.kind || 'distractor'
+              }))}
+              disabled={!!q.feedback}
+              onSelect={(cell)=>answer(cell,0)}
+            />
+            {/* Legend explaining the icons and patterns used on the fingerboard.  Colours alone are insufficient for some users, so we provide text and symbols to aid interpretation【408173630527642†L99-L124】. */}
+            <div style={{display:'flex',gap:'0.75rem',alignItems:'center',marginTop:'0.5rem',flexWrap:'wrap',fontSize:'0.75rem',color:'var(--ink-light)'}}>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--success)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✓</span>
+                Correct
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--primary)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✕</span>
+                Your choice
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--warning)',borderRadius:'3px',padding:'0 4px',backgroundImage:'linear-gradient(45deg, var(--warning) 25%, var(--card) 25%, var(--card) 50%, var(--warning) 50%, var(--warning) 75%, var(--card) 75%, var(--card) 100%)',backgroundSize:'8px 8px',height:'1em',width:'1em'}}></span>
+                Option
+              </span>
+            </div>
+            <details style={{marginTop:'0.5rem'}}>
+              <summary>List options</summary>
+              {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
+            </details>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     }
 
-    function ShiftCoach({ prefs, onBack }) {
-      const strings = STRINGS.filter(s => prefs.strings[s]);
-      const positions = POSITIONS.filter(p => prefs.positions[p]);
-      const [time,setTime]=React.useState(60), [paused,setPaused]=React.useState(false);
-      const [q,setQ]=React.useState(null), [score,setScore]=React.useState(0), [answered,setAnswered]=React.useState(0), [sel,setSel]=React.useState(null);
-
-      function makeQ(){
-        if(!strings.length || positions.length<2){ setQ(null); return; }
-        let s = getRandom(strings);
-        let from = getRandom(positions);
-        let to = getRandom(positions.filter(p=>p!==from));
-        const midiA = MIDI_BASE[s] + POS_SHIFT[from] + BASE_OFF[1];
-        const midiB = MIDI_BASE[s] + POS_SHIFT[to]   + BASE_OFF[1];
-        try{ audioEngine.playNote({midi:midiA, durationMs:500}); setTimeout(()=>audioEngine.playNote({midi:midiB, durationMs:600}), 220); }catch{}
-        return { s, from, to, midiA, midiB };
-      }
-      React.useEffect(()=>{ setQ(makeQ()); }, []);
-      React.useEffect(()=>{ if(paused) return; const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000); return ()=>clearInterval(id); },[paused]);
-      const answer=(p)=>{ if(sel!==null) return; setSel(p); setTimeout(()=>{ const ok = p===q.to; document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!'; audioEngine.playFeedback(ok);
-        setAnswered(a=>a+1); if(ok) setScore(s=>s+1); addXP(ok?7:2); setSel(null); setQ(makeQ());
-      }, 250); };
-      if(time===0) return <div className="card"><h2>Shift Coach Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      if(!q) return <div className="card"><h2>Enable more positions</h2><p>Shift Coach needs at least two visible positions.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div className="card"><h2>Shift Coach (1st-finger anchor)</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-        <p>On the <strong>{q.s}</strong> string, I started in <strong>{ordinal(q.from)}</strong> position and shifted. Which position did I land in?</p>
-        <div role="radiogroup" aria-label="Shift target position options">
-          {POSITIONS.filter(p=>prefs.positions[p]).map(p=>(
-            <OptionButton key={p} label={String(p)} selected={sel===p} onClick={()=>answer(p)} />
-          ))}
-        </div>
-        <div style={{marginTop:'0.5rem',display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
-          <button className="btn btn-secondary" onClick={()=>{ try{ audioEngine.playNote({midi:q.midiA,durationMs:600}); setTimeout(()=>audioEngine.playNote({midi:q.midiB,durationMs:800}), 250); }catch{} }}>Play Again</button>
-          <button className="btn btn-secondary" onClick={()=>{ try{ audioEngine.playInterval({rootMidi:q.midiA, semitones: q.midiB-q.midiA, gapMs: 300, durationMs:800}); }catch{} }}>Play Slow Step</button>
-        </div>
-      </div>);
-    }
-
-    function NeckReference7({ onBack }) {
-      const [showLowHigh, setShowLowHigh] = React.useState(true);
-      const [visiblePos, setVisiblePos] = React.useState(() => Object.fromEntries(POSITIONS.map(p => [p, true])));
-      const [fingerChoice, setFingerChoice] = React.useState(0); // 0=all
-      const [mode, setMode] = React.useState('study'); // 'study' | 'quiz'
-      const [quizQ, setQuizQ] = React.useState(null);
-      const [spellMode, setSpellMode] = React.useState(()=>loadJSON('vmq.v5.spellMode','both'));
-      const [spellKey,  setSpellKey]  = React.useState(()=>loadJSON('vmq.v5.spellKey','C Major'));
-      React.useEffect(()=>{ saveJSON('vmq.v5.spellMode',spellMode); window.__spellMode=spellMode; },[spellMode]);
-      React.useEffect(()=>{ saveJSON('vmq.v5.spellKey', spellKey ); window.__spellKey =spellKey;  },[spellKey]);
-
-      // geometry
-      const W = 860, H = 560, neckX = 200, neckW = 420, neckY = 40, neckH = 480;
-      const strings = ['G','D','A','E'];
-      const yForString = (s) => { const idx=strings.indexOf(s); const t=(idx+1)/(strings.length+1); return neckY + neckH * t; };
-      const band = (p) => { const top = neckY + (p-1) * (neckH/7) + 4; const bot = neckY +  p    * (neckH/7) - 4; return [top, bot]; };
-      const yForFinger = (p, f) => { const [t,b] = band(p); const u=(f-1)/3; return t + (b-t)*u; };
-      const sideFor = (p) => (p % 2 ? 'right' : 'left'); const stringTint = { E:'#e8f0ff', A:'#fff4e0', D:'#e9fff6', G:'#ffe9e0' };
-
-      function slotsForPosition() {
-        const base = FINGERS.map(f => ({f, delta:0, tag:String(f), merged:false}));
-        if(!showLowHigh) return base;
-        const lo1={f:1,delta:-1,tag:'Low 1',merged:false}, lo2={f:2,delta:-1,tag:'Low 2',merged:false};
-        const hi1lo2={f:1,delta:+1,tag:'High 1 / Low 2',merged:true}, hi3lo4={f:3,delta:+1,tag:'High 3 / Low 4',merged:true};
-        return [lo1,{f:1,delta:0,tag:'1',merged:false}, lo2,{f:2,delta:0,tag:'2',merged:false}, {f:3,delta:0,tag:'3',merged:false}, hi3lo4, {f:4,delta:0,tag:'4',merged:false}, hi1lo2];
-      }
-      const brace = (x, y1, y2, side='right', label='') => {
-        const dir = side==='right' ? 1 : -1; const mid=(y1+y2)/2, r=10, off=14*dir;
-        const path = `M ${x} ${y1} q ${off} 0 ${off} ${r} L ${x+off} ${mid-r} q 0 ${r} ${-off} ${r} q ${off} 0 ${off} ${r} L ${x+off} ${y2-r} q 0 ${r} ${-off} ${r}`;
-        return (<><path d={path} fill="none" stroke="var(--ink-light)" strokeWidth="1.25"/><text x={x + (side==='right'? 28 : -28)} y={mid-6} textAnchor={side==='right'?'start':'end'} fill="var(--ink)" fontWeight="700">{label}</text></>);
-      };
-      function playMidi(m){ try{ audioEngine.playNote({midi:m}); }catch{} }
-
-      function makeQuiz(){
-        const posPool = POSITIONS.filter(p => visiblePos[p]);
-        const s = getRandom(strings);
-        const p = posPool.length ? getRandom(posPool) : 1;
-        const f = fingerChoice ? fingerChoice : getRandom([1,2,3,4]);
-        const deltaChoice = getRandom([0, +1, -1]);
-        const thePc = pcAt(s,p,f,deltaChoice);
-        const midi = MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[f] + deltaChoice;
-        const correct = `${s} • ${ordinal(p)} • F${f}${deltaChoice===+1?' (High)':''}${deltaChoice===-1?' (Low)':''}`;
-        const options = shuffle([
-          correct,
-          `${s} • ${ordinal(Math.max(1, Math.min(7,p+1)))} • F${f}`,
-          `${s} • ${ordinal(p)} • F${Math.max(1,Math.min(4,f+(Math.random()<.5?1:-1)))}`,
-          `${getRandom(strings)} • ${ordinal(getRandom(POSITIONS))} • F${getRandom(FINGERS)}`
-        ]);
-        return { s,p,f,delta:deltaChoice, pc:thePc, midi, correct, options };
-      }
-      React.useEffect(()=>{ if(mode==='quiz') setQuizQ(makeQuiz()); }, [mode,showLowHigh,visiblePos,fingerChoice,spellMode,spellKey]);
-
-      const yForString=(s)=>{ const idx=strings.indexOf(s); const t=(idx+1)/(strings.length+1); return 40 + 480 * t; };
-
-      return (<div className="card">
-        <h2>Neck Map (1st–7th)</h2>
-        <p style={{color:'var(--ink-light)',marginTop:-6}}>Odd positions on the <strong>right</strong> (1,3,5,7). Even on the <strong>left</strong> (2,4,6). Click any bubble to hear it.</p>
-
-        <div className="grid grid-2">
-          <div>
-            <div style={{fontWeight:600,marginBottom:6}}>Label spelling</div>
-            <div className="toolbar">
-              {['both','sharp','flat','key'].map(m => (
-                <OptionButton key={m} label={m==='both'?'Both ♯/♭':m==='key'?'By Key':(m==='sharp'?'Sharps':'Flats')}
-                  selected={spellMode===m} onClick={()=>setSpellMode(m)} />
-              ))}
-              {spellMode==='key' && (
-                <select aria-label="Choose key" value={spellKey} onChange={e=>setSpellKey(e.target.value)} style={{padding:'0.5rem',borderRadius:9999,border:'1px solid var(--border)'}}>
-                  {KEY_SIGNATURES.map(k => <option key={k.key} value={k.key}>{k.key}</option>)}
-                </select>
-              )}
-            </div>
-          </div>
-          <div>
-            <div style={{fontWeight:600,marginBottom:6}}>Show Low/High</div>
-            <OptionButton label={showLowHigh?'On':'Off'} selected={showLowHigh} onClick={()=>setShowLowHigh(v=>!v)} />
-          </div>
-          <div>
-            <div style={{fontWeight:600,marginBottom:6}}>Finger filter</div>
-            <div className="toolbar">
-              <OptionButton label="All" selected={fingerChoice===0} onClick={()=>setFingerChoice(0)} />
-              {FINGERS.map(f => <OptionButton key={f} label={`F${f}`} selected={fingerChoice===f} onClick={()=>setFingerChoice(f)} />)}
-            </div>
-          </div>
-          <div>
-            <div style={{fontWeight:600,marginBottom:6}}>Mode</div>
-            <div className="toolbar">
-              <OptionButton label="Study" selected={mode==='study'} onClick={()=>setMode('study')} />
-              <OptionButton label="Quick Quiz" selected={mode==='quiz'} onClick={()=>setMode('quiz')} />
-            </div>
-          </div>
-        </div>
-
-        <div style={{marginTop:8}}>
-          <div style={{fontWeight:600,marginBottom:6}}>Positions visible</div>
-          <div className="toolbar">
-            {POSITIONS.map(p => (<OptionButton key={p} label={String(p)} selected={visiblePos[p]} onClick={()=>setVisiblePos(v=>({...v,[p]:!v[p]}))}/>))}
-            <button className="btn btn-secondary" onClick={()=>setVisiblePos(Object.fromEntries(POSITIONS.map(p=>[p,true])))}>Show All</button>
-            <button className="btn btn-secondary" onClick={()=>setVisiblePos(Object.fromEntries(POSITIONS.map(p=>[p,false])))}>Hide All</button>
-          </div>
-        </div>
-
-        <svg viewBox={`0 0 860 560`} width="100%" height="auto" role="img" aria-label="Violin fingerboard 1st through 7th positions">
-          <rect x="0" y="0" width="860" height="560" fill="var(--bg)"/>
-          <rect x="200" y="40" width="420" height="480" rx="6" fill="#d8983a" opacity="0.35" stroke="var(--border)"/>
-
-          {['G','D','A','E'].map(s => {
-            const y = yForString(s);
-            return (
-              <g key={s}>
-                <rect x="200" y={y-19} width="420" height="38" fill={{E:'#e8f0ff',A:'#fff4e0',D:'#e9fff6',G:'#ffe9e0'}[s]} opacity="0.33"/>
-                <line x1="200" y1={y} x2="620" y2={y} stroke="var(--ink-light)" strokeDasharray="2,5" opacity="0.6"/>
-                <text x="174" y={y+4} textAnchor="end" fontWeight="700" fill="var(--ink)">{s}</text>
-              </g>
-            );
-          })}
-
-          {POSITIONS.map(p => visiblePos[p] && (
-            <g key={`band-${p}`}>
-              {(() => {
-                const top = 40 + (p-1)*(480/7) + 4, bot = 40 + p*(480/7) - 4;
-                const side = p%2 ? 'right':'left';
-                const x = side==='right'? 620+84 : 200-84;
-                const dir = side==='right'?1:-1; const mid=(top+bot)/2, r=10, off=14*dir;
-                const path = `M ${x} ${top} q ${off} 0 ${off} ${r} L ${x+off} ${mid-r} q 0 ${r} ${-off} ${r} q ${off} 0 ${off} ${r} L ${x+off} ${bot-r} q 0 ${r} ${-off} ${r}`;
-                return (<g><path d={path} fill="none" stroke="var(--ink-light)" strokeWidth="1.25"/><text x={x + (side==='right'? 28 : -28)} y={mid-6} textAnchor={side==='right'?'start':'end'} fill="var(--ink)" fontWeight="700">{ordinal(p)} Position Fingering</text></g>);
-              })()}
-              {['G','D','A','E'].map(s => {
-                const yString = yForString(s);
-                return (
-                  <g key={`${s}-${p}`}>
-                    {(() => {
-                      const baseList = (()=>{
-                        const base = FINGERS.map(f => ({f, delta:0, tag:String(f), merged:false}));
-                        if(!showLowHigh) return base;
-                        const lo1={f:1,delta:-1,tag:'Low 1',merged:false}, lo2={f:2,delta:-1,tag:'Low 2',merged:false};
-                        const hi1lo2={f:1,delta:+1,tag:'High 1 / Low 2',merged:true}, hi3lo4={f:3,delta:+1,tag:'High 3 / Low 4',merged:true};
-                        return [lo1,{f:1,delta:0,tag:'1',merged:false}, lo2,{f:2,delta:0,tag:'2',merged:false}, {f:3,delta:0,tag:'3',merged:false}, hi3lo4, {f:4,delta:0,tag:'4',merged:false}, hi1lo2];
-                      })();
-                      return baseList.filter(sl => fingerChoice? sl.f===fingerChoice : true).map((slot, idx) => {
-                        const [top,bot] = [40 + (p-1)*(480/7) + 4, 40 + p*(480/7) - 4];
-                        const u=(slot.f-1)/3; const yF = top + (bot-top)*u;
-                        const side = p%2 ? 'right' : 'left';
-                        const x    = side==='right' ? 620 + 58 : 200 - 58;
-                        const xLine= side==='right' ? 620 + 12 : 200 - 12;
-                        const thePC= pcAt(s,p,slot.f,slot.delta);
-                        const label= labelPC(thePC, spellMode, spellKey);
-                        const midi = MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[slot.f] + slot.delta;
-                        return (
-                          <g key={`${s}-${p}-${idx}`}>
-                            <line x1={side==='right'? xLine : x+18} y1={yF} x2={side==='right'? x-18 : xLine} y2={yF} stroke="var(--ink-light)" strokeWidth="1" />
-                            <g tabIndex={0} role="button" aria-label={`${label} — ${s} string, ${ordinal(p)} position, finger ${slot.tag}`}
-                               onClick={()=>{ try{audioEngine.playNote({midi});}catch{}; }}
-                               onKeyDown={e=>{ if(e.key==='Enter'||e.key===' ') { try{audioEngine.playNote({midi});}catch{}; } }}>
-                              <circle cx={x} cy={yF} r="16" fill="var(--card)" stroke="var(--border)"/>
-                              <text x={x} y={yF-2} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--ink)">{label}</text>
-                              <text x={x} y={yF+10} textAnchor="middle" fontSize="9" fill="var(--ink-light)">{slot.tag}</text>
-                            </g>
-                          </g>
-                        );
-                      });
-                    })()}
-                  </g>
-                );
-              })}
-            </g>
-          ))}
-        </svg>
-
-        {mode==='quiz' && quizQ && (
-          <div className="card" style={{marginTop:'0.75rem'}}>
-            <div className="toolbar"><button className="btn btn-secondary" onClick={()=>{ try{audioEngine.playNote({midi:quizQ.midi});}catch{} }}>Play Note</button><div style={{fontWeight:600}}>Identify:</div></div>
-            <p style={{marginTop:6}}>Which <em>string • position • finger</em> is sounding?</p>
-            <div role="radiogroup" aria-label="Neck quiz options">
-              {quizQ.options.map((opt,i)=>(
-                <OptionButton key={i} label={opt} selected={false} onClick={()=>{
-                  const ok = opt===quizQ.correct;
-                  document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
-                  audioEngine.playFeedback(ok); addXP(ok?6:2); setQuizQ(makeQuiz());
-                }}/>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>);
-    }
-
-    function Settings({prefs,setPrefs}){
+    function Settings({prefs,setPrefs,onBack}){
       const toggle=(type,key)=>{
-        setPrefs(prev=>{ const copy={...prev,[type]:{...prev[type],[key]:!prev[type][key]}}; saveJSON(PREFS_KEY,copy); return copy; });
+        setPrefs(prev=>{
+          const copy={...prev,[type]:{...prev[type],[key]:!prev[type][key]}};
+          saveJSON(PREFS_KEY,copy);
+          return copy;
+        });
       };
-      React.useEffect(()=>{ window.__spellMode=prefs.spellingMode; window.__spellKey=prefs.spellingKey; },[prefs.spellingMode,prefs.spellingKey]);
-      return (<div className="card">
-        <h2>Settings</h2>
-        <h3>Strings</h3><div className="toolbar">{STRINGS.map(s=>(<OptionButton key={s} label={s} selected={prefs.strings[s]} onClick={()=>toggle('strings',s)}/>))}</div>
-        <h3>Positions</h3><div className="toolbar">{POSITIONS.map(p=>(<OptionButton key={p} label={p} selected={prefs.positions[p]} onClick={()=>toggle('positions',p)}/>))}</div>
-        <h3>Snapshot Flash Duration</h3>
-        <div className="toolbar">{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>(
-          <OptionButton key={level} label={level} selected={prefs.flashLevel===level} onClick={()=>{ setPrefs(prev=>{ const next={...prev,flashLevel:level}; saveJSON(PREFS_KEY,next); return next; }); }}/>
-        ))}</div>
-        <h3>Note Labels</h3>
-        <div className="toolbar">
-          {['both','sharp','flat','key'].map(m => (
-            <OptionButton key={m} label={m==='both'?'Both ♯/♭':m==='key'?'By Key':(m==='sharp'?'Sharps':'Flats')}
-              selected={prefs.spellingMode===m}
-              onClick={()=>setPrefs(prev => { const next={...prev,spellingMode:m}; saveJSON(PREFS_KEY,next); window.__spellMode=m; return next; })}/>
-          ))}
-          {prefs.spellingMode==='key' && (
-            <select aria-label="Choose key" value={prefs.spellingKey}
-                    onChange={e=>setPrefs(prev=>{ const next={...prev,spellingKey:e.target.value}; saveJSON(PREFS_KEY,next); window.__spellKey=e.target.value; return next; })}
-                    style={{padding:'0.5rem',borderRadius:9999,border:'1px solid var(--border)'}}>
-              {KEY_SIGNATURES.map(k => <option key={k.key} value={k.key}>{k.key}</option>)}
-            </select>
-          )}
+      return (
+        <div>
+          <div className="card">
+            <h2>Settings</h2>
+            <h3>Theme</h3>
+            <button className="btn btn-primary" onClick={()=>{ const dark=!document.documentElement.classList.contains('dark'); window.__setTheme(dark); }}>Toggle Dark Mode</button>
+            <h3>Strings</h3>
+            <div>{STRINGS.map(s=>(<OptionButton key={s} label={s} selected={prefs.strings[s]} onClick={()=>toggle('strings',s)}/>))}</div>
+            <h3>Positions</h3>
+            <div>{POSITIONS.map(p=>(<OptionButton key={p} label={p} selected={prefs.positions[p]} onClick={()=>toggle('positions',p)}/>))}</div>
+            <h3>Snapshot Flash Duration</h3>
+            <div>{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>(
+              <OptionButton key={level} label={level} selected={prefs.flashLevel===level} onClick={()=>{
+                setPrefs(prev=>{ const next={...prev,flashLevel:level}; saveJSON(PREFS_KEY,next); return next; });
+              }}/>
+            ))}</div>
+            <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
+            <h3>Audio</h3>
+            <button className="btn btn-primary" onClick={()=>audioEngine.ensure()}>Enable Sound</button>
+            <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>
+              {audioEngine.mute? 'Unmute' : 'Mute'}
+            </button>
+            <h3>Data Tools</h3>
+            <button className="btn btn-primary" onClick={()=>{
+              const data={}; Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>{ data[k]=localStorage.getItem(k); });
+              const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+              const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='vmq-data.json'; a.click(); URL.revokeObjectURL(url);
+            }}>Export Data</button>
+            <label className="btn btn-warning" style={{cursor:'pointer'}}>
+              Import Data
+              <input type="file" accept="application/json" style={{display:'none'}} onChange={(e)=>{
+                const f=e.target.files?.[0]; if(!f) return;
+                const r=new FileReader();
+                r.onload=()=>{
+                  try{
+                    const obj=JSON.parse(r.result);
+                    Object.entries(obj).forEach(([k,v])=>{ localStorage.setItem(k,v); });
+                    alert('Import complete. Please reload.');
+                  }catch{ alert('Invalid JSON'); }
+                };
+                r.readAsText(f);
+              }}/>
+            </label>
+            <button className="btn btn-danger" onClick={()=>{
+              if(confirm('Reset all VMQ data?')){
+                Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>localStorage.removeItem(k));
+                location.reload();
+              }
+            }}>Reset All Data</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
-
-        <h3>Audio</h3>
-        <div className="toolbar">
-          <button className="btn btn-primary" onClick={()=>audioEngine.ensure()}>Enable Sound</button>
-          <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>
-            {audioEngine.mute? 'Unmute' : 'Mute'}
-          </button>
-        </div>
-
-        <h3>Data Tools</h3>
-        <div className="toolbar">
-          <button className="btn btn-primary" onClick={()=>{
-            const data={}; Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>{ data[k]=localStorage.getItem(k); });
-            const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-            const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='vmq-data.json'; a.click(); URL.revokeObjectURL(url);
-          }}>Export Data</button>
-          <label className="btn btn-warning" style={{cursor:'pointer'}}>
-            Import Data
-            <input type="file" accept="application/json" style={{display:'none'}} onChange={(e)=>{
-              const f=e.target.files?.[0]; if(!f) return; const r=new FileReader();
-              r.onload=()=>{ try{ const obj=JSON.parse(r.result); Object.entries(obj).forEach(([k,v])=>{ localStorage.setItem(k,v); }); alert('Import complete. Please reload.'); }catch{ alert('Invalid JSON'); } };
-              r.readAsText(f);
-            }}/>
-          </label>
-          <button className="btn btn-danger" onClick={()=>{ if(confirm('Reset all VMQ data?')){ Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>localStorage.removeItem(k)); location.reload(); } }}>Reset All Data</button>
-        </div>
-      </div>);
+      );
     }
 
-    function StatsPage(){
+    function StatsPage({onBack}){
       const stats=loadJSON(STATS_KEY,{});
       const xp=loadJSON(XP_KEY,0);
       const lvl=levelForXP(xp);
       const prev=lvl>1? nextLevelXP(lvl-1):0;
       const next=nextLevelXP(lvl);
       const pct=Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
-      const isCellKey=k=>{ const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
+      const isCellKey=k=>{
+        const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
       const filteredStats=Object.fromEntries(Object.entries(stats).filter(([k,_])=>isCellKey(k)));
-      return (<div>
-        <div className="card">
-          <h2>Your Progress</h2>
-          <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
-          <div style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}><div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div></div>
-          <p style={{marginTop:'0.5rem'}}>Badges: {'⭐'.repeat(lvl)}</p>
+      return (
+        <div>
+          <div className="card">
+            <h2>Your Progress</h2>
+            <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
+            <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div>
+            </div>
+            <p style={{marginTop:'0.5rem'}}>Badges: {'⭐'.repeat(lvl)}</p>
+          </div>
+          {STRINGS.map(s=>(
+            <div className="card" key={s}>
+              <h3>{s} string</h3>
+              <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem'}}>
+                {POSITIONS.map(p=>(
+                  <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
+                    {FINGERS.map(f=>{
+                      const k=`${s}:${p}:${f}`;
+                      const st=filteredStats[k]||{correct:0,total:0};
+                      const acc= st.total? st.correct/st.total:0;
+                      let col, ink='#fff';
+                      if(st.total===0) {
+                        col='var(--neutral)';
+                      } else if(acc<0.5) {
+                        col='var(--danger)';
+                      } else if(acc<0.75) {
+                        col='var(--warning)'; ink='#111';
+                      } else {
+                        col='var(--success)';
+                      }
+                      const label=st.total? `${Math.round(acc*100)}%`:'';
+                      return (
+                        <div key={f}
+                             className="heat-cell"
+                             style={{background:col,color:ink,fontSize:'0.65rem'}}
+                             title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
-        {STRINGS.map(s=>(
-          <div className="card" key={s}>
-            <h3>{s} string</h3>
-            <div className="grid" style={{gridTemplateColumns:`repeat(${POSITIONS.length},1fr)`,gap:'0.3rem'}}>
-              {POSITIONS.map(p=>(
-                <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
-                  {FINGERS.map(f=>{
-                    const k=`${s}:${p}:${f}`;
-                    const st=filteredStats[k]||{correct:0,total:0};
-                    const acc= st.total? st.correct/st.total:0;
-                    let col, ink='#fff';
-                    if(st.total===0) col='var(--neutral)'; else if(acc<0.5) col='var(--danger)'; else if(acc<0.75) { col='var(--warning)'; ink='#111'; } else col='var(--success)';
-                    const label=st.total? `${Math.round(acc*100)}%`:'';
-                    return (<div key={f} className="heat-cell" style={{background:col,color:ink,fontSize:'0.65rem'}} title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>);
-                  })}
+      );
+    }
+
+    const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
+    const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
+    const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
+    const TIME_SIGNATURES=[{sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},{sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},{sig:'4/4', description:'4 quarter-note beats per measure (common time)'},{sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},{sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},{sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}];
+
+    function TempoTrainer({onBack}){
+      const [i,setI]=React.useState(0);
+      const [show,setShow]=React.useState(false);
+      const next=()=>{ setShow(false); setI((i+1)%TEMPOS.length); };
+      const prev=()=>{ setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
+      const t=TEMPOS[i];
+      const speak=(txt)=>{ try{ const u=new SpeechSynthesisUtterance(txt); u.rate=0.9; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch{} };
+      return (<div><div className="card"><h2>Tempo Trainer</h2><p><strong>{t.it}</strong></p>{show? (<p>{t.en} — {t.range}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}<div style={{marginTop:'0.5rem'}}><button className="btn btn-secondary" onClick={prev}>Prev</button><button className="btn btn-primary" onClick={next}>Next</button><button className="btn btn-success" onClick={()=>{ speak(t.it); speak(t.en); }}>Speak</button></div></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+    }
+    function TempoTester({onBack}){
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const term=getRandom(TEMPOS);
+        const correct=term.en;
+        const opts=shuffle([correct,...shuffle(TEMPOS.map(x=>x.en).filter(x=>x!==correct)).slice(0,3)]);
+        setQ({term:term.it,correct,options:opts}); setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          addXP(ok?5:2);
+          pick();
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
+      if(time===0) return <div className="card"><h2>Tempo Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Tempo Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            {q && (
+              <div>
+                <p>What does {q.term} mean?</p>
+                {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function TheoryHome({onBack,onNavigate}){
+      return (
+        <div>
+          <div className="card">
+            <h2>Theory & Concepts</h2>
+            <p>Explore intervals, key signatures and time signatures.</p>
+            <button className="btn btn-primary" onClick={()=>onNavigate('intervalTrainer')}>Intervals Trainer</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('intervalTester')}>Intervals Tester</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('keyTrainer')}>Key Sig Trainer</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('keyTester')}>Key Sig Tester</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('timeTrainer')}>Time Sig Trainer</button>
+            <button className="btn btn-primary" onClick={()=>onNavigate('timeTester')}>Time Sig Tester</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function IntervalTrainer({onBack}){
+      const [index,setIndex]=React.useState(0);
+      const next=()=>setIndex((index+1)%INTERVALS.length);
+      const i=INTERVALS[index];
+      const total=INTERVALS.length;
+      const progress=(index+1)/total;
+      return (
+        <div>
+          <div className="card">
+            <h2>Intervals Trainer</h2>
+            <p><strong>{i.name}</strong> — {i.semitones} semitone{i.semitones>1?'s':''}</p>
+            <p><em>Feel:</em> {i.feel}</p>
+            <p><em>Song cue:</em> {i.cue}</p>
+            <div style={{margin:'0.5rem 0'}}>
+              <small>Card {index+1} of {total}</small>
+              <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}><div style={{width:`${progress*100}%`,height:'100%',background:'var(--primary)'}}></div></div>
+            </div>
+            <button className="btn btn-primary" onClick={next}>Next</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function IntervalTester({onBack}){
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const item=getRandom(INTERVALS);
+        let prompt, correct, opts;
+        if(Math.random()<0.5){
+          correct=item.name;
+          opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
+          prompt=`Which interval has ${item.semitones} semitone${item.semitones>1?'s':''}?`;
+        } else {
+          correct=item.name;
+          const cue=item.cue.split(',')[0];
+          opts=shuffle([correct,...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==correct)).slice(0,3)]);
+          prompt=`Which interval matches the cue “${cue}”?`;
+        }
+        const semitones=item.semitones;
+        const rootMidi = 64 + Math.floor(Math.random()*6);
+        setQ({prompt,correct,options:opts,semitones,rootMidi});
+        setSelected(null);
+        try{ audioEngine.playInterval({rootMidi,semitones:item.semitones}); }catch(e){}
+      };
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          addXP(ok?4:1);
+          pick();
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
+      if(time===0) return <div className="card"><h2>Intervals Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Intervals Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            {q && (
+              <div>
+                <p>{q.prompt}</p>
+                <div role="radiogroup" aria-label="Answer choices">
+                  {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
                 </div>
+                <button className="btn btn-secondary" onClick={()=>{
+                  try{ audioEngine.playInterval({rootMidi:q.rootMidi, semitones:q.semitones}); }catch(e){}
+                }}>Play Again</button>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function KeyTrainer({onBack}){
+      const [index,setIndex]=React.useState(0);
+      const next=()=>setIndex((index+1)%KEY_SIGNATURES.length);
+      const k=KEY_SIGNATURES[index];
+      const total=KEY_SIGNATURES.length;
+      const progress=(index+1)/total;
+      return (
+        <div>
+          <div className="card">
+            <h2>Key Signatures Trainer</h2>
+            <p><strong>{k.key}</strong></p>
+            {k.type==='none'? <p>No sharps or flats.</p> : <p>{k.count} {k.type}{k.count>1?'s':''}.</p>}
+            <div style={{margin:'0.5rem 0'}}>
+              <small>Card {index+1} of {total}</small>
+              <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}><div style={{width:`${progress*100}%`,height:'100%',background:'var(--primary)'}}></div></div>
+            </div>
+            <button className="btn btn-primary" onClick={next}>Next</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function KeyTester({onBack}){
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const item=getRandom(KEY_SIGNATURES);
+        if(Math.random()<0.5){
+          const correct=item.key;
+          const desc=item.count===0? 'no sharps or flats' : `${item.count} ${item.type}${item.count>1?'s':''}`;
+          const opts=shuffle([correct,...shuffle(KEY_SIGNATURES.map(x=>x.key).filter(k=>k!==correct)).slice(0,3)]);
+          setQ({prompt:`Which major key has ${desc}?`,correct,options:opts});
+        } else {
+          const correct=item.count===0? 'no sharps or flats' : `${item.count} ${item.type}${item.count>1?'s':''}`;
+          const descList=[...new Set(KEY_SIGNATURES.map(x=> x.count===0? 'no sharps or flats' : `${x.count} ${x.type}${x.count>1?'s':''}`))];
+          const opts=shuffle([correct,...shuffle(descList.filter(v=>v!==correct)).slice(0,3)]);
+          setQ({prompt:`How many sharps/flats does ${item.key} have?`,correct,options:opts});
+        }
+        setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          addXP(ok?4:1);
+          pick();
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
+      if(time===0) return <div className="card"><h2>Key Sig Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Key Sig Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            {q && (
+              <div>
+                <p>{q.prompt}</p>
+                <div role="radiogroup" aria-label="Answer choices">
+                  {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function TimeTrainer({onBack}){
+      const [index,setIndex]=React.useState(0);
+      const next=()=>setIndex((index+1)%TIME_SIGNATURES.length);
+      const t=TIME_SIGNATURES[index];
+      const total=TIME_SIGNATURES.length;
+      const progress=(index+1)/total;
+      return (
+        <div>
+          <div className="card">
+            <h2>Time Sig Trainer</h2>
+            <p><strong>{t.sig}</strong></p>
+            <p>{t.description}</p>
+            <div style={{margin:'0.5rem 0'}}>
+              <small>Card {index+1} of {total}</small>
+              <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}><div style={{width:`${progress*100}%`,height:'100%',background:'var(--primary)'}}></div></div>
+            </div>
+            <button className="btn btn-primary" onClick={next}>Next</button>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+    function TimeTester({onBack}){
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const item=getRandom(TIME_SIGNATURES);
+        const correct=item.sig;
+        const opts=shuffle([correct,...shuffle(TIME_SIGNATURES.map(x=>x.sig).filter(s=>s!==correct)).slice(0,3)]);
+        setQ({prompt:item.description,correct,options:opts}); setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok=opt===q.correct;
+          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          addXP(ok?4:1);
+          pick();
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q&&q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
+      if(time===0) return <div className="card"><h2>Time Sig Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Time Sig Tester</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            {q && (
+              <div>
+                <p>{q.prompt}</p>
+                <div role="radiogroup" aria-label="Answer choices">
+                  {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
+
+    /**
+     * Position Reference component
+     *
+     * Displays a table of notes for each string and finger in the selected position.
+     * Users can navigate through positions 1–5.  The note names are computed
+     * using canonicalBase() so they exactly match the fingering layout.  Each
+     * string row has a subtle background colour to aid differentiation without
+     * relying solely on colour intensity.  A header row labels the finger
+     * numbers to make the layout intuitive.  This tool is intended as a
+     * reference rather than a drill, connecting the mental fingerboard map
+     * directly to note names in each position.
+     */
+		function PositionReference({ onBack }) {
+      // position selection
+      const [pos, setPos] = React.useState(1);
+    
+      // UI controls
+      const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
+      const [colorMode, setColorMode]   = React.useState('strings');  // 'strings' | 'notes'
+    
+      const next = () => setPos((p) => (p === 5 ? 1 : p + 1));
+      const prev = () => setPos((p) => (p === 1 ? 5 : p - 1));
+    
+      // --- helpers --------------------------------------------------------------
+    
+      // Pitch-class (0–11) at string s, position p, finger f
+      const pcAt = (s, p, f) => {
+        const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
+        return ((semi % 12) + 12) % 12;
+      };
+    
+      // Enharmonic labels (unicodes for clarity)
+      const ENH = {
+        0: 'C',
+        1: 'C♯/D♭',
+        2: 'D',
+        3: 'D♯/E♭',
+        4: 'E',
+        5: 'F',
+        6: 'F♯/G♭',
+        7: 'G',
+        8: 'G♯/A♭',
+        9: 'A',
+        10: 'A♯/B♭',
+        11: 'B',
+      };
+      const labelFor = (pc) => ENH[pc] || NOTE_NAME[pc];
+    
+      // Soft tints per string (work in light & dark)
+      const stringTint = {
+        E: 'rgba(58,91,160,0.15)',
+        A: 'rgba(230,159,0,0.15)',
+        D: 'rgba(0,158,115,0.15)',
+        G: 'rgba(213,94,0,0.15)',
+      };
+    
+      // Solid hues per pitch class
+      const noteHue = (pc) => {
+        const h = (pc * 30) % 360;
+        return `hsla(${h}, 65%, 70%, 0.28)`;
+      };
+    
+      const bgForCell = (s, pc) => {
+        if (colorMode === 'strings') return stringTint[s];
+        // colorMode === 'notes'
+        return noteHue(pc);
+      };
+    
+      // Layout plumbing
+      const cols =
+        layoutCols === 'strings'
+          ? STRINGS // columns: G D A E
+          : FINGERS; // columns: 1 2 3 4
+    
+      const rows =
+        layoutCols === 'strings'
+          ? FINGERS // rows labeled 1st–4th
+          : STRINGS; // rows labeled G/D/A/E
+    
+      const ordShort = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || `${n}th`);
+    
+      // column header label
+      const colHead = (c) => (layoutCols === 'strings' ? c : `${ordinal(c)} finger`);
+    
+      // visible row label (short), with SR-friendly aria-label
+      const rowHeadVisible = (r) => (layoutCols === 'strings' ? ordShort(r) : r);
+      const rowHeadAria = (r) =>
+        layoutCols === 'strings' ? `${ordinal(r)} finger` : `${r} string`;
+    
+      // Compute a cell’s string + finger based on current layout
+      const cellSF = (row, col) =>
+        layoutCols === 'strings'
+          ? { s: col, f: row } // rows are fingers, cols are strings
+          : { s: row, f: col }; // rows are strings, cols are fingers
+    
+      // 🔧 shared size for all cells (fits enharmonics like "C♯/D♭")
+      const CELL_STYLE = {
+        height: 56,
+        minHeight: 56,
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        padding: '10px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        fontWeight: 600,
+        lineHeight: 1.1,
+        whiteSpace: 'nowrap',
+      };
+    
+      // compact chip for the subtitle
+      const SUBTITLE_CHIP = (
+			  <div
+			    style={{
+			      display: 'flex',
+			      justifyContent: 'center',
+			      marginTop: 'clamp(10px, 1.6vw, 14px)',
+			      marginBottom: 'clamp(6px, 1.1vw, 10px)',
+			    }}
+			  >
+			    <span
+			      aria-label={`Notes of ${ordinal(pos)} Position`}
+			      style={{
+			        display: 'inline-flex',
+			        alignItems: 'center',
+			        padding: '0.35rem 0.75rem',
+			        borderRadius: 9999,
+			        border: '1px solid var(--border)',
+			        fontWeight: 700,
+			        letterSpacing: '.01em',
+			        color: 'var(--ink)',
+			        background: 'var(--card)',
+			        boxShadow: '0 1px 0 rgba(0,0,0,0.02)',
+			      }}
+			    >
+			      {ordinal(pos)} Position
+			    </span>
+			  </div>
+			);
+		    
+      // responsive width for the left header column to reduce gutter on mobile
+      const HEAD_COL_W = 'clamp(4ch, 9.5vw, 7ch)';
+    
+      // --- render ---------------------------------------------------------------
+    
+      return (
+        <div>
+          <div className="card">
+            <h2>Position Reference</h2>
+    
+            {/* compact controls */}
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.25rem' }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout (columns)</div>
+                <OptionButton
+                  label="Strings"
+                  selected={layoutCols === 'strings'}
+                  onClick={() => setLayoutCols('strings')}
+                />
+                <OptionButton
+                  label="Fingers"
+                  selected={layoutCols === 'fingers'}
+                  onClick={() => setLayoutCols('fingers')}
+                />
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
+                <OptionButton
+                  label="Strings"
+                  selected={colorMode === 'strings'}
+                  onClick={() => setColorMode('strings')}
+                />
+                <OptionButton
+                  label="Notes"
+                  selected={colorMode === 'notes'}
+                  onClick={() => setColorMode('notes')}
+                />
+              </div>
+            </div>
+    
+            {/* centered subtitle chip */}
+            {SUBTITLE_CHIP}
+    
+            {/* table */}
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: '8px',
+                tableLayout: 'fixed', // equal column widths for data columns
+              }}
+            >
+              <thead>
+                <tr>
+                  <th style={{ width: HEAD_COL_W }}></th>
+                  {cols.map((c) => (
+                    <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
+                      {colHead(c)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={String(r)}>
+                    <th
+                      aria-label={rowHeadAria(r)}
+                      style={{
+                        width: HEAD_COL_W,
+                        textAlign: 'right',
+                        paddingRight: 8,
+                        whiteSpace: 'nowrap',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {rowHeadVisible(r)}
+                    </th>
+                    {cols.map((c) => {
+                      const { s, f } = cellSF(r, c);
+                      const pc = pcAt(s, pos, f);
+                      const text = labelFor(pc);
+                      const bg = bgForCell(s, pc);
+                      return (
+                        <td key={`${s}-${f}`} style={{ padding: 0 }}>
+                          <div
+                            style={{ ...CELL_STYLE, background: bg }}
+                            title={`${s} string • ${ordinal(f)} finger`}
+                          >
+                            {text}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+    
+            {/* quick-jump positions */}
+            <div
+              role="radiogroup"
+              aria-label="Select position"
+              style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem' }}
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <OptionButton key={n} label={String(n)} selected={pos === n} onClick={() => setPos(n)} />
               ))}
             </div>
+    
+            {/* primary nav (thumb-friendly, under the table) */}
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={prev} aria-label="Previous position">
+                Prev
+              </button>
+              <button className="btn btn-primary" onClick={next} aria-label="Next position">
+                Next
+              </button>
+            </div>
           </div>
-        ))}
-      </div>);
-    }
-
-    // Tiny Theory page (so the menu has a homey reference page)
-    const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, at ease',range:'66–76 bpm'},{it:'Lento',en:'very slow',range:'52–66 bpm'},{it:'Largo',en:'broad, very slow',range:'40–60 bpm'}];
-    function Theory(){ return (<div className="card"><h2>Tempo Markings</h2><div className="grid grid-3">{TEMPOS.map(t=>(<div key={t.it} className="card"><strong>{t.it}</strong><div style={{color:'var(--ink-light)'}}>{t.en}</div><div style={{marginTop:4}}>{t.range}</div></div>))}</div></div>); }
-
-    // ───────────────────────── app shell ─────────────────────────
-    function App(){
-      const [prefs,setPrefs]=React.useState(()=>hydratePrefs(loadJSON(PREFS_KEY,null)));
-      const [view,setView]=React.useState('home'); // home, settings, drills...
-      React.useEffect(()=>{ saveJSON(PREFS_KEY,prefs); window.__spellMode=prefs.spellingMode; window.__spellKey=prefs.spellingKey; },[prefs]);
-      const xp=loadJSON(XP_KEY,0); const lvl=levelForXP(xp);
-      React.useEffect(()=>{ const chip=document.getElementById('levelChip'); if(chip) chip.textContent=`Level ${lvl} — ⭐${'⭐'.repeat(lvl-1)}`; });
-      const go=(v)=>()=>setView(v);
-
-      return (<div>
-        <div className="card">
-          <div className="toolbar">
-            <button className="btn btn-primary" onClick={go('home')}>Home</button>
-            <button className="btn btn-primary" onClick={go('settings')}>Settings</button>
-            <button className="btn btn-primary" onClick={()=>{ audioEngine.ensure(); alert('Sound enabled (if your browser required a click).'); }}>Enable Sound</button>
-          </div>
+    
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
-
-        {view==='home' && (<div>
-          <div className="card"><h2>Train</h2>
-            <div className="grid grid-3">
-              <button className="btn btn-secondary" onClick={go('snapshot')}>Snapshot</button>
-              <button className="btn btn-secondary" onClick={go('speed')}>Speed Drill</button>
-              <button className="btn btn-secondary" onClick={go('flash')}>Flashcards</button>
-              <button className="btn btn-secondary" onClick={go('interval')}>Interval Sprint</button>
-              <button className="btn btn-secondary" onClick={go('locator')}>Note Locator</button>
-              <button className="btn btn-secondary" onClick={go('shift')}>Shift Coach</button>
-            </div>
-          </div>
-          <div className="card"><h2>Study</h2>
-            <div className="grid grid-3">
-              <button className="btn btn-secondary" onClick={go('neck')}>Neck Map 1–7</button>
-              <button className="btn btn-secondary" onClick={go('bieler')}>Bieler Lab</button>
-              <button className="btn btn-secondary" onClick={go('theory')}>Theory</button>
-            </div>
-          </div>
-          <div className="card"><h2>Progress</h2>
-            <div className="toolbar">
-              <button className="btn btn-secondary" onClick={go('stats')}>Stats & Heatmap</button>
-              <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>{audioEngine.mute? 'Unmute' : 'Mute'}</button>
-            </div>
-          </div>
-        </div>)}
-
-        {view==='settings' && (<Settings prefs={prefs} setPrefs={setPrefs} />)}
-        {view==='snapshot' && (<Snapshot prefs={prefs} onBack={go('home')} />)}
-        {view==='speed' && (<SpeedDrill prefs={prefs} onBack={go('home')} />)}
-        {view==='flash' && (<Flashcards prefs={prefs} onBack={go('home')} />)}
-        {view==='interval' && (<IntervalSprint prefs={prefs} onBack={go('home')} />)}
-        {view==='locator' && (<NoteLocator prefs={prefs} onBack={go('home')} />)}
-        {view==='shift' && (<ShiftCoach prefs={prefs} onBack={go('home')} />)}
-        {view==='neck' && (<NeckReference7 onBack={go('home')} />)}
-        {view==='bieler' && (<BielerLab onBack={go('home')} />)}
-        {view==='stats' && (<StatsPage onBack={go('home')} />)}
-        {view==='theory' && (<Theory />)}
-      </div>);
+      );
     }
-
+    function App(){
+      const [page,setPage]=React.useState('home');
+      const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY,defaultPrefs));
+      return (
+        <div className="container">
+          {page==='home' && (
+            <div>
+              <h1>Violin Mastery Quest</h1>
+              <p style={{color:'var(--ink-light)'}}>Tailor your practice by choosing strings & positions. Enjoy drills, study tools and track progress.</p>
+              <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'1rem'}}>
+                <div className="card">
+                  <h2>🎻 Play</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
+                </div>
+                <div className="card">
+                  <h2>📘 Study</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Theory</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Bieler Lab</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('positionRef')}>Position Reference</button>
+                </div>
+                <div className="card">
+                  <h2>📊 Progress & Settings</h2>
+                  <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>} 
+          {page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>} 
+          {page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>} 
+          {page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>} 
+          {page==='theoryHome'&&<TheoryHome onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>} 
+          {page==='intervalTrainer'&&<IntervalTrainer onBack={()=>setPage('theoryHome')}/>} 
+          {page==='intervalTester'&&<IntervalTester onBack={()=>setPage('theoryHome')}/>} 
+          {page==='keyTrainer'&&<KeyTrainer onBack={()=>setPage('theoryHome')}/>} 
+          {page==='keyTester'&&<KeyTester onBack={()=>setPage('theoryHome')}/>} 
+          {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>} 
+          {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>} 
+          {page==='bieler'&&<BielerLab onBack={()=>setPage('home')}/>}
+          {page==='positionRef'&&<PositionReference onBack={()=>setPage('home')}/>}
+        </div>
+      );
+    }
     ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
 </body>
