@@ -623,7 +623,12 @@
                       tabIndex={disabled ? -1 : 0}
                       style={{ cursor: disabled ? 'default' : 'pointer' }}
                       onClick={() => act({ s, p, f })}
-                      onKeyDown={e => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) act({ s, p, f }); }}
+                      onKeyDown={e => {
+                        if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault(); e.stopPropagation();
+                          act({ s, p, f });
+                        }
+                      }}
                     />
                     {/* icons for correctness / selection */}
                     {kind === 'correct' && (
