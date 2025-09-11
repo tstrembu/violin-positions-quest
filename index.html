@@ -286,23 +286,22 @@
 		  }, [enabled, count, onMove, onSubmit, onBack]);
 		}
     function OptionButton({ label, selected, onClick, shortcut, ...rest }) {
-		  const bg = selected ? 'var(--primary-dark)' : 'var(--primary)';
-		  return (
-		    <button
-		      type="button"
-		      className="option-btn"
-		      role="radio"
-		      aria-checked={!!selected}
-		      aria-keyshortcuts={shortcut ?? ''}
-		      style={{ background: bg }}
-		      onClick={onClick}
-		      {...rest}
-		    >
-		      {label}
-		      {shortcut ? <span className="sr-only"> (Shortcut {shortcut})</span> : null}
-		    </button>
-		  );
-		}
+      const bg = selected ? 'var(--primary-dark)' : 'var(--primary)';
+      return (
+        <button
+          type="button"
+          className="option-btn"
+          role="button"
+          aria-keyshortcuts={shortcut ?? ''}
+          style={{ background: bg }}
+          onClick={onClick}
+          {...rest}
+        >
+          {label}
+          {shortcut ? <span className="sr-only"> (Shortcut {shortcut})</span> : null}
+        </button>
+      );
+    }
 		
 		function PillToggle({ label, pressed, onClick, ...rest }) {
 		  const bg = pressed ? 'var(--primary-dark)' : 'var(--primary)';
