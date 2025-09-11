@@ -2135,13 +2135,13 @@
 		
 		        <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:'8px', tableLayout:'fixed' }}>
 		          <thead>
-		            <tr>
-		              <th style={{ width: HEAD_COL_W }} />
-		              {cols.map(c => (
-		                <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>{colHead(c)}</th>
-		              ))}
-		            </tr>
-		          </thead>
+                <tr>
+                  <th scope="col" style={{ width: HEAD_COL_W }} />
+                  {cols.map(c => (
+                    <th scope="col" key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>{colHead(c)}</th>
+                  ))}
+                </tr>
+              </thead>
 		          <tbody>
 		            {rows.map(r => (
 		              <tr key={String(r)}>
