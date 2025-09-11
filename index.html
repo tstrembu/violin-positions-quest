@@ -83,11 +83,19 @@
     .option-btn { width:100%; padding:0.6rem; border-radius:9999px; margin:0.25rem 0; color:#fff; border:none; cursor:pointer; font-weight:600; }
     .btn:focus-visible, .option-btn:focus-visible { outline:3px solid var(--primary); outline-offset:2px; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media (prefers-reduced-motion: reduce) {
+		  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+		}
   </style>
   <script>
     (function(){
       const KEY='vmq.theme';
       const saved=localStorage.getItem(KEY);
+      // make screen-reader announcements available everywher
+      window.speakSR = (txt) => {
+			  const el = document.getElementById('sr');
+			  if (el) el.textContent = txt;
+			};
       const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const dark=saved? saved==='dark':prefers;
       document.documentElement.classList.toggle('dark', dark);
@@ -101,7 +109,7 @@
 <body>
   <div id="root"></div>
   <div id="sr" class="sr-only" aria-live="polite"></div>
-  <script type="text/babel">
+  <script type="text/babel" data-presets="react">
     // Helpers
     const loadJSON=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? fb; }catch{return fb;} };
     const saveJSON=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
@@ -243,7 +251,7 @@
         <button
           className="option-btn"
           role="radio"
-          aria-checked={selected ? 'true' : 'false'}
+          aria-checked={selected}
           style={{background:bg}}
           onClick={onClick}
         >
@@ -251,6 +259,19 @@
         </button>
       );
     }
+    function PillToggle({label, pressed, onClick}) {
+		  const bg = pressed ? 'var(--primary-dark)' : 'var(--primary)';
+		  return (
+		    <button
+		      className="option-btn"
+		      aria-pressed={pressed}
+		      style={{background: bg}}
+		      onClick={onClick}
+		    >
+		      {label}
+		    </button>
+		  );
+		}
 
     // =========================================================
     // Bieler Method definitions and lab component (unchanged except feedback)
@@ -315,7 +336,7 @@
         if(selC!==null) return;
         setSelC(idx);
         const ok = opt===cq.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+        speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
         if(ok) setScoreC(s=>s+1);
         setAnsweredC(a=>a+1);
         addXP(ok?4:1);
@@ -326,7 +347,7 @@
         if(selA!==null) return;
         setSelA(idx);
         const ok = opt===aq.correct;
-        document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+        speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
         if(ok) setScoreA(s=>s+1);
         setAnsweredA(a=>a+1);
         addXP(ok?5:2);
@@ -417,6 +438,7 @@
 
     // Visual fingerboard component (HORIZONTAL): 5 positions × 4 fingers across 4 strings
     function VisualFingerboard({ highlight = [], onSelect, disabled }) {
+    	const patId = React.useId(); // unique per instance
       // --- geometry --------------------------------------------------------------
       const POS_W = 120;                  // width per position segment
       const LEFT_PAD = 72;                // space for string labels + nut
@@ -428,8 +450,9 @@
       const MARK_H = 20;
       const RADIUS = 6;
     
-      const W = LEFT_PAD + POS_W * 5 + RIGHT_PAD;
-      const H = TOP_PAD + ROW_H * 4 + BOTTOM_PAD;
+      const POS_N = POSITIONS.length;
+			const W = LEFT_PAD + POS_W * POS_N + RIGHT_PAD;
+			const H = TOP_PAD + ROW_H * 4 + BOTTOM_PAD;
     
       // place finger 1..4 within a position segment (left→right)
       const fingerX = { 1: POS_W * 0.18, 2: POS_W * 0.40, 3: POS_W * 0.62, 4: POS_W * 0.82 };
@@ -445,7 +468,7 @@
       const fillForKind = k => {
         if (k === 'correct') return 'var(--success)';
         if (k === 'chosen') return 'var(--primary)';
-        if (k === 'distractor') return 'url(#distractorPattern)';
+        if (k === 'distractor') return `url(#${patId})`;
         return 'var(--card)';
       };
     
@@ -459,12 +482,12 @@
           height="auto"
           role="grid"
           aria-label="Fingerboard (horizontal)"
-          aria-rowcount="4"
-          aria-colcount="20"
+          aria-rowcount={4}
+  				aria-colcount={POSITIONS.length * 4}
         >
           {/* Pattern for distractors (high-contrast, color-blind friendly) */}
           <defs>
-            <pattern id="distractorPattern" patternUnits="userSpaceOnUse" width="8" height="8">
+            <pattern id={patId} patternUnits="userSpaceOnUse" width="8" height="8">
               <rect width="8" height="8" fill="var(--warning)" />
               <path d="M0 0 L8 8 M8 0 L0 8" stroke="var(--card)" strokeWidth="1" />
             </pattern>
@@ -474,7 +497,7 @@
           <rect
             x={LEFT_PAD}
             y={TOP_PAD - 16}
-            width={POS_W * 5}
+            width={POS_W * POS_N}
             height={ROW_H * 4 + 32}
             rx="10"
             fill="var(--card)"
@@ -522,7 +545,7 @@
                 {/* left label */}
                 <text x={LEFT_PAD - 14} y={y + 4} textAnchor="end" fontWeight="700">{s}</text>
                 {/* the string line */}
-                <line x1={LEFT_PAD} y1={y} x2={LEFT_PAD + POS_W * 5} y2={y}
+                <line x1={LEFT_PAD} y1={y} x2={LEFT_PAD + POS_W * POS_N} y2={y}
                       stroke="var(--ink-light)" strokeWidth="1.5" opacity="0.35" />
               </g>
             );
@@ -549,7 +572,7 @@
                       fill={fill}
                       stroke="var(--border)"
                       role="gridcell"
-                      aria-selected={kind === 'chosen' || kind === 'correct' ? 'true' : 'false'}
+                      aria-selected={kind === 'chosen' || kind === 'correct'}
                       aria-label={`${s} string, ${ordinal(p)} position, finger ${f}`}
                       tabIndex={disabled ? -1 : 0}
                       onClick={() => act({ s, p, f })}
@@ -608,7 +631,7 @@
         setSelected(idx);
         setTimeout(()=>{
           const ok= opt===q.cell.canon;
-          document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
+          speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
           audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
@@ -666,7 +689,7 @@
             if(c===card){ const newInt= known? Math.min(28,c.interval*2) : 1; return {...c, interval:newInt, due: Date.now()+newInt*24*3600*1000}; } return c; }); saveJSON(FLASH_KEY,upd); return upd;
         });
         addXP(known?5:1);
-        document.getElementById('sr').textContent = known ? 'Correct, great job!' : 'Oops, almost!';
+        speakSR(known ? 'Correct, great job!' : 'Oops, almost!');
         audioEngine.playFeedback(known);
         pick();
       };
@@ -692,7 +715,9 @@
         const labels={}; FINGERS.forEach(f=>{ labels[f]=canonicalBase(s,p,f); });
         setFlash({s,p,labels}); setState('flash'); setSelected(null);
         if(flashRef.current) clearTimeout(flashRef.current);
-        const delay=FLASH_DURATIONS[prefs.flashLevel] || 1000;
+        const prefersReduced = window.matchMedia &&
+					window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+				const delay = (FLASH_DURATIONS[prefs.flashLevel] || 1000) * (prefersReduced ? 1.5 : 1);
         flashRef.current=setTimeout(()=>{
           const f=getRandom(FINGERS);
           const correct=labels[f]; const opts=shuffle([correct,...shuffle([...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct)).slice(0,3)]);
@@ -718,9 +743,9 @@
         if(selected !== null) return;
         setSelected(idx);
         setTimeout(()=>{
-          const ok=opt===q.correct;
-          document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
-          audioEngine.playFeedback(ok);
+          const ok = opt === q.correct;
+					speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+					audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           updateStat(`${q.s}:${q.p}:${q.f}`, ok);
@@ -783,6 +808,7 @@
       const [answered,setAnswered]=React.useState(0);
       const [q,setQ]=React.useState(null);
       const [selected,setSelected]=React.useState(null);
+      const tRef = React.useRef(null);
       const pick=()=>{
         const strings=STRINGS.filter(s=>prefs.strings[s]);
         const pos=POSITIONS.filter(p=>prefs.positions[p]);
@@ -807,9 +833,10 @@
       const answer=(choice,idx)=>{
         if(selected !== null) return;
         setSelected(idx);
-        setTimeout(()=>{
+        clearTimeout(tRef.current);
+				tRef.current = setTimeout(()=>{
           const ok=choice===q.type;
-          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
           audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
@@ -818,6 +845,7 @@
           pick();
         },200);
       };
+      React.useEffect(()=>()=>clearTimeout(tRef.current),[]);
       useAnswerHotkeys(!!q,(i)=>{ if(q){ const opt=i===0?'half':'whole'; answer(opt,i); } },onBack,2);
       if(time===0) return <div className="card"><h2>Interval Sprint Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
@@ -887,7 +915,7 @@
           })
         });
         setTimeout(()=>{
-          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
+          speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
           audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
@@ -942,6 +970,7 @@
     }
 
     function Settings({prefs,setPrefs,onBack}){
+      const [muted, setMuted] = 		React.useState(audioEngine.mute);
       const toggle=(type,key)=>{
         setPrefs(prev=>{
           const copy={...prev,[type]:{...prev[type],[key]:!prev[type][key]}};
@@ -956,20 +985,27 @@
             <h3>Theme</h3>
             <button className="btn btn-primary" onClick={()=>{ const dark=!document.documentElement.classList.contains('dark'); window.__setTheme(dark); }}>Toggle Dark Mode</button>
             <h3>Strings</h3>
-            <div>{STRINGS.map(s=>(<OptionButton key={s} label={s} selected={prefs.strings[s]} onClick={()=>toggle('strings',s)}/>))}</div>
+            <div>{STRINGS.map(s=>(<PillToggle key={s} label={s} pressed={prefs.strings[s]} onClick={()=>toggle('strings',s)} />))}</div>
             <h3>Positions</h3>
-            <div>{POSITIONS.map(p=>(<OptionButton key={p} label={p} selected={prefs.positions[p]} onClick={()=>toggle('positions',p)}/>))}</div>
+            <div>{POSITIONS.map(p=>(<PillToggle key={p} label={p} pressed={prefs.positions[p]} onClick={()=>toggle('positions',p)} />))}</div>
             <h3>Snapshot Flash Duration</h3>
             <div>{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>(
-              <OptionButton key={level} label={level} selected={prefs.flashLevel===level} onClick={()=>{
+              <PillToggle key={level} label={level} pressed={prefs.flashLevel===level} onClick={()=>{
                 setPrefs(prev=>{ const next={...prev,flashLevel:level}; saveJSON(PREFS_KEY,next); return next; });
               }}/>
             ))}</div>
             <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
             <h3>Audio</h3>
-            <button className="btn btn-primary" onClick={()=>audioEngine.ensure()}>Enable Sound</button>
-            <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>
-              {audioEngine.mute? 'Unmute' : 'Mute'}
+	            <button className="btn btn-primary" onClick={()=>audioEngine.ensure()}>Enable Sound</button>
+		            <button
+		          className="btn"
+		          style={{background: muted ? 'var(--danger)' : 'var(--primary)'}}
+		          onClick={()=>{
+		            audioEngine.setMute(!muted);
+		            setMuted(!muted);
+		          }}
+		        >
+		          {muted ? 'Unmute' : 'Mute'}
             </button>
             <h3>Data Tools</h3>
             <button className="btn btn-primary" onClick={()=>{
@@ -1083,6 +1119,7 @@
       const [answered,setAnswered]=React.useState(0);
       const [q,setQ]=React.useState(null);
       const [selected,setSelected]=React.useState(null);
+      const tRef = React.useRef(null);
       const pick=()=>{
         const term=getRandom(TEMPOS);
         const correct=term.en;
@@ -1097,16 +1134,18 @@
       },[paused]);
       const answer=(opt,idx)=>{
         setSelected(idx);
-        setTimeout(()=>{
-          const ok=opt===q.correct;
-          document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
-          audioEngine.playFeedback(ok);
+        clearTimeout(tRef.current);
+        tRef.current = setTimeout(()=>{
+          const ok = opt === q.correct;
+					speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+					audioEngine.playFeedback(ok);
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?5:2);
           pick();
         },200);
       };
+      React.useEffect(()=>()=>clearTimeout(tRef.current),[]);
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
       if(time===0) return <div className="card"><h2>Tempo Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       return (
@@ -1205,10 +1244,10 @@
         if(selected !== null) return;
         setSelected(idx);
         setTimeout(()=>{
-          const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
-          audioEngine.playFeedback(ok);
-          setAnswered(a=>a+1);
+          const ok = opt === q.correct;
+					speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+					audioEngine.playFeedback(ok);
+					setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
           pick();
@@ -1294,10 +1333,10 @@
         if(selected !== null) return;
         setSelected(idx);
         setTimeout(()=>{
-          const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
-          audioEngine.playFeedback(ok);
-          setAnswered(a=>a+1);
+          const ok = opt === q.correct;
+					speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+					audioEngine.playFeedback(ok);
+					setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
           pick();
@@ -1371,10 +1410,10 @@
         if(selected !== null) return;
         setSelected(idx);
         setTimeout(()=>{
-          const ok=opt===q.correct;
-          document.getElementById('sr').textContent= ok? 'Correct, great job!' : 'Oops, almost!';
-          audioEngine.playFeedback(ok);
-          setAnswered(a=>a+1);
+          const ok = opt === q.correct;
+					speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+					audioEngine.playFeedback(ok);
+					setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           addXP(ok?4:1);
           pick();
@@ -1401,6 +1440,523 @@
         </div>
       );
     }
+    // --- Arpeggio Trainer --------------------------------------------------------
+		function ArpeggioTrainer({ prefs, onBack }) {
+		  const [time, setTime] = React.useState(60);
+		  const [paused, setPaused] = React.useState(false);
+		  const [score, setScore] = React.useState(0);
+		  const [answered, setAnswered] = React.useState(0);
+		  const [q, setQ] = React.useState(null);
+		  const [locked, setLocked] = React.useState(false);
+		
+		  const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
+		
+		  const pcName = (pc) => NOTE_NAME[((pc % 12) + 12) % 12];
+		
+		  const pick = React.useCallback(() => {
+		    if (!cells.length) { setQ(null); return; }
+		    const rootPc = Math.floor(Math.random() * 12);
+		    const type = Math.random() < 0.5 ? 'Major' : 'Minor';
+		    const thirdPc = (rootPc + (type === 'Major' ? 4 : 3)) % 12;
+		    const fifthPc = (rootPc + 7) % 12;
+		    const pcs = [rootPc, thirdPc, fifthPc];
+		    const pcNames = pcs.map(pcName);
+		    const keyName = `${pcName(rootPc)} ${type}`;
+		    setQ({ rootPc, type, pcs, pcNames, keyName, step: 0, picks: [] });
+		    setLocked(false);
+		
+		    // quick preview
+		    try {
+		      const base = 60; // middle C octave base
+		      pcs.forEach((pc, i) => {
+		        setTimeout(() => audioEngine.playNote({ midi: base + pc, durationMs: 420 }), i * 220);
+		      });
+		    } catch {}
+		  }, [cells]);
+		
+		  React.useEffect(() => { pick(); }, [pick]);
+		
+		  React.useEffect(() => {
+		    if (paused) return;
+		    const id = setInterval(() => setTime(t => (t <= 1 ? 0 : t - 1)), 1000);
+		    return () => clearInterval(id);
+		  }, [paused]);
+		
+		  if (time === 0) {
+		    return (
+		      <div className="card">
+		        <h2>Arpeggio Trainer Complete</h2>
+		        <p>Score {score}/{answered}</p>
+		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		      </div>
+		    );
+		  }
+		  if (!q) {
+		    return (
+		      <div className="card">
+		        <h2>Arpeggio Trainer</h2>
+		        <p>No valid cells. Enable strings/positions in Settings.</p>
+		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		      </div>
+		    );
+		  }
+		
+		  const onSelectCell = (cell) => {
+		    if (!q || locked) return;
+		    const expectedPc = q.pcs[q.step];
+		    const chosenName = canonicalBase(cell.s, cell.p, cell.f);
+		    const chosenPc = Number(Object.entries(NOTE_NAME).find(([, nm]) => nm === chosenName)?.[0] ?? -1);
+		    const ok = chosenPc === expectedPc;
+		
+		    if (ok) {
+		      const picks = [...q.picks, { s: cell.s, p: cell.p, f: cell.f }];
+		      const nextStep = q.step + 1;
+		      if (nextStep >= q.pcs.length) {
+		        // finished the triad
+		        speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+		        audioEngine.playFeedback(true);
+		        setScore(s => s + 1);
+		        setAnswered(a => a + 1);
+		        addXP(8);
+		        setLocked(true);
+		        setTimeout(() => pick(), 400);
+		      } else {
+		        audioEngine.playFeedback(true);
+		        setQ({ ...q, step: nextStep, picks });
+		      }
+		    } else {
+		      speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+		      audioEngine.playFeedback(false);
+		      setAnswered(a => a + 1);
+		      addXP(2);
+		      setLocked(true);
+		      setTimeout(() => pick(), 600);
+		    }
+		  };
+		
+		  const highlight = (q.picks || []).map(p => ({ ...p, kind: 'correct' }));
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Arpeggio Trainer</h2>
+		        <p>Time {time}s | Score {score}/{answered}</p>
+		        <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
+		          {paused ? 'Resume' : 'Pause'}
+		        </button>
+		        <p style={{ marginTop: '0.5rem' }}>
+		          Build <strong>{q.keyName}</strong> — click <strong>{q.pcNames[q.step]}</strong>
+		          {' '}({q.step + 1} of 3)
+		        </p>
+		        <button className="btn btn-primary" onClick={() => {
+		          try {
+		            const base = 60;
+		            q.pcs.forEach((pc, i) => {
+		              setTimeout(() => audioEngine.playNote({ midi: base + pc, durationMs: 420 }), i * 220);
+		            });
+		          } catch {}
+		        }}>Play Arpeggio</button>
+		
+		        <VisualFingerboard highlight={highlight} onSelect={onSelectCell} disabled={locked} />
+		      </div>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
+		// --- Rhythm Drills -----------------------------------------------------------
+		function RhythmDrills({ onBack }) {
+		  const [time, setTime] = React.useState(60);
+		  const [paused, setPaused] = React.useState(false);
+		  const [score, setScore] = React.useState(0);
+		  const [answered, setAnswered] = React.useState(0);
+		  const [q, setQ] = React.useState(null);
+		  const timersRef = React.useRef([]);
+		
+		  const PATTERNS = [
+		    { sig: '4/4', unit: 'quarter', bpm: 96, beats: 4, accents: [0] },
+		    { sig: '3/4', unit: 'quarter', bpm: 96, beats: 3, accents: [0] },
+		    { sig: '6/8', unit: 'eighth',  bpm: 120, beats: 6, accents: [0, 3] }, // 3+3 feel
+		  ];
+		
+		  const beatMs = (pattern) => {
+		    const base = 60000 / pattern.bpm;
+		    return pattern.unit === 'quarter' ? base : base / 2; // eighth = half of quarter
+		  };
+		
+		  const clearTimers = () => {
+		    timersRef.current.forEach(id => clearTimeout(id));
+		    timersRef.current = [];
+		  };
+		
+		  const playPattern = (pattern) => {
+		    clearTimers();
+		    const dur = beatMs(pattern);
+		    for (let i = 0; i < pattern.beats; i++) {
+		      const accent = pattern.accents.includes(i);
+		      const at = i * dur;
+		      const id = setTimeout(() => {
+		        try {
+		          // accent = higher pitch, short blip
+		          audioEngine.playNote({ midi: accent ? 93 : 81, durationMs: 140 });
+		        } catch {}
+		      }, at);
+		      timersRef.current.push(id);
+		    }
+		  };
+		
+		  const pick = React.useCallback(() => {
+		    const item = getRandom(PATTERNS);
+		    const distractors = shuffle(PATTERNS.filter(p => p.sig !== item.sig)).slice(0, 2).map(p => p.sig);
+		    const options = shuffle([item.sig, ...distractors]);
+		    setQ({ pattern: item, options, correct: item.sig });
+		    // autoplay
+		    playPattern(item);
+		  }, []);
+		
+		  React.useEffect(() => { pick(); return clearTimers; }, [pick]);
+		
+		  React.useEffect(() => {
+		    if (paused) return;
+		    const id = setInterval(() => setTime(t => (t <= 1 ? 0 : t - 1)), 1000);
+		    return () => clearInterval(id);
+		  }, [paused]);
+		
+		  if (time === 0) {
+		    return (
+		      <div className="card">
+		        <h2>Rhythm Drills Complete</h2>
+		        <p>Score {score}/{answered}</p>
+		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		      </div>
+		    );
+		  }
+		  if (!q) return null;
+		
+		  const answer = (sig, idx) => {
+		    setAnswered(a => a + 1);
+		    const ok = sig === q.correct;
+		    speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+		    audioEngine.playFeedback(ok);
+		    if (ok) { setScore(s => s + 1); addXP(5); } else { addXP(2); }
+		    setTimeout(() => pick(), 250);
+		  };
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Rhythm Drills</h2>
+		        <p>Time {time}s | Score {score}/{answered}</p>
+		        <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
+		          <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
+		            {paused ? 'Resume' : 'Pause'}
+		          </button>
+		          <button className="btn btn-primary" onClick={() => playPattern(q.pattern)}>Play Again</button>
+		        </div>
+		        <p style={{marginTop:'.5rem'}}>Which time signature best fits the pattern?</p>
+		        <div role="radiogroup" aria-label="Time signature choices">
+		          {q.options.map((opt, i) => (
+		            <OptionButton key={i} label={opt} selected={false} onClick={() => answer(opt, i)} />
+		          ))}
+		        </div>
+		      </div>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
+		// --- Ear Trainer (audio-first intervals) ------------------------------------
+		function EarTrainer({ onBack }) {
+		  const [time, setTime] = React.useState(60);
+		  const [paused, setPaused] = React.useState(false);
+		  const [score, setScore] = React.useState(0);
+		  const [answered, setAnswered] = React.useState(0);
+		  const [q, setQ] = React.useState(null);
+		
+		  const pick = React.useCallback(() => {
+		    const item = getRandom(INTERVALS);
+		    const correct = item.name;
+		    const options = shuffle([correct, ...shuffle(INTERVALS.map(x => x.name).filter(n => n !== correct)).slice(0, 3)]);
+		    const rootMidi = 60 + Math.floor(Math.random() * 12);
+		    setQ({ correct, options, semitones: item.semitones, rootMidi });
+		    try { audioEngine.playInterval({ rootMidi, semitones: item.semitones }); } catch {}
+		  }, []);
+		
+		  React.useEffect(() => { pick(); }, [pick]);
+		
+		  React.useEffect(() => {
+		    if (paused) return;
+		    const id = setInterval(() => setTime(t => (t <= 1 ? 0 : t - 1)), 1000);
+		    return () => clearInterval(id);
+		  }, [paused]);
+		
+		  if (time === 0) {
+		    return (
+		      <div className="card">
+		        <h2>Ear Trainer Complete</h2>
+		        <p>Score {score}/{answered}</p>
+		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		      </div>
+		    );
+		  }
+		  if (!q) return null;
+		
+		  const answer = (opt, idx) => {
+		    setAnswered(a => a + 1);
+		    const ok = opt === q.correct;
+		    speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+		    audioEngine.playFeedback(ok);
+		    if (ok) { setScore(s => s + 1); addXP(5); } else { addXP(2); }
+		    setTimeout(() => pick(), 220);
+		  };
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Ear Trainer</h2>
+		        <p>Time {time}s | Score {score}/{answered}</p>
+		        <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
+		          <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
+		            {paused ? 'Resume' : 'Pause'}
+		          </button>
+		          <button className="btn btn-primary" onClick={() => {
+		            try { audioEngine.playInterval({ rootMidi: q.rootMidi, semitones: q.semitones }); } catch {}
+		          }}>Play Again</button>
+		        </div>
+		        <p style={{marginTop:'.5rem'}}>Which interval did you hear?</p>
+		        <div role="radiogroup" aria-label="Intervals">
+		          {q.options.map((opt, i) => (
+		            <OptionButton key={i} label={opt} selected={false} onClick={() => answer(opt, i)} />
+		          ))}
+		        </div>
+		      </div>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
+		// --- Practice Journal --------------------------------------------------------
+		const JOURNAL_KEY = 'vmq.v4.journal';
+		
+		function PracticeJournal({ onBack }) {
+		  const [running, setRunning] = React.useState(false);
+		  const [startTs, setStartTs] = React.useState(null);
+		  const [elapsed, setElapsed] = React.useState(0);
+		  const [activity, setActivity] = React.useState('General Practice');
+		  const [notes, setNotes] = React.useState('');
+		  const [entries, setEntries] = React.useState(() => loadJSON(JOURNAL_KEY, []));
+		
+		  React.useEffect(() => {
+		    if (!running) return;
+		    const id = setInterval(() => setElapsed(Date.now() - startTs), 1000);
+		    return () => clearInterval(id);
+		  }, [running, startTs]);
+		
+		  const fmt = (ms) => {
+		    const sec = Math.floor(ms / 1000);
+		    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+		    const s = (sec % 60).toString().padStart(2, '0');
+		    return `${m}:${s}`;
+		  };
+		
+		  const start = () => {
+		    setRunning(true);
+		    setStartTs(Date.now());
+		    setElapsed(0);
+		  };
+		  const stopAndSave = () => {
+		    if (!running) return;
+		    const end = Date.now();
+		    const durMs = end - startTs;
+		    const item = {
+		      startISO: new Date(startTs).toISOString(),
+		      endISO: new Date(end).toISOString(),
+		      minutes: Math.round(durMs / 60000),
+		      activity,
+		      notes: notes.trim()
+		    };
+		    const next = [item, ...entries].slice(0, 500);
+		    setEntries(next);
+		    saveJSON(JOURNAL_KEY, next);
+		    setRunning(false);
+		    setStartTs(null);
+		    setElapsed(0);
+		    setNotes('');
+		  };
+		
+		  const totalMin = entries.reduce((a, e) => a + (e.minutes || 0), 0);
+		
+		  const activities = [
+		    'General Practice','Positions Charts','Flashcards','Speed Drill','Snapshot',
+		    'Interval Sprint','Note Locator','Ear Trainer','Arpeggio Trainer','Rhythm Drills',
+		    'Tempo Trainer','Key/Time Theory','Technique Lab'
+		  ];
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Practice Journal</h2>
+		        <div className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:'1rem'}}>
+		          <div>
+		            <div style={{fontWeight:600, marginBottom:6}}>Activity</div>
+		            <select
+		              value={activity}
+		              onChange={e => setActivity(e.target.value)}
+		              style={{width:'100%', padding:'0.5rem', borderRadius:8, border:'1px solid var(--border)'}}
+		              disabled={running}
+		            >
+		              {activities.map(a => <option key={a} value={a}>{a}</option>)}
+		            </select>
+		            <div style={{marginTop:'0.75rem', fontWeight:600}}>Notes</div>
+		            <textarea
+		              value={notes}
+		              onChange={e => setNotes(e.target.value)}
+		              placeholder="What did you work on?"
+		              rows={4}
+		              style={{width:'100%', padding:'0.5rem', borderRadius:8, border:'1px solid var(--border)'}}
+		              disabled={running}
+		            />
+		          </div>
+		          <div>
+		            <div style={{fontWeight:600, marginBottom:6}}>Timer</div>
+		            <div style={{fontSize:'2rem', fontWeight:700}}>{fmt(elapsed)}</div>
+		            <div style={{display:'flex', gap:'.5rem', marginTop:'.5rem', flexWrap:'wrap'}}>
+		              {!running && <button className="btn btn-primary" onClick={start}>Start</button>}
+		              {running && <button className="btn btn-danger" onClick={stopAndSave}>Stop & Save</button>}
+		              {!running && entries.length > 0 && (
+		                <button className="btn btn-secondary" onClick={() => {
+		                  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+		                  const url = URL.createObjectURL(blob);
+		                  const a = document.createElement('a');
+		                  a.href = url; a.download = 'vmq-practice-journal.json'; a.click();
+		                  URL.revokeObjectURL(url);
+		                }}>Export JSON</button>
+		              )}
+		            </div>
+		            <p style={{color:'var(--ink-light)', marginTop:'.5rem'}}>Total logged: <strong>{totalMin} min</strong></p>
+		          </div>
+		        </div>
+		      </div>
+		
+		      <div className="card">
+		        <h3>Entries</h3>
+		        {entries.length === 0 && <p>No entries yet.</p>}
+		        {entries.map((e, i) => (
+		          <div key={i} style={{borderTop: i ? '1px solid var(--border)' : 'none', padding:'0.5rem 0'}}>
+		            <div style={{fontWeight:600}}>{e.activity} • {e.minutes} min</div>
+		            <div style={{fontSize:'0.85rem', color:'var(--ink-light)'}}>
+		              {new Date(e.startISO).toLocaleString()} → {new Date(e.endISO).toLocaleTimeString()}
+		            </div>
+		            {e.notes && <div style={{marginTop:4}}>{e.notes}</div>}
+		          </div>
+		        ))}
+		      </div>
+		
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
+		// --- Custom Note Drill -------------------------------------------------------
+		const CUSTOM_KEY = 'vmq.v4.custom.notes';
+		
+		function CustomDrill({ prefs, onBack }) {
+		  const [selected, setSelected] = React.useState(() => {
+		    const saved = loadJSON(CUSTOM_KEY, null);
+		    if (saved) return saved;
+		    // default: common accidentals + naturals
+		    return { C:true, D:true, E:true, F:true, G:true, A:true, B:true, 'F#':false, 'Bb':false, 'Eb':false, 'Ab':false, 'Db':false };
+		  });
+		  const [running, setRunning] = React.useState(false);
+		  const [time, setTime] = React.useState(60);
+		  const [score, setScore] = React.useState(0);
+		  const [answered, setAnswered] = React.useState(0);
+		  const [q, setQ] = React.useState(null);
+		  const [locked, setLocked] = React.useState(false);
+		
+		  const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
+		  const ALL_NOTES = Object.values(NOTE_NAME); // ['C','Db','D',...,'B']
+		
+		  const activeNotes = ALL_NOTES.filter(n => selected[n]);
+		
+		  const pick = React.useCallback(() => {
+		    if (!cells.length || activeNotes.length === 0) { setQ(null); return; }
+		    const note = getRandom(activeNotes);
+		    // choose any one location as the "answer"; allow clicking any location with same pitch
+		    const locs = cells.filter(c => c.canon === note);
+		    if (locs.length === 0) { setQ(null); return; }
+		    const correct = getRandom(locs);
+		    setQ({ note, correct });
+		    setLocked(false);
+		  }, [cells, activeNotes]);
+		
+		  React.useEffect(() => { if (running) pick(); }, [pick, running]);
+		
+		  React.useEffect(() => {
+		    if (!running) return;
+		    const id = setInterval(() => setTime(t => (t <= 1 ? 0 : t - 1)), 1000);
+		    return () => clearInterval(id);
+		  }, [running]);
+		
+		  const toggle = (n) => {
+		    const next = { ...selected, [n]: !selected[n] };
+		    setSelected(next);
+		    saveJSON(CUSTOM_KEY, next);
+		  };
+		
+		  const answer = (cell) => {
+		    if (!q || locked) return;
+		    const ok = canonicalBase(cell.s, cell.p, cell.f) === q.note;
+		    speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+		    audioEngine.playFeedback(ok);
+		    setAnswered(a => a + 1);
+		    if (ok) { setScore(s => s + 1); addXP(5); } else { addXP(2); }
+		    setLocked(true);
+		    setTimeout(() => pick(), 350);
+		  };
+		
+		  if (!running) {
+		    return (
+		      <div>
+		        <div className="card">
+		          <h2>Custom Note Drill</h2>
+		          <p>Select the notes you want to practice, then press Start.</p>
+		          <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(90px,1fr))', gap:'0.4rem'}}>
+		            {ALL_NOTES.map(n => (
+		              <OptionButton key={n} label={n} selected={!!selected[n]} onClick={() => toggle(n)} />
+		            ))}
+		          </div>
+		          <button className="btn btn-primary" style={{marginTop:'0.5rem'}} onClick={() => { setScore(0); setAnswered(0); setTime(60); setRunning(true); }}>
+		            Start
+		          </button>
+		        </div>
+		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		      </div>
+		    );
+		  }
+		
+		  if (time === 0) {
+		    return (
+		      <div className="card">
+		        <h2>Custom Drill Complete</h2>
+		        <p>Score {score}/{answered}</p>
+		        <button className="btn btn-secondary" onClick={() => setRunning(false)}>Done</button>
+		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		      </div>
+		    );
+		  }
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Custom Note Drill</h2>
+		        <p>Time {time}s | Score {score}/{answered}</p>
+		        {q && <p>Find <strong>{q.note}</strong> on the fingerboard.</p>}
+		        <VisualFingerboard highlight={[]} disabled={locked} onSelect={answer} />
+		        <div style={{display:'flex', gap:'.5rem', marginTop:'.5rem'}}>
+		          <button className="btn btn-secondary" onClick={() => setRunning(false)}>Stop</button>
+		        </div>
+		      </div>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
 
 
     /**
@@ -1416,261 +1972,116 @@
      * directly to note names in each position.
      */
 		function PositionReference({ onBack }) {
-      // position selection
-      const [pos, setPos] = React.useState(1);
-    
-      // UI controls
-      const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
-      const [colorMode, setColorMode]   = React.useState('strings');  // 'strings' | 'notes'
-    
-      const next = () => setPos((p) => (p === 5 ? 1 : p + 1));
-      const prev = () => setPos((p) => (p === 1 ? 5 : p - 1));
-    
-      // --- helpers --------------------------------------------------------------
-    
-      // Pitch-class (0–11) at string s, position p, finger f
-      const pcAt = (s, p, f) => {
-        const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-        return ((semi % 12) + 12) % 12;
-      };
-    
-      // Enharmonic labels (unicodes for clarity)
-      const ENH = {
-        0: 'C',
-        1: 'C♯/D♭',
-        2: 'D',
-        3: 'D♯/E♭',
-        4: 'E',
-        5: 'F',
-        6: 'F♯/G♭',
-        7: 'G',
-        8: 'G♯/A♭',
-        9: 'A',
-        10: 'A♯/B♭',
-        11: 'B',
-      };
-      const labelFor = (pc) => ENH[pc] || NOTE_NAME[pc];
-    
-      // Soft tints per string (work in light & dark)
-      const stringTint = {
-        E: 'rgba(58,91,160,0.15)',
-        A: 'rgba(230,159,0,0.15)',
-        D: 'rgba(0,158,115,0.15)',
-        G: 'rgba(213,94,0,0.15)',
-      };
-    
-      // Solid hues per pitch class
-      const noteHue = (pc) => {
-        const h = (pc * 30) % 360;
-        return `hsla(${h}, 65%, 70%, 0.28)`;
-      };
-    
-      const bgForCell = (s, pc) => {
-        if (colorMode === 'strings') return stringTint[s];
-        // colorMode === 'notes'
-        return noteHue(pc);
-      };
-    
-      // Layout plumbing
-      const cols =
-        layoutCols === 'strings'
-          ? STRINGS // columns: G D A E
-          : FINGERS; // columns: 1 2 3 4
-    
-      const rows =
-        layoutCols === 'strings'
-          ? FINGERS // rows labeled 1st–4th
-          : STRINGS; // rows labeled G/D/A/E
-    
-      const ordShort = (n) => ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || `${n}th`);
-    
-      // column header label
-      const colHead = (c) => (layoutCols === 'strings' ? c : `${ordinal(c)} finger`);
-    
-      // visible row label (short), with SR-friendly aria-label
-      const rowHeadVisible = (r) => (layoutCols === 'strings' ? ordShort(r) : r);
-      const rowHeadAria = (r) =>
-        layoutCols === 'strings' ? `${ordinal(r)} finger` : `${r} string`;
-    
-      // Compute a cell’s string + finger based on current layout
-      const cellSF = (row, col) =>
-        layoutCols === 'strings'
-          ? { s: col, f: row } // rows are fingers, cols are strings
-          : { s: row, f: col }; // rows are strings, cols are fingers
-    
-      // 🔧 shared size for all cells (fits enharmonics like "C♯/D♭")
-      const CELL_STYLE = {
-        height: 56,
-        minHeight: 56,
-        border: '1px solid var(--border)',
-        borderRadius: 10,
-        padding: '10px 12px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        fontWeight: 600,
-        lineHeight: 1.1,
-        whiteSpace: 'nowrap',
-      };
-    
-      // compact chip for the subtitle
-      const SUBTITLE_CHIP = (
-			  <div
-			    style={{
-			      display: 'flex',
-			      justifyContent: 'center',
-			      marginTop: 'clamp(10px, 1.6vw, 14px)',
-			      marginBottom: 'clamp(6px, 1.1vw, 10px)',
-			    }}
-			  >
-			    <span
-			      aria-label={`Notes of ${ordinal(pos)} Position`}
-			      style={{
-			        display: 'inline-flex',
-			        alignItems: 'center',
-			        padding: '0.35rem 0.75rem',
-			        borderRadius: 9999,
-			        border: '1px solid var(--border)',
-			        fontWeight: 700,
-			        letterSpacing: '.01em',
-			        color: 'var(--ink)',
-			        background: 'var(--card)',
-			        boxShadow: '0 1px 0 rgba(0,0,0,0.02)',
-			      }}
-			    >
-			      {ordinal(pos)} Position
-			    </span>
-			  </div>
-			);
-		    
-      // responsive width for the left header column to reduce gutter on mobile
-      const HEAD_COL_W = 'clamp(4ch, 9.5vw, 7ch)';
-    
-      // --- render ---------------------------------------------------------------
-    
-      return (
-        <div>
-          <div className="card">
-            <h2>Positions Charts</h2>
-    
-            {/* compact controls */}
-            <div
-              className="grid"
-              style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.25rem' }}
-            >
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout (columns)</div>
-                <OptionButton
-                  label="Strings"
-                  selected={layoutCols === 'strings'}
-                  onClick={() => setLayoutCols('strings')}
-                />
-                <OptionButton
-                  label="Fingers"
-                  selected={layoutCols === 'fingers'}
-                  onClick={() => setLayoutCols('fingers')}
-                />
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
-                <OptionButton
-                  label="Strings"
-                  selected={colorMode === 'strings'}
-                  onClick={() => setColorMode('strings')}
-                />
-                <OptionButton
-                  label="Notes"
-                  selected={colorMode === 'notes'}
-                  onClick={() => setColorMode('notes')}
-                />
-              </div>
-            </div>
-    
-            {/* centered subtitle chip */}
-            {SUBTITLE_CHIP}
-    
-            {/* table */}
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'separate',
-                borderSpacing: '8px',
-                tableLayout: 'fixed', // equal column widths for data columns
-              }}
-            >
-              <thead>
-                <tr>
-                  <th style={{ width: HEAD_COL_W }}></th>
-                  {cols.map((c) => (
-                    <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>
-                      {colHead(c)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={String(r)}>
-                    <th
-                      aria-label={rowHeadAria(r)}
-                      style={{
-                        width: HEAD_COL_W,
-                        textAlign: 'right',
-                        paddingRight: 8,
-                        whiteSpace: 'nowrap',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {rowHeadVisible(r)}
-                    </th>
-                    {cols.map((c) => {
-                      const { s, f } = cellSF(r, c);
-                      const pc = pcAt(s, pos, f);
-                      const text = labelFor(pc);
-                      const bg = bgForCell(s, pc);
-                      return (
-                        <td key={`${s}-${f}`} style={{ padding: 0 }}>
-                          <div
-                            style={{ ...CELL_STYLE, background: bg }}
-                            title={`${s} string • ${ordinal(f)} finger`}
-                          >
-                            {text}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-    
-            {/* quick-jump positions */}
-            <div
-              role="radiogroup"
-              aria-label="Select position"
-              style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.75rem' }}
-            >
-              {[1, 2, 3, 4, 5].map((n) => (
-                <OptionButton key={n} label={String(n)} selected={pos === n} onClick={() => setPos(n)} />
-              ))}
-            </div>
-    
-            {/* primary nav (thumb-friendly, under the table) */}
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
-              <button className="btn btn-secondary" onClick={prev} aria-label="Previous position">
-                Prev
-              </button>
-              <button className="btn btn-primary" onClick={next} aria-label="Next position">
-                Next
-              </button>
-            </div>
-          </div>
-    
-          <button className="btn btn-secondary" onClick={onBack}>Back</button>
-        </div>
-      );
-    }
+		  const [pos, setPos] = React.useState(POSITIONS[0]);
+		  const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
+		  const [colorMode, setColorMode]   = React.useState('strings');  // 'strings' | 'notes'
+		
+		  const next = () => setPos(p => (p === POSITIONS[POSITIONS.length - 1] ? POSITIONS[0] : p + 1));
+		  const prev = () => setPos(p => (p === POSITIONS[0] ? POSITIONS[POSITIONS.length - 1] : p - 1));
+		
+		  const pcAt = (s, p, f) => ((OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f]) % 12 + 12) % 12;
+		
+		  const ENH = {0:'C',1:'C♯/D♭',2:'D',3:'D♯/E♭',4:'E',5:'F',6:'F♯/G♭',7:'G',8:'G♯/A♭',9:'A',10:'A♯/B♭',11:'B'};
+		  const labelFor = pc => ENH[pc] || NOTE_NAME[pc];
+		
+		  const stringTint = { E:'rgba(58,91,160,0.15)', A:'rgba(230,159,0,0.15)', D:'rgba(0,158,115,0.15)', G:'rgba(213,94,0,0.15)' };
+		  const noteHue = pc => `hsla(${(pc * 30) % 360}, 65%, 70%, 0.28)`;
+		  const bgForCell = (s, pc) => (colorMode === 'strings' ? stringTint[s] : noteHue(pc));
+		
+		  const cols = layoutCols === 'strings' ? STRINGS : FINGERS;
+		  const rows = layoutCols === 'strings' ? FINGERS : STRINGS;
+		
+		  const ordinalShort = n => ({1:'1st',2:'2nd',3:'3rd',4:'4th'}[n] || `${n}th`);
+		  const colHead = c => (layoutCols === 'strings' ? c : `${ordinal(c)} finger`);
+		  const rowHeadVisible = r => (layoutCols === 'strings' ? ordinalShort(r) : r);
+		  const rowHeadAria = r => (layoutCols === 'strings' ? `${ordinal(r)} finger` : `${r} string`);
+		  const cellSF = (row, col) => (layoutCols === 'strings' ? { s: col, f: row } : { s: row, f: col });
+		
+		  const CELL_STYLE = {
+		    height: 56, minHeight: 56, border: '1px solid var(--border)', borderRadius: 10,
+		    padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+		    textAlign: 'center', fontWeight: 600, lineHeight: 1.1, whiteSpace: 'nowrap'
+		  };
+		  const HEAD_COL_W = 'clamp(4ch, 9.5vw, 7ch)';
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Positions Charts</h2>
+		
+		        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.25rem' }}>
+		          <div role="radiogroup" aria-label="Layout (columns)">
+		            <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout</div>
+		            <OptionButton label="Strings" selected={layoutCols === 'strings'} onClick={() => setLayoutCols('strings')} />
+		            <OptionButton label="Fingers" selected={layoutCols === 'fingers'} onClick={() => setLayoutCols('fingers')} />
+		          </div>
+		          <div role="radiogroup" aria-label="Color mode">
+		            <div style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
+		            <OptionButton label="Strings" selected={colorMode === 'strings'} onClick={() => setColorMode('strings')} />
+		            <OptionButton label="Notes" selected={colorMode === 'notes'} onClick={() => setColorMode('notes')} />
+		          </div>
+		        </div>
+		
+		        <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0 6px' }}>
+		          <span
+		            aria-label={`Notes of ${ordinal(pos)} Position`}
+		            style={{ display:'inline-flex', alignItems:'center', padding:'0.35rem 0.75rem',
+		                     borderRadius:9999, border:'1px solid var(--border)', fontWeight:700,
+		                     letterSpacing:'.01em', color:'var(--ink)', background:'var(--card)',
+		                     boxShadow:'0 1px 0 rgba(0,0,0,0.02)' }}
+		          >
+		            {ordinal(pos)} Position
+		          </span>
+		        </div>
+		
+		        <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:'8px', tableLayout:'fixed' }}>
+		          <thead>
+		            <tr>
+		              <th style={{ width: HEAD_COL_W }} />
+		              {cols.map(c => (
+		                <th key={String(c)} style={{ textAlign: 'center', fontWeight: 700 }}>{colHead(c)}</th>
+		              ))}
+		            </tr>
+		          </thead>
+		          <tbody>
+		            {rows.map(r => (
+		              <tr key={String(r)}>
+		                <th
+		                  aria-label={rowHeadAria(r)}
+		                  style={{ width: HEAD_COL_W, textAlign: 'right', paddingRight: 8, whiteSpace: 'nowrap', fontWeight: 600 }}
+		                >
+		                  {rowHeadVisible(r)}
+		                </th>
+		                {cols.map(c => {
+		                  const { s, f } = cellSF(r, c);
+		                  const pc = pcAt(s, pos, f);
+		                  return (
+		                    <td key={`${s}-${f}`} style={{ padding: 0 }}>
+		                      <div style={{ ...CELL_STYLE, background: bgForCell(s, pc) }} title={`${s} string • ${ordinal(f)} finger`}>
+		                        {labelFor(pc)}
+		                      </div>
+		                    </td>
+		                  );
+		                })}
+		              </tr>
+		            ))}
+		          </tbody>
+		        </table>
+		
+		        <div role="radiogroup" aria-label="Select position" style={{ display:'flex', gap:'.5rem', justifyContent:'center', marginTop:'.75rem' }}>
+		          {POSITIONS.map(n => <OptionButton key={n} label={String(n)} selected={pos === n} onClick={() => setPos(n)} />)}
+		        </div>
+		
+		        <div style={{ display:'flex', gap:'.5rem', justifyContent:'center', marginTop:'.5rem' }}>
+		          <button className="btn btn-secondary" onClick={prev} aria-label="Previous position">Prev</button>
+		          <button className="btn btn-primary" onClick={next} aria-label="Next position">Next</button>
+		        </div>
+		      </div>
+		
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
     function App(){
       const [page,setPage]=React.useState('home');
       const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY,defaultPrefs));
@@ -1699,6 +2110,10 @@
 							    <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('arpeggio')}>Arpeggio Trainer</button>
+									<button className="btn btn-primary" onClick={()=>setPage('ear')}>Ear Trainer</button>
+									<button className="btn btn-primary" onClick={()=>setPage('rhythm')}>Rhythm Drills</button>
+									<button className="btn btn-primary" onClick={()=>setPage('custom')}>Custom Note Drill</button>
 							  </div>
 							
 							  {/* 📊 Progress & Settings */}
@@ -1706,6 +2121,7 @@
 							    <h2>📊 Progress & Settings</h2>
 							    <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('journal')}>Practice Journal</button>
 							  </div>
 							</div>
             </div>
@@ -1728,6 +2144,11 @@
           {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>} 
           {page==='bieler'&&<BielerLab onBack={()=>setPage('home')}/>}
           {page==='positionRef'&&<PositionReference onBack={()=>setPage('home')}/>}
+          {page==='arpeggio' && <ArpeggioTrainer prefs={prefs} onBack={()=>setPage('home')} />}
+					{page==='ear' && <EarTrainer onBack={()=>setPage('home')} />}
+					{page==='rhythm' && <RhythmDrills onBack={()=>setPage('home')} />}
+					{page==='custom' && <CustomDrill prefs={prefs} onBack={()=>setPage('home')} />}
+					{page==='journal' && <PracticeJournal onBack={()=>setPage('home')} />}
         </div>
       );
     }
