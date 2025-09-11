@@ -2232,35 +2232,37 @@
 							</div>
             </div>
           )}
-          {page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>} 
-          {page==='flash'&&<Flashcards prefs={prefs} onBack={()=>setPage('home')}/>} 
-          {page==='snapshot'&&<Snapshot prefs={prefs} onBack={()=>setPage('home')}/>} 
-          {page==='interval'&&<IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>} 
-          {page==='locator'&&<NoteLocator prefs={prefs} onBack={()=>setPage('home')}/>} 
-          {page==='tempo'&&<TempoTrainer onBack={()=>setPage('home')}/>} 
-          {page==='tempoTest'&&<TempoTester onBack={()=>setPage('home')}/>} 
-          {page==='stats'&&<StatsPage onBack={()=>setPage('home')}/>} 
-          {page==='settings'&&<Settings prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>} 
-          {page==='theoryHome'&&<TheoryHome onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>} 
-          {page==='intervalTrainer'&&<IntervalTrainer onBack={()=>setPage('theoryHome')}/>} 
-          {page==='keyTrainer'   && <KeyTrainer onBack={()=>setPage('theoryHome')}/>}
-          {page==='keyTester'    && <KeyTester onBack={()=>setPage('theoryHome')}/>}
-          {page==='timeTrainer'  && <TimeTrainer onBack={()=>setPage('theoryHome')}/>}
-          {page==='timeTester'   && <TimeTester onBack={()=>setPage('theoryHome')}/>}
-          {page==='bieler'       && <BielerLab  onBack={()=>setPage('home')}/>}
-          {page==='arpeggio'     && <ArpeggioTrainer prefs={prefs} onBack={()=>setPage('home')}/>}
-          {page==='ear'          && <EarTrainer onBack={()=>setPage('home')}/>}
-          {page==='rhythm'       && <RhythmDrills onBack={()=>setPage('home')}/>}
-          {page==='custom'       && <CustomDrill prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='speed'        && <SpeedDrill     prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='flash'        && <Flashcards     prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='snapshot'     && <Snapshot       prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='interval'     && <IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='locator'      && <NoteLocator    prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='tempo'        && <TempoTrainer   onBack={()=>setPage('home')}/>} 
+          {page==='tempoTest'    && <TempoTester    onBack={()=>setPage('home')}/>} 
+          {page==='stats'        && <StatsPage      onBack={()=>setPage('home')}/>} 
+          {page==='settings'     && <Settings       prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>} 
+
+          {page==='theoryHome'      && <TheoryHome        onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>} 
+          {page==='intervalTrainer' && <IntervalTrainer   onBack={()=>setPage('theoryHome')}/>} 
+          {page==='intervalTester'  && <IntervalTester    onBack={()=>setPage('theoryHome')}/>} 
+          {page==='keyTrainer'      && <KeyTrainer        onBack={()=>setPage('theoryHome')}/>}
+          {page==='keyTester'       && <KeyTester         onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTrainer'     && <TimeTrainer       onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTester'      && <TimeTester        onBack={()=>setPage('theoryHome')}/>}
+
+          {page==='bieler'       && <BielerLab        onBack={()=>setPage('home')}/>}
+          {page==='arpeggio'     && <ArpeggioTrainer  prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='ear'          && <EarTrainer       onBack={()=>setPage('home')}/>}
+          {page==='rhythm'       && <RhythmDrills     onBack={()=>setPage('home')}/>}
+          {page==='custom'       && <CustomDrill      prefs={prefs} onBack={()=>setPage('home')}/>}
           {page==='positionRef'  && <PositionReference onBack={()=>setPage('home')}/>}
-          {page==='journal'      && <PracticeJournal onBack={()=>setPage('home')}/>}
+          {page==='journal'      && <PracticeJournal   onBack={()=>setPage('home')}/>}
         </div>
       );
     }
-
     // Mount
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    root.render(<React.StrictMode><App/></React.StrictMode>);
   </script>
 </body>
 </html>
