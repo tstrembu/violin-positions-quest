@@ -2146,11 +2146,12 @@
 		            {rows.map(r => (
 		              <tr key={String(r)}>
 		                <th
-		                  aria-label={rowHeadAria(r)}
-		                  style={{ width: HEAD_COL_W, textAlign: 'right', paddingRight: 8, whiteSpace: 'nowrap', fontWeight: 600 }}
-		                >
-		                  {rowHeadVisible(r)}
-		                </th>
+                      scope="row"
+                      aria-label={rowHeadAria(r)}
+                      style={{ width: HEAD_COL_W, textAlign: 'right', paddingRight: 8, whiteSpace: 'nowrap', fontWeight: 600 }}
+                    >
+                      {rowHeadVisible(r)}
+                    </th>
 		                {cols.map(c => {
 		                  const { s, f } = cellSF(r, c);
 		                  const pc = pcAt(s, pos, f);
