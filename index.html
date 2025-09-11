@@ -58,8 +58,8 @@
       --card:#0f1f3d;
       --ink:#e2e8f0;
       --ink-light:#94a3b8;
-      --primary:#7a9fcc;
-      --primary-dark:#5d79a7;
+		  --primary:#4a78b6;
+		  --primary-dark:#355a8a;
       --success:#00b58a;
       --warning:#f3ae3d;
       --danger:#d5672f;
@@ -91,7 +91,7 @@
     (function(){
       const KEY='vmq.theme';
       const saved=localStorage.getItem(KEY);
-      // make screen-reader announcements available everywher
+      // make screen-reader announcements available everywhere
       window.speakSR = (txt) => {
 			  const el = document.getElementById('sr');
 			  if (el) el.textContent = txt;
@@ -113,6 +113,11 @@
     // Helpers
     const loadJSON=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? fb; }catch{return fb;} };
     const saveJSON=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
+    const focusFirstRadio = () => {
+		  requestAnimationFrame(() => {
+		    document.querySelector('[data-autofocus="true"]')?.focus();
+		  });
+		};
     const STRINGS=['G','D','A','E'];
     const POSITIONS=[1,2,3,4,5];
     const FINGERS=[1,2,3,4];
@@ -120,6 +125,9 @@
     const BASE_OFF={1:2,2:4,3:5,4:7};
     const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
     const NOTE_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
+    const NOTE_TO_PC = Object.fromEntries(
+		  Object.entries(NOTE_NAME).map(([k, v]) => [v, Number(k)])
+		);
     const MIDI_BASE={ G:55, D:62, A:69, E:76 };
 
     // Audio engine for simple oscillator notes, intervals and feedback beeps
@@ -223,42 +231,90 @@
     const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
 
     // Hook for keyboard shortcuts
-    function useAnswerHotkeys(enabled,onIndex,onBack,count=4){
-      React.useEffect(()=>{
-        if(!enabled) return;
-        const handler=(e)=>{
-          const t = e.target;
-          const tag = (t && t.tagName || '').toLowerCase();
-          if(tag==='input' || tag==='select' || tag==='textarea' || (t && t.isContentEditable)) return;
-          const k=e.key;
-          if(k>='1' && k<='9'){
-            const idx=Number(k)-1;
-            if(idx < (count??4)) onIndex(idx);
-          } else if(k==='Enter') {
-            onIndex(0);
-          } else if(k==='Escape') {
-            onBack();
-          }
-        };
-        window.addEventListener('keydown',handler);
-        return ()=>window.removeEventListener('keydown',handler);
-      },[enabled,onIndex,onBack,count]);
-    }
-
-    function OptionButton({label,selected,onClick}){
-      const bg=selected? 'var(--primary-dark)' : 'var(--primary)';
-      return (
-        <button
-          className="option-btn"
-          role="radio"
-          aria-checked={selected}
-          style={{background:bg}}
-          onClick={onClick}
-        >
-          {label}
-        </button>
-      );
-    }
+    function useAnswerHotkeys(enabled, onIndex, onBack, count = 4) {
+		  const cursorRef = React.useRef(-1);
+		
+		  React.useEffect(() => {
+		    if (!enabled) return;
+		    const handler = (e) => {
+		      const t = e.target;
+		      const tag = (t && t.tagName || '').toLowerCase();
+		      if (tag === 'input' || tag === 'select' || tag === 'textarea' || (t && t.isContentEditable)) return;
+		
+		      const k = e.key;
+		      const max = (count ?? 4) - 1;
+		
+		      if (k >= '1' && k <= '9') {
+		        const idx = Number(k) - 1;
+		        if (idx <= max) { cursorRef.current = idx; onIndex(idx); }
+		      } else if (k === 'Enter') {
+		        cursorRef.current = 0; onIndex(0);
+		      } else if (k === 'Escape') {
+		        onBack();
+		      } else if (k === 'ArrowRight' || k === 'ArrowDown') {
+		        const next = Math.min((cursorRef.current < 0 ? 0 : cursorRef.current) + 1, max);
+		        cursorRef.current = next; onIndex(next);
+		      } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
+		        const prev = Math.max((cursorRef.current < 0 ? 0 : cursorRef.current) - 1, 0);
+		        cursorRef.current = prev; onIndex(prev);
+		      }
+		    };
+		    window.addEventListener('keydown', handler);
+		    return () => window.removeEventListener('keydown', handler);
+		  }, [enabled, onIndex, onBack, count]);
+		
+		  React.useEffect(() => { cursorRef.current = -1; }, [enabled, count]);
+		}
+		function useRadioHotkeys(enabled, { count = 4, onMove, onSubmit, onBack }) {
+		  const cursorRef = React.useRef(0);
+		
+		  React.useEffect(() => { cursorRef.current = 0; }, [enabled, count]);
+		
+		  React.useEffect(() => {
+		    if (!enabled) return;
+		    const handler = (e) => {
+		      const t = e.target;
+		      const tag = (t && t.tagName || '').toLowerCase();
+		      if (tag === 'input' || tag === 'select' || tag === 'textarea' || (t && t.isContentEditable)) return;
+		
+		      const max = Math.max(0, (count ?? 4) - 1);
+		      const k = e.key;
+		
+		      if (k >= '1' && k <= '9') {
+		        const idx = Math.min(Number(k) - 1, max);
+		        cursorRef.current = idx; onMove?.(idx);
+		      } else if (k === 'ArrowRight' || k === 'ArrowDown') {
+		        const next = Math.min((cursorRef.current < 0 ? 0 : cursorRef.current) + 1, max);
+		        cursorRef.current = next; onMove?.(next);
+		      } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
+		        const prev = Math.max((cursorRef.current < 0 ? 0 : cursorRef.current) - 1, 0);
+		        cursorRef.current = prev; onMove?.(prev);
+		      } else if (k === 'Enter' || k === ' ') {
+		        onSubmit?.(cursorRef.current);
+		      } else if (k === 'Escape') {
+		        onBack?.();
+		      }
+		    };
+		    window.addEventListener('keydown', handler);
+		    return () => window.removeEventListener('keydown', handler);
+		  }, [enabled, count, onMove, onSubmit, onBack]);
+		}
+    function OptionButton({ label, selected, onClick, shortcut, ...rest }) {
+		  const bg = selected ? 'var(--primary-dark)' : 'var(--primary)';
+		  return (
+		    <button
+		      className="option-btn"
+		      role="radio"
+		      aria-checked={selected}
+		      aria-keyshortcuts={shortcut}
+		      style={{ background: bg }}
+		      onClick={onClick}
+		      {...rest}
+		    >
+		      {label}
+		    </button>
+		  );
+		}
     function PillToggle({label, pressed, onClick}) {
 		  const bg = pressed ? 'var(--primary-dark)' : 'var(--primary)';
 		  return (
@@ -438,7 +494,8 @@
 
     // Visual fingerboard component (HORIZONTAL): 5 positions × 4 fingers across 4 strings
     function VisualFingerboard({ highlight = [], onSelect, disabled }) {
-    	const patId = React.useId(); // unique per instance
+  		const patId = React.useMemo(() => 'pat-' + Math.random().toString(36).slice(2), []);
+    	
       // --- geometry --------------------------------------------------------------
       const POS_W = 120;                  // width per position segment
       const LEFT_PAD = 72;                // space for string labels + nut
@@ -481,7 +538,7 @@
           width="100%"
           height="auto"
           role="grid"
-          aria-label="Fingerboard (horizontal)"
+          aria-label="Fingerboard (horizontal). Press Enter to choose."
           aria-rowcount={4}
   				aria-colcount={POSITIONS.length * 4}
         >
@@ -575,6 +632,7 @@
                       aria-selected={kind === 'chosen' || kind === 'correct'}
                       aria-label={`${s} string, ${ordinal(p)} position, finger ${f}`}
                       tabIndex={disabled ? -1 : 0}
+                      style={{ cursor: disabled ? 'default' : 'pointer' }}
                       onClick={() => act({ s, p, f })}
                       onKeyDown={e => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) act({ s, p, f }); }}
                     />
@@ -605,9 +663,15 @@
       const [answered,setAnswered]=React.useState(0);
       const [q,setQ]=React.useState(null);
       const [selected,setSelected]=React.useState(null);
-      const pick=React.useCallback(()=>{
-        if(!cells.length){ setQ(null); return; }
-        const weight=c=>{ const k=`${c.s}:${c.p}:${c.f}`; const st=stats[k]||{correct:0,total:0}; const acc=st.total? st.correct/st.total : 0; return 1-acc+0.05; };
+      const pick = React.useCallback((statsArg) => {
+			  if (!cells.length) { setQ(null); return; }
+			  const sstats = statsArg ?? stats;
+			  const weight = c => {
+			    const k = `${c.s}:${c.p}:${c.f}`;
+			    const st = sstats[k] || { correct: 0, total: 0 };
+			    const acc = st.total ? st.correct / st.total : 0;
+			    return 1 - acc + 0.05;
+			  };
         const total=cells.reduce((sum,c)=>sum+weight(c),0);
         let r=Math.random()*total; let chosen=cells[cells.length-1];
         for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break;} }
@@ -636,14 +700,14 @@
           setAnswered(a=>a+1);
           if(ok) setScore(s=>s+1);
           setStats(prev=>{
-            const k=`${q.cell.s}:${q.cell.p}:${q.cell.f}`;
-            const st=prev[k]||{correct:0,total:0};
-            const next={...prev,[k]:{correct:st.correct+(ok?1:0), total:st.total+1}};
-            saveJSON(STATS_KEY,next);
-            return next;
-          });
+					  const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
+					  const st = prev[k] || { correct: 0, total: 0 };
+					  const next = { ...prev, [k]: { correct: st.correct + (ok ? 1 : 0), total: st.total + 1 } };
+					  saveJSON(STATS_KEY, next);
+					  setTimeout(() => pick(next), 0);
+					  return next;
+					});
           addXP(ok?8:2);
-          pick();
         },200);
       };
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
@@ -956,7 +1020,7 @@
               </span>
               <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
                 <span style={{display:'inline-block',background:'var(--warning)',borderRadius:'3px',padding:'0 4px',backgroundImage:'linear-gradient(45deg, var(--warning) 25%, var(--card) 25%, var(--card) 50%, var(--warning) 50%, var(--warning) 75%, var(--card) 75%, var(--card) 100%)',backgroundSize:'8px 8px',height:'1em',width:'1em'}}></span>
-                Option
+                Available option (click to choose)
               </span>
             </div>
             <details style={{marginTop:'0.5rem'}}>
@@ -1058,7 +1122,13 @@
             <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
               <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div>
             </div>
-            <p style={{marginTop:'0.5rem'}}>Badges: {'⭐'.repeat(lvl)}</p>
+						{/* Stats badges: cap to 10 and show multiplier */}
+						<p style={{marginTop:'0.5rem'}}>
+						  Badges:{' '}
+						  <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
+						    {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
+						  </span>
+						</p>
           </div>
           {STRINGS.map(s=>(
             <div className="card" key={s}>
@@ -1113,6 +1183,7 @@
       return (<div><div className="card"><h2>Tempo Trainer</h2><p><strong>{t.it}</strong></p>{show? (<p>{t.en} — {t.range}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}<div style={{marginTop:'0.5rem'}}><button className="btn btn-secondary" onClick={prev}>Prev</button><button className="btn btn-primary" onClick={next}>Next</button><button className="btn btn-success" onClick={()=>{ speak(t.it); speak(t.en); }}>Speak</button></div></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
     }
     function TempoTester({onBack}){
+      const [cursor, setCursor] = React.useState(0);
       const [time,setTime]=React.useState(60);
       const [paused,setPaused]=React.useState(false);
       const [score,setScore]=React.useState(0);
@@ -1146,7 +1217,12 @@
         },200);
       };
       React.useEffect(()=>()=>clearTimeout(tRef.current),[]);
-      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length ?? 4);
+      useRadioHotkeys(!!q, {
+			  count: q?.options?.length ?? 4,
+			  onMove: setCursor,
+			  onSubmit: (i) => { if (q && q.options[i]) answer(q.options[i], i); },
+			  onBack
+			});
       if(time===0) return <div className="card"><h2>Tempo Tester Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       return (
         <div>
@@ -1157,7 +1233,16 @@
             {q && (
               <div>
                 <p>What does {q.term} mean?</p>
-                {q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}
+                {q.options.map((opt,i)=>(
+								  <OptionButton
+								    key={i}
+								    label={opt}
+								    selected={cursor===i}
+								    shortcut={String(i+1)}
+								    onClick={()=>answer(opt,i)}
+								    data-autofocus={i===0 ? 'true' : undefined}
+								  />
+								))}
               </div>
             )}
           </div>
@@ -1448,10 +1533,11 @@
 		  const [answered, setAnswered] = React.useState(0);
 		  const [q, setQ] = React.useState(null);
 		  const [locked, setLocked] = React.useState(false);
-		
+		  		
 		  const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
 		
-		  const pcName = (pc) => NOTE_NAME[((pc % 12) + 12) % 12];
+		  const ENH = {0:'C',1:'C♯/D♭',2:'D',3:'D♯/E♭',4:'E',5:'F',6:'F♯/G♭',7:'G',8:'G♯/A♭',9:'A',10:'A♯/B♭',11:'B'};
+			const pcName = (pc) => ENH[((pc % 12) + 12) % 12];
 		
 		  const pick = React.useCallback(() => {
 		    if (!cells.length) { setQ(null); return; }
@@ -1505,7 +1591,7 @@
 		    if (!q || locked) return;
 		    const expectedPc = q.pcs[q.step];
 		    const chosenName = canonicalBase(cell.s, cell.p, cell.f);
-		    const chosenPc = Number(Object.entries(NOTE_NAME).find(([, nm]) => nm === chosenName)?.[0] ?? -1);
+		    const chosenPc = NOTE_TO_PC[chosenName] ?? -1;
 		    const ok = chosenPc === expectedPc;
 		
 		    if (ok) {
@@ -1565,12 +1651,15 @@
 		}
 		// --- Rhythm Drills -----------------------------------------------------------
 		function RhythmDrills({ onBack }) {
+		  const [loop, setLoop] = React.useState(false);
 		  const [time, setTime] = React.useState(60);
 		  const [paused, setPaused] = React.useState(false);
 		  const [score, setScore] = React.useState(0);
 		  const [answered, setAnswered] = React.useState(0);
 		  const [q, setQ] = React.useState(null);
 		  const timersRef = React.useRef([]);
+		  const xp  = loadJSON('vmq.v4.xp', 0);
+			const lvl = levelForXP(xp);
 		
 		  const PATTERNS = [
 		    { sig: '4/4', unit: 'quarter', bpm: 96, beats: 4, accents: [0] },
@@ -1589,20 +1678,21 @@
 		  };
 		
 		  const playPattern = (pattern) => {
-		    clearTimers();
-		    const dur = beatMs(pattern);
-		    for (let i = 0; i < pattern.beats; i++) {
-		      const accent = pattern.accents.includes(i);
-		      const at = i * dur;
-		      const id = setTimeout(() => {
-		        try {
-		          // accent = higher pitch, short blip
-		          audioEngine.playNote({ midi: accent ? 93 : 81, durationMs: 140 });
-		        } catch {}
-		      }, at);
-		      timersRef.current.push(id);
-		    }
-		  };
+			  clearTimers();
+			  const dur = beatMs(pattern);
+			  for (let i = 0; i < pattern.beats; i++) {
+			    const accent = pattern.accents.includes(i);
+			    const at = i * dur;
+			    const id = setTimeout(() => {
+			      try { audioEngine.playNote({ midi: accent ? 93 : 81, durationMs: 140 }); } catch {}
+			    }, at);
+			    timersRef.current.push(id);
+			  }
+			  if (loop) {
+			    const id2 = setTimeout(() => playPattern(pattern), pattern.beats * dur + 40);
+			    timersRef.current.push(id2);
+			  }
+			};
 		
 		  const pick = React.useCallback(() => {
 		    const item = getRandom(PATTERNS);
@@ -1611,7 +1701,7 @@
 		    setQ({ pattern: item, options, correct: item.sig });
 		    // autoplay
 		    playPattern(item);
-		  }, []);
+		  }, [loop]);
 		
 		  React.useEffect(() => { pick(); return clearTimers; }, [pick]);
 		
@@ -1646,13 +1736,19 @@
 		      <div className="card">
 		        <h2>Rhythm Drills</h2>
 		        <p>Time {time}s | Score {score}/{answered}</p>
-		        <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
-		          <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
-		            {paused ? 'Resume' : 'Pause'}
-		          </button>
-		          <button className="btn btn-primary" onClick={() => playPattern(q.pattern)}>Play Again</button>
-		        </div>
-		        <p style={{marginTop:'.5rem'}}>Which time signature best fits the pattern?</p>
+						<div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
+						  <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
+						    {paused ? 'Resume' : 'Pause'}
+						  </button>
+						  <button className="btn btn-primary" onClick={() => playPattern(q.pattern)}>Play Again</button>
+						  <PillToggle label={`Loop ${loop ? 'On' : 'Off'}`} pressed={loop} onClick={() => setLoop(l => !l)} />
+						</div>
+		        <p style={{marginTop:'0.5rem'}}>
+						  Badges:{' '}
+						  <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
+						    {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
+						  </span>
+						</p>
 		        <div role="radiogroup" aria-label="Time signature choices">
 		          {q.options.map((opt, i) => (
 		            <OptionButton key={i} label={opt} selected={false} onClick={() => answer(opt, i)} />
@@ -1670,6 +1766,20 @@
 		  const [score, setScore] = React.useState(0);
 		  const [answered, setAnswered] = React.useState(0);
 		  const [q, setQ] = React.useState(null);
+		  const [loop, setLoop] = React.useState(false);
+		
+		  const timersRef = React.useRef([]);
+		  const clearTimers = () => { timersRef.current.forEach(id => clearTimeout(id)); timersRef.current = []; };
+		  React.useEffect(() => () => clearTimers(), []);
+		
+		  const playCurrent = React.useCallback((rootMidi, semitones) => {
+		    clearTimers();
+		    try { audioEngine.playInterval({ rootMidi, semitones }); } catch {}
+		    if (loop) {
+		      const id = setTimeout(() => playCurrent(rootMidi, semitones), 900); // ~0.9s cycle
+		      timersRef.current.push(id);
+		    }
+		  }, [loop]);
 		
 		  const pick = React.useCallback(() => {
 		    const item = getRandom(INTERVALS);
@@ -1677,8 +1787,8 @@
 		    const options = shuffle([correct, ...shuffle(INTERVALS.map(x => x.name).filter(n => n !== correct)).slice(0, 3)]);
 		    const rootMidi = 60 + Math.floor(Math.random() * 12);
 		    setQ({ correct, options, semitones: item.semitones, rootMidi });
-		    try { audioEngine.playInterval({ rootMidi, semitones: item.semitones }); } catch {}
-		  }, []);
+		    playCurrent(rootMidi, item.semitones);
+		  }, [playCurrent]);
 		
 		  React.useEffect(() => { pick(); }, [pick]);
 		
@@ -1699,7 +1809,7 @@
 		  }
 		  if (!q) return null;
 		
-		  const answer = (opt, idx) => {
+		  const answer = (opt) => {
 		    setAnswered(a => a + 1);
 		    const ok = opt === q.correct;
 		    speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
@@ -1713,19 +1823,18 @@
 		      <div className="card">
 		        <h2>Ear Trainer</h2>
 		        <p>Time {time}s | Score {score}/{answered}</p>
+		        <p style={{marginTop:'.5rem'}}>Which interval did you hear?</p>
+		        <div role="radiogroup" aria-label="Intervals">
+		          {q.options.map((opt, i) => (
+		            <OptionButton key={i} label={opt} selected={false} onClick={() => answer(opt)} />
+		          ))}
+		        </div>
 		        <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
 		          <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
 		            {paused ? 'Resume' : 'Pause'}
 		          </button>
-		          <button className="btn btn-primary" onClick={() => {
-		            try { audioEngine.playInterval({ rootMidi: q.rootMidi, semitones: q.semitones }); } catch {}
-		          }}>Play Again</button>
-		        </div>
-		        <p style={{marginTop:'.5rem'}}>Which interval did you hear?</p>
-		        <div role="radiogroup" aria-label="Intervals">
-		          {q.options.map((opt, i) => (
-		            <OptionButton key={i} label={opt} selected={false} onClick={() => answer(opt, i)} />
-		          ))}
+		          <button className="btn btn-primary" onClick={() => playCurrent(q.rootMidi, q.semitones)}>Play Again</button>
+		          <PillToggle label={`Loop ${loop ? 'On' : 'Off'}`} pressed={loop} onClick={() => setLoop(l => !l)} />
 		        </div>
 		      </div>
 		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
@@ -2138,21 +2247,23 @@
           {page==='theoryHome'&&<TheoryHome onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>} 
           {page==='intervalTrainer'&&<IntervalTrainer onBack={()=>setPage('theoryHome')}/>} 
           {page==='intervalTester'&&<IntervalTester onBack={()=>setPage('theoryHome')}/>} 
-          {page==='keyTrainer'&&<KeyTrainer onBack={()=>setPage('theoryHome')}/>} 
-          {page==='keyTester'&&<KeyTester onBack={()=>setPage('theoryHome')}/>} 
-          {page==='timeTrainer'&&<TimeTrainer onBack={()=>setPage('theoryHome')}/>} 
-          {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>} 
-          {page==='bieler'&&<BielerLab onBack={()=>setPage('home')}/>}
-          {page==='positionRef'&&<PositionReference onBack={()=>setPage('home')}/>}
-          {page==='arpeggio' && <ArpeggioTrainer prefs={prefs} onBack={()=>setPage('home')} />}
-					{page==='ear' && <EarTrainer onBack={()=>setPage('home')} />}
-					{page==='rhythm' && <RhythmDrills onBack={()=>setPage('home')} />}
-					{page==='custom' && <CustomDrill prefs={prefs} onBack={()=>setPage('home')} />}
-					{page==='journal' && <PracticeJournal onBack={()=>setPage('home')} />}
-        </div>
-      );
-    }
-    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+          {page==='keyTrainer' && <KeyTrainer onBack={() => setPage('theoryHome')} />}
+					{page==='keyTester' && <KeyTester onBack={() => setPage('theoryHome')} />}
+					{page==='timeTrainer' && <TimeTrainer onBack={() => setPage('theoryHome')} />}
+					{page==='timeTester' && <TimeTester onBack={() => setPage('theoryHome')} />}
+					{page==='bieler' && <BielerLab onBack={() => setPage('home')} />}
+					{page==='positionRef' && <PositionReference onBack={() => setPage('home')} />}
+					{page==='arpeggio' && <ArpeggioTrainer prefs={prefs} onBack={() => setPage('home')} />}
+					{page==='ear' && <EarTrainer onBack={() => setPage('home')} />}
+					{page==='rhythm' && <RhythmDrills onBack={() => setPage('home')} />}
+					{page==='custom' && <CustomDrill prefs={prefs} onBack={() => setPage('home')} />}
+					{page==='journal' && <PracticeJournal onBack={() => setPage('home')} />}
+					        </div>
+					      );
+					    }
+					
+     const root = ReactDOM.createRoot(document.getElementById('root'));
+	    root.render(<App />);
   </script>
 </body>
 </html>
