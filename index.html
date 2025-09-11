@@ -113,11 +113,6 @@
     // Helpers
     const loadJSON=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? fb; }catch{return fb;} };
     const saveJSON=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
-    const focusFirstRadio = () => {
-		  requestAnimationFrame(() => {
-		    document.querySelector('[data-autofocus="true"]')?.focus();
-		  });
-		};
     const STRINGS=['G','D','A','E'];
     const POSITIONS=[1,2,3,4,5];
     const FINGERS=[1,2,3,4];
@@ -2262,8 +2257,7 @@
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    const root = ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
