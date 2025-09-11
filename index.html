@@ -343,12 +343,12 @@
       { term:'Bow Hold', def:'Flexible, pronation-ready grip with curved fingers and mobile thumb.' },
       { term:'Contact Point', def:'Soundpoint between bridge and fingerboard; chosen by speed/pressure/tilt.' },
       { term:'Bow Angles', def:'String crossings via forearm/upper arm levels; keep hair tangent to soundpoint.' },
-      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
+      { term:'Détaché', def:'Connected, articulated bows; the default singing stroke.' },
       { term:'Legato', def:'Multiple notes under one bow with seamless changes.' },
-      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
-      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
+      { term:'Collé', def:'Pinch-and-release articulation from the fingers near the bow start.' },
+      { term:'Martelé', def:'Accented, stopped stroke—bite, release, ring.' },
       { term:'Spiccato', def:'Controlled bounce near the balance point—vertical energy, horizontal timing.' },
-      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
+      { term:'Sautillé', def:'Fast natural bow spring at higher speeds; small surface motion.' },
       { term:'Ricochet', def:'Thrown bow that rebounds multiple times with one impulse.' },
       { term:'Firm Staccato', def:'In-the-string articulated stops in one bow direction.' },
       { term:'Flying Staccato', def:'Off-the-string successive stops in a single bow.' },
@@ -360,13 +360,13 @@
     const BIELER_CONCEPT_QA = [
       { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
       { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
-      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
+      { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
       { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
     ];
     const BIELER_APPLY = [
       { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
-      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
-      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
+      { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
+      { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
     ];
     function BielerLab({ onBack }) {
       const [mode,setMode] = React.useState('vocab');
@@ -1169,7 +1169,7 @@
     }
 
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
-    const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
+    const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
     const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
     const TIME_SIGNATURES=[{sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},{sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},{sig:'4/4', description:'4 quarter-note beats per measure (common time)'},{sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},{sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},{sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}];
 
@@ -2247,23 +2247,23 @@
           {page==='theoryHome'&&<TheoryHome onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>} 
           {page==='intervalTrainer'&&<IntervalTrainer onBack={()=>setPage('theoryHome')}/>} 
           {page==='intervalTester'&&<IntervalTester onBack={()=>setPage('theoryHome')}/>} 
-          {page==='keyTrainer' && <KeyTrainer onBack={() => setPage('theoryHome')} />}
-					{page==='keyTester' && <KeyTester onBack={() => setPage('theoryHome')} />}
-					{page==='timeTrainer' && <TimeTrainer onBack={() => setPage('theoryHome')} />}
-					{page==='timeTester' && <TimeTester onBack={() => setPage('theoryHome')} />}
-					{page==='bieler' && <BielerLab onBack={() => setPage('home')} />}
-					{page==='positionRef' && <PositionReference onBack={() => setPage('home')} />}
-					{page==='arpeggio' && <ArpeggioTrainer prefs={prefs} onBack={() => setPage('home')} />}
-					{page==='ear' && <EarTrainer onBack={() => setPage('home')} />}
-					{page==='rhythm' && <RhythmDrills onBack={() => setPage('home')} />}
-					{page==='custom' && <CustomDrill prefs={prefs} onBack={() => setPage('home')} />}
-					{page==='journal' && <PracticeJournal onBack={() => setPage('home')} />}
-					        </div>
-					      );
-					    }
-					
-     const root = ReactDOM.createRoot(document.getElementById('root'));
-	    root.render(<App />);
+          {page==='keyTrainer' && <KeyTrainer onBack={()=>setPage('theoryHome')}/>}
+          {page==='keyTester' && <KeyTester onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTrainer' && <TimeTrainer onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTester' && <TimeTester onBack={()=>setPage('theoryHome')}/>}
+          {page==='bieler' && <BielerLab onBack={()=>setPage('home')}/>}
+          {page==='arpeggio' && <ArpeggioTrainer prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='ear' && <EarTrainer onBack={()=>setPage('home')}/>}
+          {page==='rhythm' && <RhythmDrills onBack={()=>setPage('home')}/>}
+          {page==='custom' && <CustomDrill prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='positionRef' && <PositionReference onBack={()=>setPage('home')}/>}
+          {page==='journal' && <PracticeJournal onBack={()=>setPage('home')}/>}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
