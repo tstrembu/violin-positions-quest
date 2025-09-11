@@ -202,28 +202,31 @@
 		  React.useEffect(() => {
 		    if (!enabled) return;
 		    const handler = (e) => {
-		      const t = e.target;
-		      const tag = (t && t.tagName || '').toLowerCase();
-		      if (tag === 'input' || tag === 'select' || tag === 'textarea' || (t && t.isContentEditable)) return;
-		
-		      const k = e.key;
-		      const max = (count ?? 4) - 1;
-		
-		      if (k >= '1' && k <= '9') {
-		        const idx = Number(k) - 1;
-		        if (idx <= max) { cursorRef.current = idx; onIndex(idx); }
-		      } else if (k === 'Enter') {
-		        cursorRef.current = 0; onIndex(0);
-		      } else if (k === 'Escape') {
-		        onBack();
-		      } else if (k === 'ArrowRight' || k === 'ArrowDown') {
-		        const next = Math.min((cursorRef.current < 0 ? 0 : cursorRef.current) + 1, max);
-		        cursorRef.current = next; onIndex(next);
-		      } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
-		        const prev = Math.max((cursorRef.current < 0 ? 0 : cursorRef.current) - 1, 0);
-		        cursorRef.current = prev; onIndex(prev);
-		      }
-		    };
+        const t = e.target;
+        const tag = (t && t.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'select' || tag === 'textarea' || (t && t.isContentEditable)) return;
+      
+        const k = e.key;
+        const max = (count ?? 4) - 1;
+        let handled = false;
+      
+        if (k >= '1' && k <= '9') {
+          const idx = Number(k) - 1;
+          if (idx <= max) { cursorRef.current = idx; onIndex(idx); handled = true; }
+        } else if (k === 'Enter') {
+          cursorRef.current = 0; onIndex(0); handled = true;
+        } else if (k === 'Escape') {
+          onBack(); handled = true;
+        } else if (k === 'ArrowRight' || k === 'ArrowDown') {
+          const next = Math.min((cursorRef.current < 0 ? 0 : cursorRef.current) + 1, max);
+          cursorRef.current = next; onIndex(next); handled = true;
+        } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
+          const prev = Math.max((cursorRef.current < 0 ? 0 : cursorRef.current) - 1, 0);
+          cursorRef.current = prev; onIndex(prev); handled = true;
+        }
+      
+        if (handled) { e.preventDefault(); e.stopPropagation(); }
+      };
 		    window.addEventListener('keydown', handler);
 		    return () => window.removeEventListener('keydown', handler);
 		  }, [enabled, onIndex, onBack, count]);
@@ -238,28 +241,31 @@
 		  React.useEffect(() => {
 		    if (!enabled) return;
 		    const handler = (e) => {
-		      const t = e.target;
-		      const tag = (t && t.tagName || '').toLowerCase();
-		      if (tag === 'input' || tag === 'select' || tag === 'textarea' || (t && t.isContentEditable)) return;
-		
-		      const max = Math.max(0, (count ?? 4) - 1);
-		      const k = e.key;
-		
-		      if (k >= '1' && k <= '9') {
-		        const idx = Math.min(Number(k) - 1, max);
-		        cursorRef.current = idx; onMove?.(idx);
-		      } else if (k === 'ArrowRight' || k === 'ArrowDown') {
-		        const next = Math.min((cursorRef.current < 0 ? 0 : cursorRef.current) + 1, max);
-		        cursorRef.current = next; onMove?.(next);
-		      } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
-		        const prev = Math.max((cursorRef.current < 0 ? 0 : cursorRef.current) - 1, 0);
-		        cursorRef.current = prev; onMove?.(prev);
-		      } else if (k === 'Enter' || k === ' ') {
-		        onSubmit?.(cursorRef.current);
-		      } else if (k === 'Escape') {
-		        onBack?.();
-		      }
-		    };
+        const t = e.target;
+        const tag = (t && t.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'select' || tag === 'textarea' || (t && t.isContentEditable)) return;
+      
+        const max = Math.max(0, (count ?? 4) - 1);
+        const k = e.key;
+        let handled = false;
+      
+        if (k >= '1' && k <= '9') {
+          const idx = Math.min(Number(k) - 1, max);
+          cursorRef.current = idx; onMove?.(idx); handled = true;
+        } else if (k === 'ArrowRight' || k === 'ArrowDown') {
+          const next = Math.min((cursorRef.current < 0 ? 0 : cursorRef.current) + 1, max);
+          cursorRef.current = next; onMove?.(next); handled = true;
+        } else if (k === 'ArrowLeft' || k === 'ArrowUp') {
+          const prev = Math.max((cursorRef.current < 0 ? 0 : cursorRef.current) - 1, 0);
+          cursorRef.current = prev; onMove?.(prev); handled = true;
+        } else if (k === 'Enter' || k === ' ') {
+          onSubmit?.(cursorRef.current); handled = true;
+        } else if (k === 'Escape') {
+          onBack?.(); handled = true;
+        }
+      
+        if (handled) { e.preventDefault(); e.stopPropagation(); }
+      };
 		    window.addEventListener('keydown', handler);
 		    return () => window.removeEventListener('keydown', handler);
 		  }, [enabled, count, onMove, onSubmit, onBack]);
