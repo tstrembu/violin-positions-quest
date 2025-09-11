@@ -81,6 +81,42 @@
   <div id="sr" class="sr-only" aria-live="polite"></div>
   <script type="text/babel" data-presets="react">
     // Helpers
+    // ---- Safe speech helper (covers iOS/Safari quirks) --------------------------
+    function speak(text, { rate = 0.9, pitch = 1, lang, voiceName } = {}) {
+      try {
+        if (!text) return;
+        const synth = window.speechSynthesis;
+        const Utterance = window.SpeechSynthesisUtterance;
+        if (!synth || !Utterance) return; // unsupported browser
+    
+        // iOS/Safari can delay voice availability until getVoices() is touched.
+        // The call below (and the onvoiceschanged hookup) nudges voice loading.
+        let voices = [];
+        try {
+          voices = synth.getVoices?.() || [];
+          if (typeof synth.onvoiceschanged === 'undefined') {
+            // no-op read to encourage voice population on some iOS builds
+            void voices.length;
+          }
+        } catch {}
+    
+        const u = new Utterance(String(text));
+        u.rate = rate;
+        u.pitch = pitch;
+    
+        if (lang) u.lang = lang;
+        if (voiceName && Array.isArray(voices)) {
+          const v = voices.find(v => v.name === voiceName);
+          if (v) u.voice = v;
+        }
+    
+        // Cancel any pending speech before speaking (prevents overlap).
+        try { synth.cancel(); } catch {}
+        synth.speak(u);
+      } catch {
+        // swallow—speech is a progressive enhancement
+      }
+    }
     const loadJSON=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? fb; }catch{return fb;} };
     const saveJSON=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
     const STRINGS=['G','D','A','E'];
