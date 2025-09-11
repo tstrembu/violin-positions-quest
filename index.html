@@ -1074,7 +1074,9 @@
                 r.onload=()=>{
                   try{
                     const obj=JSON.parse(r.result);
-                    Object.entries(obj).forEach(([k,v])=>{ localStorage.setItem(k,v); });
+                    Object.entries(obj).forEach(([k,v])=>{
+                      if (/^vmq\.v[45]\./.test(k)) localStorage.setItem(k, v);
+                    });
                     alert('Import complete. Please reload.');
                   }catch{ alert('Invalid JSON'); }
                 };
