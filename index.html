@@ -113,134 +113,73 @@
     const POS_SHIFT={1:0,2:2,3:3,4:5,5:7};
     const NOTE_NAME={0:'C',1:'Db',2:'D',3:'Eb',4:'E',5:'F',6:'F#',7:'G',8:'Ab',9:'A',10:'Bb',11:'B'};
     const MIDI_BASE={ G:55, D:62, A:69, E:76 };
-    
-    /* === NEW: helper maps & utilities (paste under helpers) =================== */
-		
-		// Canonical VMQ note set (matches NOTE_NAME): C, Db, D, Eb, E, F, F#, G, Ab, A, Bb, B
-		const VMQ_NOTES = Object.values(NOTE_NAME); // ["C","Db","D","Eb","E","F","F#","G","Ab","A","Bb","B"]
-		
-		// Reverse map: "Db" -> 1, "F#" -> 6, etc.
-		const PC_FROM_CANON = VMQ_NOTES.reduce((acc, name, pc) => (acc[name] = pc, acc), {});
-		
-		// Get all cells (s,p,f) that can produce a canonical note on currently-enabled strings/positions
-		const cellsForNote = (note, prefs) =>
-		  CELLS.filter(c => prefs.strings[c.s] && prefs.positions[c.p] && c.canon === note);
-		
-		// MIDI for a fingerboard cell
-		const midiForCell = (s, p, f) => MIDI_BASE[s] + POS_SHIFT[p] + BASE_OFF[f];
-		
-		// Quick MIDI-from-pitch-class helper (keeps tones around a center)
-		function midiFromPcNear(pc, centerMidi = 64) { // E4-ish center
-		  const centerPc = ((centerMidi % 12) + 12) % 12;
-		  let diff = pc - centerPc;
-		  if (diff > 6) diff -= 12;
-		  if (diff < -6) diff += 12;
-		  return centerMidi + diff;
-		}
-		
-		// Very small, dependency-free localStorage hook (used by Journal)
-		function useLocalStorage(key, initialValue) {
-		  const [val, setVal] = React.useState(() => loadJSON(key, initialValue));
-		  React.useEffect(() => saveJSON(key, val), [key, val]);
-		  return [val, setVal];
-		}
-		
-		/* === NEW: drift-free countdown (used by new drills; optional for old ones) == */
-		function useCountdown({ seconds, paused, onDone }) {
-		  const [left, setLeft] = React.useState(seconds);
-		  const targetRef = React.useRef();
-		
-		  React.useEffect(() => {
-		    targetRef.current = performance.now() + seconds * 1000;
-		    setLeft(seconds);
-		  }, [seconds]);
-		
-		  React.useEffect(() => {
-		    if (paused) return;
-		    let raf;
-		    const tick = () => {
-		      const ms = Math.max(0, targetRef.current - performance.now());
-		      const nextLeft = Math.ceil(ms / 1000);
-		      setLeft(prev => (prev !== nextLeft ? nextLeft : prev));
-		      if (ms <= 0) { onDone?.(); return; }
-		      raf = requestAnimationFrame(tick);
-		    };
-		    raf = requestAnimationFrame(tick);
-		    return () => cancelAnimationFrame(raf);
-		  }, [paused, onDone]);
-		
-		  return left;
-		}
 
-    // Audio engine with master gain + compressor and feedback beeps
-		class AudioEngine{
-		  constructor(){
-		    this.ctx = null;
-		    this.mute = loadJSON('vmq.v4.mute', false);
-		    this.master = null;
-		    this.comp = null;
-		  }
-		  ensure(){
-		    if(!this.ctx){
-		      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-		      this.master = this.ctx.createGain();
-		      this.master.gain.value = 0.9;
-		      this.comp = this.ctx.createDynamicsCompressor();
-		      this.master.connect(this.comp);
-		      this.comp.connect(this.ctx.destination);
-		    }
-		    if(this.ctx.state === 'suspended') this.ctx.resume();
-		    return this.ctx;
-		  }
-		  _connect(node){ node.connect(this.master); }
-		  playNote({midi, durationMs=800}){
-		    if(this.mute) return;
-		    const ctx=this.ensure();
-		    const now=ctx.currentTime;
-		    const freq=440*Math.pow(2,(midi-69)/12);
-		    const osc=ctx.createOscillator();
-		    const gain=ctx.createGain();
-		    osc.frequency.value=freq;
-		    osc.type='sine';
-		    gain.gain.setValueAtTime(0, now);
-		    gain.gain.linearRampToValueAtTime(0.8, now+0.01);
-		    gain.gain.exponentialRampToValueAtTime(0.1, now + (durationMs/1000)*0.8);
-		    gain.gain.linearRampToValueAtTime(0, now + durationMs/1000);
-		    osc.connect(gain);
-		    this._connect(gain);
-		    osc.start(now);
-		    osc.stop(now + durationMs/1000);
-		    osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch {} };
-		  }
-		  playInterval({rootMidi,semitones,gapMs=150,durationMs=600}){
-		    if(this.mute) return;
-		    this.ensure();
-		    this.playNote({midi:rootMidi, durationMs});
-		    const midi2 = rootMidi + semitones;
-		    setTimeout(()=>{ this.playNote({midi:midi2, durationMs}); }, gapMs);
-		  }
-		  setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
-		  // short, quiet square beep (hi=correct, low=incorrect)
-		  playFeedback(ok){
-		    if(this.mute) return;
-		    const ctx=this.ensure();
-		    const now=ctx.currentTime;
-		    const freq = ok ? 880 : 220;
-		    const osc=ctx.createOscillator();
-		    const gain=ctx.createGain();
-		    osc.frequency.value=freq;
-		    osc.type='square';
-		    gain.gain.setValueAtTime(0,now);
-		    gain.gain.linearRampToValueAtTime(0.3,now+0.01);
-		    gain.gain.linearRampToValueAtTime(0,now+0.2);
-		    osc.connect(gain);
-		    this._connect(gain);
-		    osc.start(now);
-		    osc.stop(now+0.2);
-		    osc.onended=()=>{ try{osc.disconnect(); gain.disconnect();}catch{} };
-		  }
-		}
-		const audioEngine=new AudioEngine();
+    // Audio engine for simple oscillator notes, intervals and feedback beeps
+    class AudioEngine{
+      constructor(){ this.ctx=null; this.mute=loadJSON('vmq.v4.mute',false); }
+      ensure(){ 
+        if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); 
+        if(this.ctx.state==='suspended') this.ctx.resume(); 
+        return this.ctx; 
+      }
+      playNote({midi,durationMs=800}){
+        if(this.mute) return;
+        const ctx=this.ensure();
+        const now=ctx.currentTime;
+        const freq=440*Math.pow(2,(midi-69)/12);
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.frequency.value=freq;
+        osc.type='sine';
+        gain.gain.setValueAtTime(0,now);
+        gain.gain.linearRampToValueAtTime(0.8,now+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.1,now+durationMs/1000*0.8);
+        gain.gain.linearRampToValueAtTime(0,now+durationMs/1000);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now+durationMs/1000);
+        osc.onended = () => {
+          try { osc.disconnect(); gain.disconnect(); } catch {}
+        };
+      }
+      playInterval({rootMidi,semitones,gapMs=150,durationMs=600}){
+        if(this.mute) return;
+        this.ensure();
+        this.playNote({midi:rootMidi, durationMs});
+        const midi2 = rootMidi + semitones;
+        setTimeout(() => {
+          this.playNote({midi:midi2, durationMs});
+        }, gapMs);
+      }
+      setMute(m){ this.mute=m; saveJSON('vmq.v4.mute',m); }
+      /**
+       * Plays a short beep to reinforce correct or incorrect answers.  The
+       * frequency is higher for correct answers (880Hz) and lower for
+       * incorrect answers (220Hz).  The envelope decays quickly so as not to
+       * distract from the next question.
+       * @param {boolean} ok - whether the answer was correct
+       */
+      playFeedback(ok){
+        if(this.mute) return;
+        const ctx=this.ensure();
+        const now=ctx.currentTime;
+        const freq = ok ? 880 : 220;
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.frequency.value=freq;
+        osc.type='square';
+        gain.gain.setValueAtTime(0,now);
+        gain.gain.linearRampToValueAtTime(0.3,now+0.01);
+        gain.gain.linearRampToValueAtTime(0,now+0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now+0.2);
+        osc.onended=()=>{ try{osc.disconnect(); gain.disconnect();}catch{} };
+      }
+    }
+    const audioEngine=new AudioEngine();
 
     const canonicalBase=(s,p,f)=>{ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return NOTE_NAME[((semi%12)+12)%12]; };
     const CELLS=[]; for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f,canon:canonicalBase(s,p,f)}); }
@@ -262,11 +201,10 @@
     const getRandom=a=>a[Math.floor(Math.random()*a.length)];
     const ordinal=n=>{ const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
     const defaultPrefs={
-		  strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
-		  positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
-		  flashLevel:'Professional',
-		  focusNotes: [] // when non-empty, drills target these canonical notes only
-		};
+      strings:Object.fromEntries(STRINGS.map(s=>[s,true])),
+      positions:Object.fromEntries(POSITIONS.map(p=>[p,true])),
+      flashLevel:'Professional'
+    };
     const FLASH_DURATIONS={
       Beginner:3000,
       Intermediate:2000,
@@ -274,39 +212,45 @@
       Professional:800,
       Master:500
     };
-    const filteredCells = (prefs) =>
-		  CELLS.filter(c =>
-		    prefs.strings[c.s] &&
-		    prefs.positions[c.p] &&
-		    (!prefs.focusNotes || prefs.focusNotes.length === 0 || prefs.focusNotes.includes(c.canon))
-		  );
+    const filteredCells=prefs=>CELLS.filter(c=>prefs.strings[c.s]&&prefs.positions[c.p]);
 
     // Hook for keyboard shortcuts
-    function useAnswerHotkeys(enabled, onIndex, onBack, count=4){
-		  const idxRef = React.useRef(onIndex);
-		  const backRef = React.useRef(onBack);
-		  React.useEffect(() => { idxRef.current = onIndex; }, [onIndex]);
-		  React.useEffect(() => { backRef.current = onBack; }, [onBack]);
-		
-		  React.useEffect(()=>{
-		    if(!enabled) return;
-		    const handler=(e)=>{
-		      if (e.repeat) return;
-		      const tag = (e.target?.tagName||'').toLowerCase();
-		      if (['input','select','textarea'].includes(tag) || e.target?.isContentEditable) return;
-		      if (/^[1-9]$/.test(e.key)) {
-		        const idx = Number(e.key)-1;
-		        if (idx < (count ?? 4)) idxRef.current(idx);
-		      } else if (e.key==='Enter') {
-		        idxRef.current(0);
-		      } else if (e.key==='Escape') {
-		        backRef.current();
-		      }
-		    };
-		    window.addEventListener('keydown', handler, { passive:true });
-		    return ()=>window.removeEventListener('keydown', handler);
-		  },[enabled, count]);
-		}
+    function useAnswerHotkeys(enabled,onIndex,onBack,count=4){
+      React.useEffect(()=>{
+        if(!enabled) return;
+        const handler=(e)=>{
+          const t = e.target;
+          const tag = (t && t.tagName || '').toLowerCase();
+          if(tag==='input' || tag==='select' || tag==='textarea' || (t && t.isContentEditable)) return;
+          const k=e.key;
+          if(k>='1' && k<='9'){
+            const idx=Number(k)-1;
+            if(idx < (count??4)) onIndex(idx);
+          } else if(k==='Enter') {
+            onIndex(0);
+          } else if(k==='Escape') {
+            onBack();
+          }
+        };
+        window.addEventListener('keydown',handler);
+        return ()=>window.removeEventListener('keydown',handler);
+      },[enabled,onIndex,onBack,count]);
+    }
+
+    function OptionButton({label,selected,onClick}){
+      const bg=selected? 'var(--primary-dark)' : 'var(--primary)';
+      return (
+        <button
+          className="option-btn"
+          role="radio"
+          aria-checked={selected ? 'true' : 'false'}
+          style={{background:bg}}
+          onClick={onClick}
+        >
+          {label}
+        </button>
+      );
+    }
 
     // =========================================================
     // Bieler Method definitions and lab component (unchanged except feedback)
@@ -412,7 +356,7 @@
       return (
         <div>
           <div className="card">
-            <h2>Bieler Method Lab</h2>
+            <h2>Technique Lab</h2>
             <p style={{color:'var(--ink-light)',marginTop:-6}}>
               Progressive study: build vocabulary → check concepts → apply to musical/technique scenarios.
             </p>
@@ -471,68 +415,159 @@
       );
     }
 
-    // Visual fingerboard component: renders 5 positions and 4 strings with finger lanes.
-    function VisualFingerboard({highlight=[],onSelect,disabled}) {
-      const posW=80, strH=32, fingerH=strH/4, W=posW*5, H=strH*4;
-      // Build a lookup for highlighted cells and their kind
+    // Visual fingerboard component (HORIZONTAL): 5 positions × 4 fingers across 4 strings
+    function VisualFingerboard({ highlight = [], onSelect, disabled }) {
+      // --- geometry --------------------------------------------------------------
+      const POS_W = 120;                  // width per position segment
+      const LEFT_PAD = 72;                // space for string labels + nut
+      const RIGHT_PAD = 24;
+      const TOP_PAD = 36;                 // space for position labels
+      const BOTTOM_PAD = 28;
+      const ROW_H = 56;                   // vertical spacing per string
+      const MARK_W = 36;                  // finger marker size
+      const MARK_H = 20;
+      const RADIUS = 6;
+    
+      const W = LEFT_PAD + POS_W * 5 + RIGHT_PAD;
+      const H = TOP_PAD + ROW_H * 4 + BOTTOM_PAD;
+    
+      // place finger 1..4 within a position segment (left→right)
+      const fingerX = { 1: POS_W * 0.18, 2: POS_W * 0.40, 3: POS_W * 0.62, 4: POS_W * 0.82 };
+    
+      // draw order top→bottom (your previous board already shows E at the top)
+      const ORDER = ['E', 'A', 'D', 'G'];
+      const yForString = s => TOP_PAD + ORDER.indexOf(s) * ROW_H + ROW_H / 2;
+    
+      // highlights lookup
       const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
-      // Determine fill for each kind; use a pattern for distractors to aid colour‐blind users
+    
+      // fills
       const fillForKind = k => {
-        if(k==='correct') return 'var(--success)';
-        if(k==='chosen') return 'var(--primary)';
-        if(k==='distractor') return 'url(#distractorPattern)';
+        if (k === 'correct') return 'var(--success)';
+        if (k === 'chosen') return 'var(--primary)';
+        if (k === 'distractor') return 'url(#distractorPattern)';
         return 'var(--card)';
       };
+    
+      // keyboard interaction helper
+      const act = cell => { if (!disabled && onSelect) onSelect(cell); };
+    
       return (
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="grid" aria-label="Fingerboard" aria-rowcount="4" aria-colcount="5">
-          {/* Define a simple diagonal pattern for distractor cells.  Colour‐blind users can rely on the pattern rather than colour to distinguish it【408173630527642†L99-L124】. */}
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          width="100%"
+          height="auto"
+          role="grid"
+          aria-label="Fingerboard (horizontal)"
+          aria-rowcount="4"
+          aria-colcount="20"
+        >
+          {/* Pattern for distractors (high-contrast, color-blind friendly) */}
           <defs>
             <pattern id="distractorPattern" patternUnits="userSpaceOnUse" width="8" height="8">
               <rect width="8" height="8" fill="var(--warning)" />
               <path d="M0 0 L8 8 M8 0 L0 8" stroke="var(--card)" strokeWidth="1" />
             </pattern>
           </defs>
-          {['G','D','A','E'].map((s,si)=>(
-            <g key={s} transform={`translate(0,${(3-si)*strH})`}>
-              {POSITIONS.map(p=>(
-                <g key={p} transform={`translate(${(p-1)*posW},0)`}>
-                  {FINGERS.map((f,fi)=>{
-                    const cellKey=`${s}:${p}:${f}`;
-                    const kind=hiMap[cellKey];
-                    const fill=fillForKind(kind);
-                    // x,y coordinates for text overlay
-                    const cx = (posW/2);
-                    const cy = fi*fingerH + fingerH*0.6;
-                    return (
-                      <g key={cellKey}>
-                        <rect
-                          x={4}
-                          y={fi*fingerH+4}
-                          width={posW-8}
-                          height={Math.max(6,fingerH-6)}
-                          rx="3"
-                          fill={fill}
-                          stroke="var(--border)"
-                          tabIndex={disabled?-1:0}
-                          role="gridcell"
-                          aria-selected={kind==='chosen' || kind==='correct' ? 'true':'false'}
-                          aria-label={`${s} string, ${ordinal(p)} pos, finger ${f}`}
-                          onClick={()=>!disabled && onSelect?.({s,p,f})}
-                          onKeyDown={e=>{ if(!disabled && (e.key==='Enter'||e.key===' ')) onSelect?.({s,p,f}); }}
-                        />
-                        {/* Add simple text icons for correct and chosen cells to assist users who cannot rely on colour alone */}
-                        {kind==='correct' && (
-                          <text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✓</text>
-                        )}
-                        {kind==='chosen' && kind!=='correct' && (
-                          <text x={cx} y={cy} textAnchor="middle" dy="0.3em" fontSize="12" fill="var(--card)" pointerEvents="none">✕</text>
-                        )}
-                      </g>
-                    );
-                  })}
-                </g>
-              ))}
-            </g>
+    
+          {/* Fingerboard bed */}
+          <rect
+            x={LEFT_PAD}
+            y={TOP_PAD - 16}
+            width={POS_W * 5}
+            height={ROW_H * 4 + 32}
+            rx="10"
+            fill="var(--card)"
+            stroke="var(--border)"
+          />
+    
+          {/* Nut (left thick line) */}
+          <rect
+            x={LEFT_PAD - 8}
+            y={TOP_PAD - 16}
+            width={6}
+            height={ROW_H * 4 + 32}
+            rx="2"
+            fill="var(--ink-light)"
+            opacity="0.35"
+          />
+    
+          {/* Vertical position dividers + labels */}
+          {POSITIONS.map((p, i) => {
+            const x = LEFT_PAD + (p - 1) * POS_W;
+            return (
+              <g key={`lane-${p}`}>
+                {/* divider */}
+                <line x1={x} y1={TOP_PAD - 16} x2={x} y2={TOP_PAD - 16 + ROW_H * 4 + 32}
+                      stroke="var(--border)" />
+                {/* header label */}
+                <text
+                  x={x + POS_W / 2}
+                  y={TOP_PAD - 18}
+                  textAnchor="middle"
+                  fontSize="12"
+                  fill="var(--ink-light)"
+                >
+                  {ordinal(p)} pos
+                </text>
+              </g>
+            );
+          })}
+    
+          {/* String lanes (E top → G bottom) + left labels */}
+          {ORDER.map(s => {
+            const y = yForString(s);
+            return (
+              <g key={`string-${s}`}>
+                {/* left label */}
+                <text x={LEFT_PAD - 14} y={y + 4} textAnchor="end" fontWeight="700">{s}</text>
+                {/* the string line */}
+                <line x1={LEFT_PAD} y1={y} x2={LEFT_PAD + POS_W * 5} y2={y}
+                      stroke="var(--ink-light)" strokeWidth="1.5" opacity="0.35" />
+              </g>
+            );
+          })}
+    
+          {/* Interactive finger markers */}
+          {STRINGS.map(s => (
+            POSITIONS.map(p => (
+              FINGERS.map(f => {
+                const x = LEFT_PAD + (p - 1) * POS_W + fingerX[f] - MARK_W / 2;
+                const y = yForString(s) - MARK_H / 2;
+                const key = `${s}:${p}:${f}`;
+                const kind = hiMap[key];
+                const fill = fillForKind(kind);
+    
+                return (
+                  <g key={key}>
+                    <rect
+                      x={x}
+                      y={y}
+                      width={MARK_W}
+                      height={MARK_H}
+                      rx={RADIUS}
+                      fill={fill}
+                      stroke="var(--border)"
+                      role="gridcell"
+                      aria-selected={kind === 'chosen' || kind === 'correct' ? 'true' : 'false'}
+                      aria-label={`${s} string, ${ordinal(p)} position, finger ${f}`}
+                      tabIndex={disabled ? -1 : 0}
+                      onClick={() => act({ s, p, f })}
+                      onKeyDown={e => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) act({ s, p, f }); }}
+                    />
+                    {/* icons for correctness / selection */}
+                    {kind === 'correct' && (
+                      <text x={x + MARK_W / 2} y={y + MARK_H / 2 + 4}
+                            textAnchor="middle" fontSize="12" fill="var(--card)" pointerEvents="none">✓</text>
+                    )}
+                    {kind === 'chosen' && kind !== 'correct' && (
+                      <text x={x + MARK_W / 2} y={y + MARK_H / 2 + 4}
+                            textAnchor="middle" fontSize="12" fill="var(--card)" pointerEvents="none">✕</text>
+                    )}
+                  </g>
+                );
+              })
+            ))
           ))}
         </svg>
       );
@@ -861,520 +896,6 @@
           pick();
         },450);
       };
-      /* ========================== Arpeggio Trainer ============================= */
-			function ArpeggioTrainer({ prefs, onBack }){
-			  const [quality, setQuality] = React.useState('Major'); // "Major" | "Minor"
-			  const [root, setRoot] = React.useState('C');           // VMQ_NOTES member
-			  const [step, setStep]   = React.useState(0);           // which note in the arpeggio
-			  const [score, setScore] = React.useState(0);
-			  const [answered, setAnswered] = React.useState(0);
-			  const [q, setQ] = React.useState(null);                // {note, options, correct}
-			  const [selected, setSelected] = React.useState(null);
-			
-			  const triadPcs = quality === 'Major' ? [0,4,7] : [0,3,7];
-			
-			  const pcsForRoot = (r) => {
-			    const base = PC_FROM_CANON[r];
-			    return triadPcs.map(off => ((base + off) % 12 + 12) % 12);
-			  };
-			
-			  const nameFromPc = (pc) => NOTE_NAME[((pc % 12)+12)%12];
-			
-			  const playArpeggio = React.useCallback(()=>{
-			    const pcs = pcsForRoot(root);
-			    pcs.forEach((pc, i) => {
-			      setTimeout(()=> {
-			        try{
-			          const midi = midiFromPcNear(pc, 64);
-			          audioEngine.playNote({midi, durationMs:500});
-			        }catch{}
-			      }, i*550);
-			    });
-			  }, [root, quality]);
-			
-			  const nextStep = React.useCallback(()=>{
-			    const pcs = pcsForRoot(root);
-			    const pc = pcs[step % pcs.length];
-			    const note = nameFromPc(pc);
-			
-			    const allCells = filteredCells(prefs);
-			    // If no cells (e.g., user disabled everything)
-			    if (!allCells.length){
-			      setQ(null);
-			      return;
-			    }
-			    const correctCells = allCells.filter(c => c.canon === note);
-			    // If too few exact matches, allow any cell as distractors
-			    const distract = allCells.filter(c => c.canon !== note);
-			    const pool = [
-			      ...correctCells.map(c => ({s:c.s,p:c.p,f:c.f, kind:'distractor'})),
-			      ...shuffle(distract).slice(0, Math.max(0, 4 - correctCells.length)).map(c=>({s:c.s,p:c.p,f:c.f, kind:'distractor'}))
-			    ];
-			    const options = shuffle([
-			      ...shuffle(correctCells).slice(0,1).map(c => ({s:c.s,p:c.p,f:c.f, kind:'correct'})),
-			      ...shuffle(pool).slice(0,3)
-			    ]).slice(0,4);
-			
-			    setQ({ note, options, correct: options.find(o=>o.kind==='correct') || options[0] });
-			    setSelected(null);
-			  }, [prefs, root, step, quality]);
-			
-			  React.useEffect(()=>{ nextStep(); }, [root, quality, step]);
-			
-			  const answer = (opt, idx) => {
-			    if (selected !== null) return;
-			    setSelected(idx);
-			    const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
-			    setTimeout(()=>{
-			      document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
-			      audioEngine.playFeedback(ok);
-			      setAnswered(a=>a+1);
-			      if(ok) setScore(s=>s+1);
-			      updateStat(`arp:${root}:${quality}:${q.note}`, ok);
-			      addXP(ok?6:2);
-			      setStep(s => (s+1)%3);
-			    }, 350);
-			  };
-			
-			  if (!q) return (
-			    <div>
-			      <div className="card">
-			        <h2>Arpeggio Trainer</h2>
-			        <p>No valid cells. Enable strings & positions in Settings.</p>
-			      </div>
-			      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-			    </div>
-			  );
-			
-			  return (
-			    <div>
-			      <div className="card">
-			        <h2>Arpeggio Trainer</h2>
-			        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
-			          <div>
-			            <div style={{fontWeight:600}}>Root</div>
-			            <div className="grid" style={{gridTemplateColumns:'repeat(6,1fr)'}}>
-			              {VMQ_NOTES.map(n => (
-			                <OptionButton key={n} label={n} selected={root===n} onClick={()=>{ setRoot(n); setStep(0); setScore(0); setAnswered(0); }} />
-			              ))}
-			            </div>
-			          </div>
-			          <div>
-			            <div style={{fontWeight:600}}>Quality</div>
-			            <OptionButton label="Major" selected={quality==='Major'} onClick={()=>{ setQuality('Major'); setStep(0); setScore(0); setAnswered(0);} }/>
-			            <OptionButton label="Minor" selected={quality==='Minor'} onClick={()=>{ setQuality('Minor'); setStep(0); setScore(0); setAnswered(0);} }/>
-			          </div>
-			        </div>
-			
-			        <p style={{marginTop:'0.5rem'}}>Score {score}/{answered} • Current Note: <strong>{q.note}</strong> • Step {step+1}/3</p>
-			
-			        <button className="btn btn-secondary" onClick={playArpeggio}>Play Arpeggio</button>
-			
-			        <p style={{marginTop:'0.75rem'}}>Click where you can play <strong>{q.note}</strong>:</p>
-			        <VisualFingerboard
-			          highlight={q.options.map(o=>({...o, kind: selected===null ? (o.kind||'distractor') : (o.s===q.correct.s && o.p===q.correct.p && o.f===q.correct.f ? 'correct' : (selected!==null && o===q.options[selected] ? 'chosen' : 'distractor'))}))}
-			          disabled={selected!==null}
-			          onSelect={(cell)=>answer(cell, 0)}
-			        />
-			        <details style={{marginTop:'0.5rem'}}>
-			          <summary>List options</summary>
-			          {q.options.map((o,i)=>(
-			            <OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={selected===i} onClick={()=>answer(o,i)} />
-			          ))}
-			        </details>
-			      </div>
-			      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-			    </div>
-			  );
-			}
-			/* ============================ Rhythm Drills =============================== */
-			function RhythmDrills({ onBack }){
-			  const [mode, setMode] = React.useState('identify'); // 'identify' | 'tap'
-			  const [tempo, setTempo] = React.useState(96);
-			  const [q, setQ] = React.useState(null);
-			  const [selected, setSelected] = React.useState(null);
-			  const [score, setScore] = React.useState(0);
-			  const [answered, setAnswered] = React.useState(0);
-			  const [tapping, setTapping] = React.useState(false);
-			  const tapTimesRef = React.useRef([]);
-			
-			  const SIGS = {
-			    '2/4': [1,0],
-			    '3/4': [1,0,0],
-			    '4/4': [1,0,0,0],
-			    '6/8': [1,0,0,1,0,0],
-			    '9/8': [1,0,0,1,0,0,1,0,0],
-			    '12/8':[1,0,0,1,0,0,1,0,0,1,0,0],
-			  };
-			
-			  const allSigs = Object.keys(SIGS);
-			
-			  const schedulePattern = (sig, t) => {
-			    try{
-			      audioEngine.ensure();
-			      const beats = SIGS[sig].length;
-			      const intervalMs = 60000 / t; // ms per beat (treat 6/8 "beat" as the written unit in pattern)
-			      SIGS[sig].forEach((accent, i) => {
-			        setTimeout(()=>{
-			          const midi = accent ? 84 : 72; // accent high beep, normal mid beep
-			          audioEngine.playNote({midi, durationMs:160});
-			        }, i * intervalMs);
-			      });
-			    }catch{}
-			  };
-			
-			  /* ---------- Identify Time Signature ---------- */
-			  const makeIdentifyQ = React.useCallback(()=>{
-			    const sig = allSigs[Math.floor(Math.random()*allSigs.length)];
-			    const opts = shuffle([sig, ...shuffle(allSigs.filter(s=>s!==sig)).slice(0,3)]);
-			    setQ({type:'identify', sig, options: opts});
-			    setSelected(null);
-			    schedulePattern(sig, tempo);
-			  }, [tempo]);
-			
-			  const answerIdentify = (opt, idx) => {
-			    if (selected !== null) return;
-			    setSelected(idx);
-			    setTimeout(()=>{
-			      const ok = opt === q.sig;
-			      document.getElementById('sr').textContent = ok? 'Correct, great job!' : 'Oops, almost!';
-			      audioEngine.playFeedback(ok);
-			      setAnswered(a=>a+1);
-			      if(ok) setScore(s=>s+1);
-			      addXP(ok?4:1);
-			      makeIdentifyQ();
-			    }, 250);
-			  };
-			
-			  /* ---------- Tap-back ---------- */
-			  const startTapRound = React.useCallback(()=>{
-			    setQ({type:'tap'});
-			    setSelected(null);
-			    setTapping(false);
-			    tapTimesRef.current = [];
-			    // count-in 4 clicks then expect 8 taps
-			    try{
-			      audioEngine.ensure();
-			      const intervalMs = 60000 / tempo;
-			      [0,1,2,3].forEach(i=>{
-			        setTimeout(()=> audioEngine.playNote({midi: i===0 ? 84 : 72, durationMs:150}), i*intervalMs);
-			      });
-			      setTimeout(()=> setTapping(true), 4*intervalMs + 60);
-			      setTimeout(()=> {
-			        setTapping(false);
-			        gradeTaps(tapTimesRef.current, intervalMs);
-			      }, 4*intervalMs + 60 + 8*intervalMs + 120);
-			    }catch{}
-			  }, [tempo]);
-			
-			  const onTap = () => {
-			    if (!tapping) return;
-			    tapTimesRef.current.push(performance.now());
-			    audioEngine.playNote({midi: 76, durationMs:100});
-			  };
-			
-			  const gradeTaps = (times, beatMs) => {
-			    if (times.length < 3) {
-			      document.getElementById('sr').textContent = 'Oops, almost!';
-			      audioEngine.playFeedback(false);
-			      setAnswered(a=>a+1);
-			      addXP(1);
-			      return startTapRound();
-			    }
-			    const intervals = times.slice(1).map((t,i)=> t - times[i]);
-			    const avgErr = intervals.reduce((a,b)=> a + Math.abs(b - beatMs), 0) / intervals.length;
-			    const ok = avgErr <= Math.max(90, beatMs*0.18); // 90ms or ~18% of beat
-			    document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
-			    audioEngine.playFeedback(ok);
-			    setAnswered(a=>a+1);
-			    if (ok) setScore(s=>s+1);
-			    addXP(ok?5:2);
-			    startTapRound();
-			  };
-			
-			  React.useEffect(()=>{
-			    if (mode==='identify') makeIdentifyQ();
-			    if (mode==='tap') startTapRound();
-			    // eslint-disable-next-line
-			  }, [mode]);
-			
-			  return (
-			    <div>
-			      <div className="card">
-			        <h2>Rhythm Drills</h2>
-			        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',marginBottom:'0.25rem'}}>
-			          <OptionButton label="Identify Time Signature" selected={mode==='identify'} onClick={()=>setMode('identify')}/>
-			          <OptionButton label="Tap Back" selected={mode==='tap'} onClick={()=>setMode('tap')}/>
-			        </div>
-			        <div style={{margin:'0.25rem 0'}}>
-			          <small>Tempo: {tempo} bpm</small><br/>
-			          <input type="range" min="60" max="132" value={tempo} onChange={e=>setTempo(Number(e.target.value))} style={{width:'100%'}} />
-			        </div>
-			
-			        <p>Score {score}/{answered}</p>
-			
-			        {mode==='identify' && q?.type==='identify' && (
-			          <div role="radiogroup" aria-label="Time signature answers">
-			            <p>Listen and choose the time signature:</p>
-			            <button className="btn btn-secondary" onClick={()=>schedulePattern(q.sig, tempo)}>Play Again</button>
-			            {q.options.map((opt,i)=>(
-			              <OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answerIdentify(opt,i)} />
-			            ))}
-			          </div>
-			        )}
-			
-			        {mode==='tap' && (
-			          <div>
-			            <p>After the count-in, tap the button on each beat:</p>
-			            <button className="btn btn-primary" onClick={onTap} aria-pressed={tapping}>
-			              {tapping ? 'Tap! (on the beat)' : 'Tap Button'}
-			            </button>
-			            <p style={{color:'var(--ink-light)'}}>{tapping? 'Listening to taps...' : 'Waiting for next round...'}</p>
-			          </div>
-			        )}
-			      </div>
-			      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-			    </div>
-			  );
-			}
-			/* ============================ Ear Training Lab =========================== */
-			function EarTrainingLab({ onBack }){
-			  const [mode, setMode] = React.useState('interval'); // 'interval' | 'sing'
-			  const [q, setQ] = React.useState(null);
-			  const [selected, setSelected] = React.useState(null);
-			  const [score, setScore] = React.useState(0);
-			  const [answered, setAnswered] = React.useState(0);
-			
-			  // ----- Interval Mode -----
-			  const makeIntervalQ = React.useCallback(()=>{
-			    const item = getRandom(INTERVALS);
-			    const rootMidi = 60 + Math.floor(Math.random()*12);
-			    const options = shuffle([item.name, ...shuffle(INTERVALS.map(x=>x.name).filter(n=>n!==item.name)).slice(0,3)]);
-			    setQ({type:'interval', name:item.name, semitones:item.semitones, rootMidi, options});
-			    setSelected(null);
-			    try{ audioEngine.playInterval({rootMidi, semitones:item.semitones}); }catch{}
-			  }, []);
-			
-			  const answerInterval = (opt, idx) => {
-			    if (selected !== null) return;
-			    setSelected(idx);
-			    setTimeout(()=>{
-			      const ok = opt === q.name;
-			      document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
-			      audioEngine.playFeedback(ok);
-			      setAnswered(a=>a+1);
-			      if(ok) setScore(s=>s+1);
-			      addXP(ok?4:1);
-			      makeIntervalQ();
-			    }, 250);
-			  };
-			
-			  // ----- Sing-Back Mode -----
-			  const [micReady, setMicReady] = React.useState(false);
-			  const [targetMidi, setTargetMidi] = React.useState(64);
-			  const analyserRef = React.useRef(null);
-			  const dataRef = React.useRef(null);
-			  const sampleRateRef = React.useRef(44100);
-			
-			  const setupMic = async () => {
-			    try{
-			      const ctx = audioEngine.ensure();
-			      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-			      const src = ctx.createMediaStreamSource(stream);
-			      const analyser = ctx.createAnalyser();
-			      analyser.fftSize = 2048;
-			      src.connect(analyser);
-			      analyserRef.current = analyser;
-			      dataRef.current = new Float32Array(analyser.fftSize);
-			      sampleRateRef.current = ctx.sampleRate;
-			      setMicReady(true);
-			    }catch(e){
-			      alert('Microphone access denied.');
-			    }
-			  };
-			
-			  const autoCorrelate = (timeData, sampleRate) => {
-			    // Basic ACF pitch detection; returns frequency or -1
-			    let SIZE = timeData.length;
-			    let rms = 0;
-			    for (let i=0; i<SIZE; i++) { const v=timeData[i]; rms += v*v; }
-			    rms = Math.sqrt(rms/SIZE);
-			    if (rms < 0.01) return -1;
-			    let r1=0, r2=SIZE-1, thres=0.2;
-			    for (let i=0; i<SIZE/2; i++) if (Math.abs(timeData[i])<thres){ r1=i; break; }
-			    for (let i=1; i<SIZE/2; i++) if (Math.abs(timeData[SIZE-i])<thres){ r2=SIZE-i; break; }
-			    timeData = timeData.slice(r1, r2);
-			    SIZE = timeData.length;
-			    const c = new Array(SIZE).fill(0);
-			    for (let i=0; i<SIZE; i++){
-			      for (let j=0; j<SIZE-i; j++){
-			        c[i] = c[i] + timeData[j]*timeData[j+i];
-			      }
-			    }
-			    let d=0; while (c[d] > c[d+1]) d++;
-			    let maxval=-1, maxpos=-1;
-			    for (let i=d; i<SIZE; i++){
-			      if (c[i] > maxval){ maxval = c[i]; maxpos = i; }
-			    }
-			    if (maxpos <= 0) return -1;
-			    const T0 = maxpos;
-			    return sampleRate / T0;
-			  };
-			
-			  const centsDiff = (f, midi) => {
-			    if (f <= 0) return 1200;
-			    const targetF = 440 * Math.pow(2, (midi-69)/12);
-			    return 1200*Math.log2(f/targetF);
-			  };
-			
-			  const playTarget = () => { try{ audioEngine.playNote({midi: targetMidi, durationMs:800}); }catch{} };
-			
-			  const singNow = async () => {
-			    if (!micReady) await setupMic();
-			    if (!analyserRef.current) return;
-			    const analyser = analyserRef.current;
-			    const buf = dataRef.current;
-			    const sr = sampleRateRef.current;
-			    // sample for ~1s
-			    const readings = [];
-			    const start = performance.now();
-			    while (performance.now() - start < 1000) {
-			      analyser.getFloatTimeDomainData(buf);
-			      const f = autoCorrelate(buf, sr);
-			      if (f > 60 && f < 1500) readings.push(f);
-			      await new Promise(r => setTimeout(r, 80));
-			    }
-			    const f = readings.length ? readings.sort((a,b)=>a-b)[Math.floor(readings.length/2)] : -1;
-			    const diff = Math.abs(centsDiff(f, targetMidi));
-			    const ok = diff <= 50; // within ±50 cents
-			    document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
-			    audioEngine.playFeedback(ok);
-			    setAnswered(a=>a+1);
-			    if (ok) setScore(s=>s+1);
-			    addXP(ok?6:2);
-			  };
-			
-			  React.useEffect(()=>{
-			    if (mode==='interval') makeIntervalQ();
-			  },[mode, makeIntervalQ]);
-			
-			  return (
-			    <div>
-			      <div className="card">
-			        <h2>Ear-Training Lab</h2>
-			        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',marginBottom:'0.25rem'}}>
-			          <OptionButton label="Interval ID" selected={mode==='interval'} onClick={()=>setMode('interval')}/>
-			          <OptionButton label="Sing Back" selected={mode==='sing'} onClick={()=>setMode('sing')}/>
-			        </div>
-			        <p>Score {score}/{answered}</p>
-			
-			        {mode==='interval' && q?.type==='interval' && (
-			          <div>
-			            <button className="btn btn-secondary" onClick={()=>audioEngine.playInterval({rootMidi:q.rootMidi,semitones:q.semitones})}>Play Again</button>
-			            <p>Which interval did you hear?</p>
-			            <div role="radiogroup" aria-label="Interval answers">
-			              {q.options.map((opt,i)=>(
-			                <OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answerInterval(opt,i)} />
-			              ))}
-			            </div>
-			          </div>
-			        )}
-			
-			        {mode==='sing' && (
-			          <div>
-			            <p>Listen, then sing or hum the same pitch. You’ll be graded within ±50 cents.</p>
-			            <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',alignItems:'center'}}>
-			              <button className="btn btn-secondary" onClick={()=>setTargetMidi(m=>Math.max(52, m-1))}>–</button>
-			              <span><strong>Target:</strong> MIDI {targetMidi}</span>
-			              <button className="btn btn-secondary" onClick={()=>setTargetMidi(m=>Math.min(76, m+1))}>+</button>
-			              <button className="btn btn-primary" onClick={playTarget}>Play Note</button>
-			              <button className="btn btn-success" onClick={singNow}>{micReady? 'Sing Now' : 'Enable Mic & Sing'}</button>
-			            </div>
-			          </div>
-			        )}
-			      </div>
-			      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-			    </div>
-			  );
-			}
-			/* ============================ Practice Journal =========================== */
-			function PracticeJournal({ onBack }){
-			  const [entries, setEntries] = useLocalStorage('vmq.v5.journal', []);
-			  const [running, setRunning] = React.useState(false);
-			  const [startTs, setStartTs] = React.useState(null);
-			  const [tags, setTags] = React.useState(new Set());
-			  const [note, setNote] = React.useState('');
-			
-			  const TAGS = [
-			    'Speed Drill','Snapshot','Interval Sprint','Note Locator',
-			    'Arpeggio Trainer','Rhythm Drills','Ear Training',
-			    'Flashcards','Positions Charts','Technique Lab',
-			    'Tempo Trainer','Music Theory'
-			  ];
-			
-			  const toggleTag = t => setTags(prev => {
-			    const next = new Set(prev);
-			    next.has(t) ? next.delete(t) : next.add(t);
-			    return next;
-			  });
-			
-			  const start = () => { setRunning(true); setStartTs(Date.now()); };
-			  const stop  = () => {
-			    if (!running || !startTs) return;
-			    const end = Date.now();
-			    const mins = Math.max(1, Math.round((end - startTs)/60000));
-			    const entry = { start:startTs, end, minutes:mins, tags:Array.from(tags), note: note.trim() };
-			    const next = [entry, ...entries].slice(0, 500);
-			    setEntries(next);
-			    setRunning(false); setStartTs(null); setNote(''); setTags(new Set());
-			    addXP(Math.min(30, mins)); // little reward for journaling
-			  };
-			
-			  const todayDate = (ts) => new Date(ts).toLocaleString();
-			
-			  return (
-			    <div>
-			      <div className="card">
-			        <h2>Practice Journal</h2>
-			        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',alignItems:'center'}}>
-			          {!running
-			            ? <button className="btn btn-primary" onClick={start}>Start Session</button>
-			            : <button className="btn btn-danger" onClick={stop}>Stop & Save</button>}
-			          {running && <span style={{color:'var(--ink-light)'}}>Started: {new Date(startTs).toLocaleTimeString()}</span>}
-			        </div>
-			
-			        <h3 style={{marginTop:'0.75rem'}}>Tags</h3>
-			        <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))'}}>
-			          {TAGS.map(t=>(
-			            <OptionButton key={t} label={t} selected={tags.has(t)} onClick={()=>toggleTag(t)} />
-			          ))}
-			        </div>
-			
-			        <h3 style={{marginTop:'0.75rem'}}>Notes</h3>
-			        <textarea
-			          rows={3}
-			          value={note}
-			          onChange={e=>setNote(e.target.value)}
-			          placeholder="What did you work on?"
-			          style={{width:'100%', border:'1px solid var(--border)', borderRadius:8, padding:'8px', color:'var(--ink)', background:'var(--card)'}}
-			        />
-			
-			        <h3 style={{marginTop:'0.75rem'}}>Recent Sessions</h3>
-			        {entries.length===0 && <p style={{color:'var(--ink-light)'}}>No sessions yet.</p>}
-			        {entries.map((e,i)=>(
-			          <div key={i} className="card" style={{padding:'0.75rem', marginBottom:'0.5rem'}}>
-			            <div><strong>{e.minutes} min</strong> • {todayDate(e.start)}</div>
-			            {e.tags?.length>0 && <div style={{marginTop:'0.25rem'}}>{e.tags.map((t,ti)=>(
-			              <span key={ti} style={{border:'1px solid var(--border)', borderRadius:9999, padding:'2px 8px', marginRight:6, fontSize:'0.85rem'}}>{t}</span>
-			            ))}</div>}
-			            {e.note && <div style={{marginTop:'0.25rem', color:'var(--ink-light)'}}>{e.note}</div>}
-			          </div>
-			        ))}
-			      </div>
-			      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-			    </div>
-			  );
-			}
       useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
       if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
       if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
@@ -1439,47 +960,17 @@
             <h3>Positions</h3>
             <div>{POSITIONS.map(p=>(<OptionButton key={p} label={p} selected={prefs.positions[p]} onClick={()=>toggle('positions',p)}/>))}</div>
             <h3>Snapshot Flash Duration</h3>
-						<div>{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>(
-						  <OptionButton key={level} label={level} selected={prefs.flashLevel===level} onClick={()=>{
-						    setPrefs(prev=>{ const next={...prev,flashLevel:level}; saveJSON(PREFS_KEY,next); return next; });
-						  }}/>
-						))}</div>
-						<h3>Focus Notes (optional)</h3>
-						<p style={{color:'var(--ink-light)', marginTop:-8}}>
-						  Pick notes to target across drills. Leave empty for all notes.
-						</p>
-						<div className="grid" style={{gridTemplateColumns:'repeat(6,1fr)'}}>
-						  {VMQ_NOTES.map(n=>(
-						    <OptionButton key={n} label={n}
-						      selected={prefs.focusNotes?.includes(n)}
-						      onClick={()=>{
-						        setPrefs(prev=>{
-						          const arr = new Set(prev.focusNotes || []);
-						          arr.has(n) ? arr.delete(n) : arr.add(n);
-						          const next = {...prev, focusNotes: Array.from(arr)};
-						          saveJSON(PREFS_KEY,next);
-						          return next;
-						        });
-						      }}
-						    />
-						  ))}
-						</div>
-						<button className="btn btn-secondary" onClick={()=>{
-						  setPrefs(prev=>{ const next={...prev, focusNotes: []}; saveJSON(PREFS_KEY,next); return next; });
-						}}>Clear Focus Notes</button>
+            <div>{['Beginner','Intermediate','Advanced','Professional','Master'].map(level=>(
+              <OptionButton key={level} label={level} selected={prefs.flashLevel===level} onClick={()=>{
+                setPrefs(prev=>{ const next={...prev,flashLevel:level}; saveJSON(PREFS_KEY,next); return next; });
+              }}/>
+            ))}</div>
             <p style={{marginTop:'1rem',color:'var(--ink-light)'}}>Select strings and positions for drills. Choose flash duration (Beginner = slowest) for Snapshot memorization.</p>
             <h3>Audio</h3>
             <button className="btn btn-primary" onClick={()=>audioEngine.ensure()}>Enable Sound</button>
             <button className="btn" style={{background: audioEngine.mute? 'var(--danger)':'var(--primary)'}} onClick={()=>{ audioEngine.setMute(!audioEngine.mute); }}>
               {audioEngine.mute? 'Unmute' : 'Mute'}
             </button>
-            <button className="btn btn-success" onClick={()=>{
-						  try{
-						    audioEngine.ensure();
-						    const base = 64;
-						    [0,2,4,5,7,9,11,12].forEach((st, i)=> setTimeout(()=> audioEngine.playNote({midi: base+st, durationMs:300}), i*170));
-						  }catch{}
-						}}>Test Sound</button>
             <h3>Data Tools</h3>
             <button className="btn btn-primary" onClick={()=>{
               const data={}; Object.keys(localStorage).filter(k=>k.startsWith('vmq.v4')||k.startsWith('vmq.v5')).forEach(k=>{ data[k]=localStorage.getItem(k); });
@@ -1514,172 +1005,63 @@
     }
 
     function StatsPage({onBack}){
-		  const stats=loadJSON(STATS_KEY,{});
-		  const xp=loadJSON(XP_KEY,0);
-		  const lvl=levelForXP(xp);
-		  const prev=lvl>1? nextLevelXP(lvl-1):0;
-		  const next=nextLevelXP(lvl);
-		  const pct=Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
-		  const isCellKey=k=>{
-		    const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
-		  const filteredStats=Object.fromEntries(Object.entries(stats).filter(([k,_])=>isCellKey(k)));
-		
-		  // Journal summary
-		  const journal = loadJSON('vmq.v5.journal', []);
-		  const now = new Date();
-		  const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate()-6);
-		  const minsThisWeek = journal
-		    .filter(e => new Date(e.start) >= weekAgo)
-		    .reduce((sum,e)=>sum+(e.minutes||0), 0);
-		  // Streak = consecutive days (including today if practiced)
-		  const days = new Set(journal.map(e=> new Date(e.start).toDateString()));
-		  let streak = 0;
-		  for(let d=0;; d++){
-		    const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate()-d);
-		    if (days.has(dt.toDateString())) streak++; else break;
-		  }
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Your Progress</h2>
-		        <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
-		        <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
-		          <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div>
-		        </div>
-		        <p style={{marginTop:'0.5rem'}}>Badges: {'⭐'.repeat(lvl)}</p>
-		        <div style={{display:'flex', gap:'1rem', flexWrap:'wrap', marginTop:'0.5rem', color:'var(--ink-light)'}}>
-		          <div><strong>{minsThisWeek}</strong> min this week</div>
-		          <div><strong>{streak}</strong> day streak</div>
-		        </div>
-		      </div>
-		      {STRINGS.map(s=>(
-		        <div className="card" key={s}>
-		          <h3>{s} string</h3>
-		          <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem'}}>
-		            {POSITIONS.map(p=>(
-		              <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
-		                {FINGERS.map(f=>{
-		                  const k=`${s}:${p}:${f}`;
-		                  const st=filteredStats[k]||{correct:0,total:0};
-		                  const acc= st.total? st.correct/st.total:0;
-		                  let col, ink='#fff';
-		                  if(st.total===0) col='var(--neutral)';
-		                  else if(acc<0.5) col='var(--danger)';
-		                  else if(acc<0.75){ col='var(--warning)'; ink='#111'; }
-		                  else col='var(--success)';
-		                  const label=st.total? `${Math.round(acc*100)}%`:'';
-		                  return (
-		                    <div key={f}
-		                         className="heat-cell"
-		                         style={{background:col,color:ink,fontSize:'0.65rem'}}
-		                         title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}
-		                         aria-label={`String ${s}, position ${p}, finger ${f}, accuracy ${st.total?Math.round(acc*100):0} percent`}>
-		                      {label}
-		                    </div>
-		                  );
-		                })}
-		              </div>
-		            ))}
-		          </div>
-		        </div>
-		      ))}
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		}
-		/* ============================ Focus Note Drill =========================== */
-		function FocusNoteDrill({ prefs, onBack }){
-		  const [time, setTime] = React.useState(60);
-		  const [paused, setPaused] = React.useState(false);
-		  const [score, setScore] = React.useState(0);
-		  const [answered, setAnswered] = React.useState(0);
-		  const [q, setQ] = React.useState(null);
-		  const [selected, setSelected] = React.useState(null);
-		
-		  const cells = React.useMemo(()=> filteredCells(prefs), [prefs]);
-		  const countdown = useCountdown({ seconds: 60, paused, onDone: ()=>setTime(0) });
-		
-		  React.useEffect(()=> setTime(countdown), [countdown]);
-		
-		  const pick = React.useCallback(()=>{
-		    if (!cells.length || !prefs.focusNotes || prefs.focusNotes.length===0){
-		      setQ(null); return;
-		    }
-		    const note = getRandom(prefs.focusNotes);
-		    const correctCells = cells.filter(c => c.canon===note);
-		    const distract = cells.filter(c => c.canon!==note);
-		    const options = shuffle([
-		      ...shuffle(correctCells).slice(0,1).map(c=>({s:c.s,p:c.p,f:c.f, kind:'correct'})),
-		      ...shuffle(distract).slice(0,3).map(c=>({s:c.s,p:c.p,f:c.f, kind:'distractor'}))
-		    ]);
-		    setQ({note, options, correct: options.find(o=>o.kind==='correct')});
-		    setSelected(null);
-		    try{
-		      const sample = options.find(o=>o.kind==='correct') || options[0];
-		      audioEngine.playNote({midi: midiForCell(sample.s, sample.p, sample.f), durationMs:600});
-		    }catch{}
-		  }, [cells, prefs.focusNotes]);
-		
-		  React.useEffect(()=>{ pick(); }, [pick]);
-		
-		  const answer = (opt, idx) => {
-		    if (selected !== null) return;
-		    setSelected(idx);
-		    const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
-		    setTimeout(()=>{
-		      document.getElementById('sr').textContent = ok ? 'Correct, great job!' : 'Oops, almost!';
-		      audioEngine.playFeedback(ok);
-		      setAnswered(a=>a+1);
-		      if(ok) setScore(s=>s+1);
-		      addXP(ok?5:2);
-		      pick();
-		    }, 350);
-		  };
-		
-		  if (time===0) return (
-		    <div className="card">
-		      <h2>Focus Note Drill Complete</h2>
-		      <p>Score {score}/{answered}</p>
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		
-		  if (!q) return (
-		    <div>
-		      <div className="card">
-		        <h2>Focus Note Drill</h2>
-		        <p>Enable Focus Notes in Settings to use this drill.</p>
-		      </div>
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Focus Note Drill</h2>
-		        <p>Time {time}s | Score {score}/{answered}</p>
-		        <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-		        <p>Find <strong>{q.note}</strong> on the fingerboard:</p>
-		        <VisualFingerboard
-		          highlight={q.options.map((o,i)=>({
-		            s:o.s,p:o.p,f:o.f, kind: selected===null ? (o.kind||'distractor') :
-		              (o.s===q.correct.s && o.p===q.correct.p && o.f===q.correct.f ? 'correct' :
-		               (selected===i ? 'chosen' : 'distractor'))
-		          }))}
-		          disabled={selected!==null}
-		          onSelect={(cell)=>answer(cell, 0)}
-		        />
-		        <details style={{marginTop:'0.5rem'}}>
-		          <summary>List options</summary>
-		          {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={selected===i} onClick={()=>answer(o,i)} />))}
-		        </details>
-		      </div>
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		}
+      const stats=loadJSON(STATS_KEY,{});
+      const xp=loadJSON(XP_KEY,0);
+      const lvl=levelForXP(xp);
+      const prev=lvl>1? nextLevelXP(lvl-1):0;
+      const next=nextLevelXP(lvl);
+      const pct=Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
+      const isCellKey=k=>{
+        const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
+      const filteredStats=Object.fromEntries(Object.entries(stats).filter(([k,_])=>isCellKey(k)));
+      return (
+        <div>
+          <div className="card">
+            <h2>Your Progress</h2>
+            <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
+            <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div>
+            </div>
+            <p style={{marginTop:'0.5rem'}}>Badges: {'⭐'.repeat(lvl)}</p>
+          </div>
+          {STRINGS.map(s=>(
+            <div className="card" key={s}>
+              <h3>{s} string</h3>
+              <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem'}}>
+                {POSITIONS.map(p=>(
+                  <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
+                    {FINGERS.map(f=>{
+                      const k=`${s}:${p}:${f}`;
+                      const st=filteredStats[k]||{correct:0,total:0};
+                      const acc= st.total? st.correct/st.total:0;
+                      let col, ink='#fff';
+                      if(st.total===0) {
+                        col='var(--neutral)';
+                      } else if(acc<0.5) {
+                        col='var(--danger)';
+                      } else if(acc<0.75) {
+                        col='var(--warning)'; ink='#111';
+                      } else {
+                        col='var(--success)';
+                      }
+                      const label=st.total? `${Math.round(acc*100)}%`:'';
+                      return (
+                        <div key={f}
+                             className="heat-cell"
+                             style={{background:col,color:ink,fontSize:'0.65rem'}}
+                             title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
     const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
     const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
@@ -1749,7 +1131,7 @@
       return (
         <div>
           <div className="card">
-            <h2>Theory & Concepts</h2>
+            <h2>Music Theory</h2>
             <p>Explore intervals, key signatures and time signatures.</p>
             <button className="btn btn-primary" onClick={()=>onNavigate('intervalTrainer')}>Intervals Trainer</button>
             <button className="btn btn-primary" onClick={()=>onNavigate('intervalTester')}>Intervals Tester</button>
@@ -2170,7 +1552,7 @@
       return (
         <div>
           <div className="card">
-            <h2>Position Reference</h2>
+            <h2>Positions Charts</h2>
     
             {/* compact controls */}
             <div
@@ -2299,33 +1681,33 @@
               <h1>Violin Mastery Quest</h1>
               <p style={{color:'var(--ink-light)'}}>Tailor your practice by choosing strings & positions. Enjoy drills, study tools and track progress.</p>
               <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'1rem'}}>
-                <div className="card">
-                  <h2>🎻 Play</h2>
-                  <button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('arpeggios')}>Arpeggio Trainer</button>
-									<button className="btn btn-primary" onClick={()=>setPage('rhythm')}>Rhythm Drills</button>
-									<button className="btn btn-primary" onClick={()=>setPage('ear')}>Ear-Training Lab</button>
-									<button className="btn btn-primary" onClick={()=>setPage('focusDrill')}>Focus Note Drill</button>
-									<button className="btn btn-primary" onClick={()=>setPage('journal')}>Practice Journal</button>
-                </div>
-                <div className="card">
-                  <h2>📘 Study</h2>
-                  <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Theory</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Bieler Lab</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('positionRef')}>Position Reference</button>
-                </div>
-                <div className="card">
-                  <h2>📊 Progress & Settings</h2>
-                  <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
-                  <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
-                </div>
-              </div>
+							  {/* 📘 Study FIRST */}
+							  <div className="card">
+							    <h2>📘 Study</h2>
+							    <button className="btn btn-primary" onClick={()=>setPage('positionRef')}>Positions Charts</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Music Theory</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Technique Lab</button>
+							  </div>
+							
+							  {/* 🎻 Play SECOND */}
+							  <div className="card">
+							    <h2>🎻 Play</h2>
+							    <button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
+							  </div>
+							
+							  {/* 📊 Progress & Settings */}
+							  <div className="card">
+							    <h2>📊 Progress & Settings</h2>
+							    <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
+							  </div>
+							</div>
             </div>
           )}
           {page==='speed'&&<SpeedDrill prefs={prefs} onBack={()=>setPage('home')}/>} 
@@ -2346,11 +1728,6 @@
           {page==='timeTester'&&<TimeTester onBack={()=>setPage('theoryHome')}/>} 
           {page==='bieler'&&<BielerLab onBack={()=>setPage('home')}/>}
           {page==='positionRef'&&<PositionReference onBack={()=>setPage('home')}/>}
-          {page==='arpeggios'   && <ArpeggioTrainer prefs={prefs} onBack={()=>setPage('home')}/>}
-					{page==='rhythm'      && <RhythmDrills onBack={()=>setPage('home')}/>}
-					{page==='ear'         && <EarTrainingLab onBack={()=>setPage('home')}/>}
-					{page==='journal'     && <PracticeJournal onBack={()=>setPage('home')}/>}
-					{page==='focusDrill'  && <FocusNoteDrill prefs={prefs} onBack={()=>setPage('home')}/>}
         </div>
       );
     }
