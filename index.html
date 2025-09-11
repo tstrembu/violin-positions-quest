@@ -3,42 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <title>Violin Mastery Quest – Enhanced Trainer (v5+ with Improvements)</title>
-  <!--
-    This file contains an evolved version of the Violin Mastery Quest code which
-    implements several of the expert panel’s recommendations.  In particular
-    it:
-    • Adds encouraging feedback messages and a simple audible beep when a user
-      answers correctly or incorrectly.  The AudioEngine now includes a
-      `playFeedback` method that produces a high‐pitched beep for correct
-      responses and a low‐pitched beep for wrong answers.  Each quiz and drill
-      calls this method when marking answers.
-    • Adjusts the screen reader text to be more positive ("Correct, great
-      job!" or "Oops, almost!") rather than plain "Correct"/"Incorrect".
-    • Fixes the cell height in the VisualFingerboard component so that
-      highlights show up properly.  Previously the subtraction of eight
-      pixels sometimes resulted in zero‐height rectangles on small screens;
-      this has been reduced.
-    • Displays simple badge icons on the stats page.  Each player level is
-      represented as a star (⭐) so students can see their progress at a
-      glance.  While not a full badge system, this responds to the panel
-      suggestion to reward learners with visual symbols.
-    The overall structure remains intact; these changes are incremental and
-    designed to illustrate how the app could evolve to incorporate more
-    motivational and pedagogical features.
-  -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    /*
-      Updated colour palette for accessibility. The success, warning and danger
-      colours now use a colour‐blind friendly palette (green, orange and red).  A
-      neutral grey is defined for low‐information elements.  In dark mode the
-      palette is mirrored with brighter tints.  See colour‐blind guidance for
-      details【408173630527642†L99-L134】.
-    */
     :root {
       --bg:#f8fafc;
       --card:#fff;
