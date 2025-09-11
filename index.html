@@ -1230,15 +1230,15 @@
               <div>
                 <p>What does {q.term} mean?</p>
                 {q.options.map((opt,i)=>(
-								  <OptionButton
-								    key={i}
-								    label={opt}
-								    selected={cursor===i}
-								    shortcut={String(i+1)}
-								    onClick={()=>answer(opt,i)}
-								    data-autofocus={i===0 ? 'true' : undefined}
-								  />
-								))}
+                  <OptionButton
+                    key={i}
+                    label={opt}
+                    selected={cursor===i}
+                    shortcut={String(i+1)}
+                    onClick={()=>answer(opt,i)}
+                    autoFocus={i===0}
+                  />
+                ))}
               </div>
             )}
           </div>
