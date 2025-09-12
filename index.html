@@ -2431,127 +2431,445 @@
 		    </div>
 		  );
 		}
-		// --- Practice Journal --------------------------------------------------------
-		const JOURNAL_KEY = 'vmq.v4.journal';
-		
-		function PracticeJournal({ onBack }) {
-		  const [running, setRunning] = React.useState(false);
-		  const [startTs, setStartTs] = React.useState(null);
-		  const [elapsed, setElapsed] = React.useState(0);
-		  const [activity, setActivity] = React.useState('General Practice');
-		  const [notes, setNotes] = React.useState('');
-		  const [entries, setEntries] = React.useState(() => loadJSON(JOURNAL_KEY, []));
-		
-		  React.useEffect(() => {
-		    if (!running) return;
-		    const id = setInterval(() => setElapsed(Date.now() - startTs), 1000);
-		    return () => clearInterval(id);
-		  }, [running, startTs]);
-		
-		  const fmt = (ms) => {
-		    const sec = Math.floor(ms / 1000);
-		    const m = Math.floor(sec / 60).toString().padStart(2, '0');
-		    const s = (sec % 60).toString().padStart(2, '0');
-		    return `${m}:${s}`;
-		  };
-		
-		  const start = () => {
-		    setRunning(true);
-		    setStartTs(Date.now());
-		    setElapsed(0);
-		  };
-		  const stopAndSave = () => {
-		    if (!running) return;
-		    const end = Date.now();
-		    const durMs = end - startTs;
-		    const item = {
-		      startISO: new Date(startTs).toISOString(),
-		      endISO: new Date(end).toISOString(),
-		      minutes: Math.round(durMs / 60000),
-		      activity,
-		      notes: notes.trim()
-		    };
-		    const next = [item, ...entries].slice(0, 500);
-		    setEntries(next);
-		    saveJSON(JOURNAL_KEY, next);
-		    setRunning(false);
-		    setStartTs(null);
-		    setElapsed(0);
-		    setNotes('');
-		  };
-		
-		  const totalMin = entries.reduce((a, e) => a + (e.minutes || 0), 0);
-		
-		  const activities = [
-		    'General Practice','Positions Charts','Flashcards','Speed Drill','Snapshot',
-		    'Interval Sprint','Note Locator','Ear Trainer','Arpeggio Trainer','Rhythm Drills',
-		    'Tempo Trainer','Key/Time Theory','Technique Lab'
-		  ];
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Practice Journal</h2>
-		        <div className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:'1rem'}}>
-		          <div>
-		            <div style={{fontWeight:600, marginBottom:6}}>Activity</div>
-		            <select
-		              value={activity}
-		              onChange={e => setActivity(e.target.value)}
-		              style={{width:'100%', padding:'0.5rem', borderRadius:8, border:'1px solid var(--border)'}}
-		              disabled={running}
-		            >
-		              {activities.map(a => <option key={a} value={a}>{a}</option>)}
-		            </select>
-		            <div style={{marginTop:'0.75rem', fontWeight:600}}>Notes</div>
-		            <textarea
-		              value={notes}
-		              onChange={e => setNotes(e.target.value)}
-		              placeholder="What did you work on?"
-		              rows={4}
-		              style={{width:'100%', padding:'0.5rem', borderRadius:8, border:'1px solid var(--border)'}}
-		              disabled={running}
-		            />
-		          </div>
-		          <div>
-		            <div style={{fontWeight:600, marginBottom:6}}>Timer</div>
-		            <div style={{fontSize:'2rem', fontWeight:700}}>{fmt(elapsed)}</div>
-		            <div style={{display:'flex', gap:'.5rem', marginTop:'.5rem', flexWrap:'wrap'}}>
-		              {!running && <button className="btn btn-primary" onClick={start}>Start</button>}
-		              {running && <button className="btn btn-danger" onClick={stopAndSave}>Stop & Save</button>}
-		              {!running && entries.length > 0 && (
-		                <button className="btn btn-secondary" onClick={() => {
-		                  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
-		                  const url = URL.createObjectURL(blob);
-		                  const a = document.createElement('a');
-		                  a.href = url; a.download = 'vmq-practice-journal.json'; a.click();
-		                  URL.revokeObjectURL(url);
-		                }}>Export JSON</button>
-		              )}
-		            </div>
-		            <p style={{color:'var(--ink-light)', marginTop:'.5rem'}}>Total logged: <strong>{totalMin} min</strong></p>
-		          </div>
-		        </div>
-		      </div>
-		
-		      <div className="card">
-		        <h3>Entries</h3>
-		        {entries.length === 0 && <p>No entries yet.</p>}
-		        {entries.map((e, i) => (
-		          <div key={i} style={{borderTop: i ? '1px solid var(--border)' : 'none', padding:'0.5rem 0'}}>
-		            <div style={{fontWeight:600}}>{e.activity} • {e.minutes} min</div>
-		            <div style={{fontSize:'0.85rem', color:'var(--ink-light)'}}>
-		              {new Date(e.startISO).toLocaleString()} → {new Date(e.endISO).toLocaleTimeString()}
-		            </div>
-		            {e.notes && <div style={{marginTop:4}}>{e.notes}</div>}
-		          </div>
-		        ))}
-		      </div>
-		
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		}
+    // --- Practice Journal (Auto Tracker) ------------------------------------------
+    const JOURNAL_KEY = 'vmq.v5.journal';
+    
+    // Utility: local-date (yyyy-mm-dd), parse mm/dd/yyyy, format mm/dd/yyyy
+    const localDateStr = (d = new Date()) => {
+      const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), da = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${da}`;
+    };
+    const parseMDY = (str) => {
+      const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!m) return null;
+      const [_, mm, dd, yyyy] = m;
+      const dt = new Date(`${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T12:00:00`);
+      return Number.isFinite(dt.valueOf()) ? dt : null;
+    };
+    const fmtMDY = (d) => {
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${mm}/${dd}/${d.getFullYear()}`;
+    };
+    const msToMin = (ms) => Math.floor(ms / 60000);
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    
+    // Activity names we track (normalized headings → label)
+    const ACTIVITY_MAP = {
+      'positions charts': 'Positions Charts',
+      'flashcards': 'Flashcards',
+      'speed drill': 'Speed Drill',
+      'snapshot': 'Snapshot',
+      'interval sprint': 'Interval Sprint',
+      'note locator': 'Note Locator',
+      'intervals trainer': 'Intervals Trainer',
+      'intervals tester': 'Intervals Tester',
+      'key signatures trainer': 'Key Sig Trainer',
+      'key sig tester': 'Key Sig Tester',
+      'time sig trainer': 'Time Sig Trainer',
+      'time sig tester': 'Time Sig Tester',
+      'tempo trainer': 'Tempo Trainer',
+      'tempo tester': 'Tempo Tester',
+      'ear trainer': 'Ear Trainer',
+      'arpeggio trainer': 'Arpeggio Trainer',
+      'rhythm trainer': 'Rhythm Trainer',
+      'rhythm drills': 'Rhythm Drills',
+      'technique lab': 'Technique Lab',
+      'music theory': 'Theory',
+    };
+    const IGNORED_HEADINGS = new Set([
+      'practice journal','settings','your progress','music theory','home'
+    ]);
+    
+    // CSV helper
+    function toCSV(rows) {
+      if (!rows.length) return 'date,start_iso,end_iso,activity,minutes,score,total,accuracy_pct,correct_delta,total_delta,notes\n';
+      const header = Object.keys(rows[0]);
+      const esc = (v) => {
+        if (v == null) return '';
+        const s = String(v);
+        return /[,"\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+      };
+      const lines = [header.join(',')].concat(rows.map(r => header.map(k => esc(r[k])).join(',')));
+      return lines.join('\n');
+    }
+    
+    function PracticeJournal({ onBack }) {
+      // Persistent journal
+      const [entries, setEntries] = React.useState(() => loadJSON(JOURNAL_KEY, []));
+      const persist = React.useCallback((list) => { setEntries(list); saveJSON(JOURNAL_KEY, list); }, []);
+    
+      // Selection (defaults to today)
+      const [selectedDate, setSelectedDate] = React.useState(localDateStr());
+      const [typedDate, setTypedDate] = React.useState(() => fmtMDY(new Date()));
+    
+      // ---- Auto tracking state (does not require user interaction) ---------------
+      const sessionRef = React.useRef(null);
+      const lastActiveRef = React.useRef(Date.now());
+      const visibleRef = React.useRef(!document.hidden);
+      const lastStatsRef = React.useRef(loadJSON('vmq.v4.stats', {})); // baseline for deltas
+      const lastDOMScoreRef = React.useRef({ score:0, total:0 });      // last parsed "Score X/Y"
+    
+      // force a heartbeat so “live” session seconds render
+      const [, forceTick] = React.useState(0);
+      React.useEffect(() => { const id = setInterval(()=>forceTick(t=>t+1), 1000); return ()=>clearInterval(id); }, []);
+    
+      // Detect current activity by peeking at the main visible <h2> heading
+      const detectActivity = React.useCallback(() => {
+        const root = document.getElementById('root');
+        if (!root) return null;
+        const h2s = Array.from(root.querySelectorAll('.card > h2'));
+        if (!h2s.length) return null;
+        // pick the first visible, non-ignored heading
+        for (const h2 of h2s) {
+          const txt = (h2.textContent || '').trim();
+          if (!txt) continue;
+          const low = txt.toLowerCase();
+          if (IGNORED_HEADINGS.has(low)) continue;
+          // Normalize “X Complete” back to “X”
+          const base = low.replace(/\s+complete$/,'').trim();
+          // map to label
+          const key = ACTIVITY_MAP[base] || ACTIVITY_MAP[low] || null;
+          if (key) return key;
+          // fallback: title-cased heading if not ignored
+          if (!/practice journal|settings|progress/i.test(txt)) return txt;
+        }
+        return null;
+      }, []);
+    
+      // Start a new session for an activity
+      const startSession = React.useCallback((activity) => {
+        if (!activity) return;
+        sessionRef.current = {
+          activity,
+          date: localDateStr(),
+          start: Date.now(),
+          engagedMs: 0,
+          // metrics since session start (two sources)
+          statDelta: { correct: 0, total: 0 },
+          domScore: { score: 0, total: 0 },
+        };
+        lastActiveRef.current = Date.now();
+        // snapshot stats at session start
+        lastStatsRef.current = loadJSON('vmq.v4.stats', {});
+        // reset DOM “Score X/Y”
+        lastDOMScoreRef.current = { score:0, total:0 };
+      }, []);
+    
+      // End + persist current session
+      const endSession = React.useCallback((reason='switch') => {
+        const s = sessionRef.current;
+        if (!s) return;
+        const end = Date.now();
+        const minutes = msToMin(s.engagedMs);
+        // only keep meaningful sessions (>= 1 min of engaged time)
+        if (minutes > 0) {
+          const accuracyPct = (s.domScore.total > 0)
+            ? Math.round((s.domScore.score / s.domScore.total) * 100)
+            : (s.statDelta.total > 0 ? Math.round((s.statDelta.correct / s.statDelta.total) * 100) : null);
+    
+          const item = {
+            id: `${s.date}-${s.activity}-${s.start}`,
+            date: s.date,
+            startISO: new Date(s.start).toISOString(),
+            endISO: new Date(end).toISOString(),
+            activity: s.activity,
+            minutes,
+            score: s.domScore.score || null,
+            total: s.domScore.total || null,
+            accuracy_pct: accuracyPct != null ? accuracyPct : null,
+            correct_delta: s.statDelta.correct || null,
+            total_delta: s.statDelta.total || null,
+            notes: '',
+            reason // 'switch' | 'pagehide' | 'manual' | 'unmount'
+          };
+          const next = [item, ...entries].slice(0, 2000);
+          persist(next);
+        }
+        sessionRef.current = null;
+      }, [entries, persist]);
+    
+      // Idle/visibility/engagement loop (increments engagedMs only when “active”)
+      React.useEffect(() => {
+        const IDLE_MS = 25000;       // idle if no input for 25s
+        const TICK_MS = 1000;        // engagement tick
+        const onInput = () => { lastActiveRef.current = Date.now(); };
+        const onVisible = () => { visibleRef.current = !document.hidden; if (!document.hidden) onInput(); };
+        window.addEventListener('pointerdown', onInput);
+        window.addEventListener('keydown', onInput);
+        window.addEventListener('wheel', onInput, { passive: true });
+        document.addEventListener('visibilitychange', onVisible);
+    
+        const ticker = setInterval(() => {
+          const s = sessionRef.current;
+          if (!s) return;
+          const isActive = visibleRef.current && (Date.now() - lastActiveRef.current < IDLE_MS);
+          if (isActive) s.engagedMs += TICK_MS;
+    
+          // poll stats deltas (since session start)
+          const curStats = loadJSON('vmq.v4.stats', {});
+          const prev = lastStatsRef.current || {};
+          let dCorrect = 0, dTotal = 0;
+          for (const k of Object.keys(curStats)) {
+            const a = curStats[k] || {correct:0,total:0};
+            const b = prev[k] || {correct:0,total:0};
+            dCorrect += clamp((a.correct||0) - (b.correct||0), -1e9, 1e9);
+            dTotal   += clamp((a.total||0)   - (b.total||0),   -1e9, 1e9);
+          }
+          if (dCorrect !== 0 || dTotal !== 0) {
+            s.statDelta.correct += dCorrect;
+            s.statDelta.total   += dTotal;
+            lastStatsRef.current = curStats;
+          }
+    
+          // parse a “Score X/Y” if a Complete screen is visible
+          try {
+            const card = document.querySelector('.card h2');
+            const h = (card && card.textContent || '').trim();
+            if (h && /complete$/i.test(h)) {
+              const p = card.parentElement?.querySelector('p');
+              const m = p && p.textContent.match(/Score\s+(\d+)\s*\/\s*(\d+)/i);
+              if (m) {
+                const sc = Number(m[1]||0), tot = Number(m[2]||0);
+                if (tot >= lastDOMScoreRef.current.total) {
+                  lastDOMScoreRef.current = { score: sc, total: tot };
+                  s.domScore = { score: sc, total: tot };
+                }
+              }
+            }
+          } catch {}
+        }, TICK_MS);
+    
+        return () => {
+          clearInterval(ticker);
+          window.removeEventListener('pointerdown', onInput);
+          window.removeEventListener('keydown', onInput);
+          window.removeEventListener('wheel', onInput);
+          document.removeEventListener('visibilitychange', onVisible);
+        };
+      }, []);
+    
+      // Watch the UI to auto-switch sessions when the visible activity changes
+      React.useEffect(() => {
+        // boot with current activity
+        let current = detectActivity();
+        if (current) startSession(current);
+    
+        const obs = new MutationObserver(() => {
+          const now = detectActivity();
+          if (now && now !== current) {
+            endSession('switch');
+            startSession(now);
+            current = now;
+          }
+        });
+        obs.observe(document.getElementById('root'), { childList: true, subtree: true, characterData: true });
+    
+        // also end session on pagehide/unload
+        const onHide = () => endSession('pagehide');
+        window.addEventListener('pagehide', onHide);
+        window.addEventListener('beforeunload', onHide);
+    
+        return () => {
+          try { obs.disconnect(); } catch {}
+          window.removeEventListener('pagehide', onHide);
+          window.removeEventListener('beforeunload', onHide);
+          endSession('unmount');
+        };
+      }, [detectActivity, startSession, endSession]);
+    
+      // ------------------- View logic (today by default) --------------------------
+      const selectedEntries = React.useMemo(() => {
+        return entries
+          .filter(e => e.date === selectedDate)
+          .sort((a,b)=>new Date(b.startISO)-new Date(a.startISO));
+      }, [entries, selectedDate]);
+    
+      // Sum per-activity + total for the selected day
+      const perActivity = React.useMemo(() => {
+        const map = new Map();
+        let total = 0;
+        selectedEntries.forEach(e => {
+          const m = e.minutes || 0;
+          total += m;
+          map.set(e.activity, (map.get(e.activity) || 0) + m);
+        });
+        const list = Array.from(map.entries())
+          .map(([activity, minutes]) => ({ activity, minutes }))
+          .sort((a,b)=>b.minutes - a.minutes);
+        return { list, total };
+      }, [selectedEntries]);
+    
+      // edit notes for an entry
+      const updateNotes = (id, text) => {
+        const next = entries.map(e => e.id === id ? { ...e, notes: text } : e);
+        persist(next);
+      };
+    
+      // export CSV (all days)
+      const exportCSV = () => {
+        const rows = entries.slice().reverse().map(e => ({
+          date: e.date,
+          start_iso: e.startISO,
+          end_iso: e.endISO,
+          activity: e.activity,
+          minutes: e.minutes,
+          score: e.score ?? '',
+          total: e.total ?? '',
+          accuracy_pct: e.accuracy_pct ?? '',
+          correct_delta: e.correct_delta ?? '',
+          total_delta: e.total_delta ?? '',
+          notes: e.notes || ''
+        }));
+        const csv = toCSV(rows);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'vmq_practice_journal.csv'; a.click();
+        URL.revokeObjectURL(url);
+      };
+    
+      // export JSON (optional)
+      const exportJSON = () => {
+        const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'vmq_practice_journal.json'; a.click();
+        URL.revokeObjectURL(url);
+      };
+    
+      // jump to today
+      const goToday = () => {
+        const today = localDateStr();
+        setSelectedDate(today);
+        setTypedDate(fmtMDY(new Date()));
+      };
+    
+      // try to apply typed MM/DD/YYYY
+      const applyTypedDate = () => {
+        const dt = parseMDY(typedDate);
+        if (!dt) { alert('Please enter a valid date in MM/DD/YYYY format.'); return; }
+        setSelectedDate(localDateStr(dt));
+      };
+    
+      // live session display
+      const live = sessionRef.current;
+    
+      return (
+        <div>
+          <div className="card">
+            <h2>Practice Journal</h2>
+    
+            {/* Date controls: default to today, calendar + MM/DD/YYYY */}
+            <div className="grid" style={{gridTemplateColumns:'1fr', gap:'0.75rem', marginBottom:'.75rem'}}>
+              <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center'}}>
+                <label style={{fontWeight:600}}>Date:</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e)=>{
+                    const v = e.target.value;
+                    setSelectedDate(v);
+                    // sync the text box
+                    const d = new Date(v+'T12:00:00');
+                    if (Number.isFinite(d.valueOf())) setTypedDate(fmtMDY(d));
+                  }}
+                  style={{padding:'0.4rem 0.6rem', borderRadius:8, border:'1px solid var(--border)'}}
+                />
+                <span style={{color:'var(--ink-light)'}}>or</span>
+                <input
+                  inputMode="numeric"
+                  placeholder="MM/DD/YYYY"
+                  value={typedDate}
+                  onChange={(e)=>setTypedDate(e.target.value)}
+                  onKeyDown={(e)=>{ if(e.key==='Enter') applyTypedDate(); }}
+                  style={{padding:'0.4rem 0.6rem', borderRadius:8, border:'1px solid var(--border)', width:140}}
+                />
+                <button className="btn btn-primary" onClick={applyTypedDate}>Go</button>
+                <button className="btn btn-secondary" onClick={goToday}>Today</button>
+                <div style={{marginLeft:'auto', display:'flex', gap:'.5rem', flexWrap:'wrap'}}>
+                  <button className="btn btn-primary" onClick={exportCSV}>Export CSV</button>
+                  <button className="btn btn-secondary" onClick={exportJSON}>Export JSON</button>
+                </div>
+              </div>
+            </div>
+    
+            {/* Live session indicator */}
+            {live && live.date === selectedDate && (
+              <div className="card" style={{padding:'0.6rem', marginBottom:'0.5rem'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:'.5rem', flexWrap:'wrap'}}>
+                  <div><strong>Tracking:</strong> {live.activity}</div>
+                  <div style={{color:'var(--ink-light)'}}>
+                    Active time: <strong>{msToMin(live.engagedMs)} min</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+    
+            {/* Per-activity summary for selected day */}
+            <div className="card" style={{padding:'0.75rem'}}>
+              <h3 style={{marginTop:0}}>Summary for {fmtMDY(new Date(selectedDate+'T12:00:00'))}</h3>
+              {perActivity.list.length === 0 ? (
+                <p style={{color:'var(--ink-light)'}}>No sessions logged for this day yet.</p>
+              ) : (
+                <div>
+                  <div className="grid" style={{gridTemplateColumns:'2fr 1fr', gap:'0.35rem', alignItems:'center'}}>
+                    <div style={{fontWeight:700}}>Activity</div>
+                    <div style={{fontWeight:700, textAlign:'right'}}>Minutes</div>
+                    {perActivity.list.map((row,i)=>(
+                      <React.Fragment key={row.activity}>
+                        <div style={{borderTop: i? '1px solid var(--border)':'none', paddingTop: i? '4px':'0'}}>{row.activity}</div>
+                        <div style={{borderTop: i? '1px solid var(--border)':'none', paddingTop: i? '4px':'0', textAlign:'right'}}>{row.minutes}</div>
+                      </React.Fragment>
+                    ))}
+                    <div style={{borderTop:'1px solid var(--border)', paddingTop:'6px', fontWeight:700}}>Total</div>
+                    <div style={{borderTop:'1px solid var(--border)', paddingTop:'6px', fontWeight:700, textAlign:'right'}}>{perActivity.total}</div>
+                  </div>
+                  <p style={{color:'var(--ink-light)', marginTop:'.5rem'}}>Only engaged time (no idle) ≥ 1 minute per session is saved.</p>
+                </div>
+              )}
+            </div>
+          </div>
+    
+          {/* Entries list for selected day */}
+          <div className="card">
+            <h3>Entries</h3>
+            {selectedEntries.length === 0 && <p>No entries yet.</p>}
+            {selectedEntries.map((e, i) => {
+              const start = new Date(e.startISO), end = new Date(e.endISO);
+              const accText =
+                e.score != null && e.total != null
+                  ? `Score ${e.score}/${e.total}${e.accuracy_pct != null ? ` (${e.accuracy_pct}%)` : ''}`
+                  : (e.total_delta ? `Accuracy ~ ${Math.round((e.correct_delta||0)/(e.total_delta||1)*100)}% (Δ ${e.correct_delta||0}/${e.total_delta||0})` : null);
+              return (
+                <div key={e.id} style={{borderTop: i ? '1px solid var(--border)' : 'none', padding:'0.6rem 0'}}>
+                  <div style={{display:'flex', justifyContent:'space-between', gap:'.5rem', flexWrap:'wrap'}}>
+                    <div style={{fontWeight:600}}>{e.activity}</div>
+                    <div style={{color:'var(--ink-light)'}}>{e.minutes} min</div>
+                  </div>
+                  <div style={{fontSize:'0.85rem', color:'var(--ink-light)'}}>
+                    {start.toLocaleTimeString()} → {end.toLocaleTimeString()}
+                  </div>
+                  {accText && <div style={{marginTop:4, fontSize:'0.9rem'}}>{accText}</div>}
+                  <details style={{marginTop:6}}>
+                    <summary style={{cursor:'pointer'}}>Notes</summary>
+                    <textarea
+                      value={e.notes || ''}
+                      onChange={(ev)=>updateNotes(e.id, ev.target.value)}
+                      rows={3}
+                      placeholder="Add a note about this session…"
+                      style={{width:'100%', padding:'0.5rem', borderRadius:8, border:'1px solid var(--border)', marginTop:'0.4rem'}}
+                    />
+                  </details>
+                </div>
+              );
+            })}
+          </div>
+    
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
 		// --- Custom Note Drill -------------------------------------------------------
 		const CUSTOM_KEY = 'vmq.v4.custom.notes';
 		
