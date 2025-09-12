@@ -1703,287 +1703,264 @@
 		    </div>
 		  );
 		}
-	// --- Rhythm Drills (progressive + loop default ON) ---------------------------
-function RhythmDrills({ onBack }) {
-  // ── UI state ───────────────────────────────────────────────────────────────
-  const LOOP_KEY = 'vmq.v4.rhythm.loop';
-  const [loop, setLoop]       = React.useState(() => loadJSON(LOOP_KEY, true)); // default ON
-  const [mode, setMode]       = React.useState('sig');   // 'sig' | 'name'
-  const [time, setTime]       = React.useState(60);
-  const [paused, setPaused]   = React.useState(false);
-  const [score, setScore]     = React.useState(0);
-  const [answered, setAns]    = React.useState(0);
-  const [q, setQ]             = React.useState(null);
-  const timersRef = React.useRef([]);
-  const xp  = loadJSON('vmq.v4.xp', 0);
-  const lvl = levelForXP(xp);
-
-  // ── scheduling helpers ─────────────────────────────────────────────────────
-  const clearTimers = React.useCallback(() => {
-    timersRef.current.forEach(id => clearTimeout(id));
-    timersRef.current = [];
-  }, []);
-
-  const scheduleClick = (msFromNow, level='weak') => {
-    // strong>beat>weak mapped to pleasant midi beeps
-    const midi = level === 'strong' ? 102 : level === 'beat' ? 95 : 88;
-    const id = setTimeout(() => {
-      try { audioEngine.playNote({ midi, durationMs: 120 }); } catch {}
-    }, msFromNow);
-    timersRef.current.push(id);
-  };
-
-  // ── pattern library (with tiers) ───────────────────────────────────────────
-  /**
-   * Each entry:
-   * { id, tier(1..4), name, sig, beatUnit, bpm, beatsPerMeasure, seq:[{dur,rest?,accent?}], customAccents? }
-   */
-  const R = []; // we’ll push into this using small builders
-
-  // Builders
-  const msPerBeat = (beatUnit, bpm) => 60000 / Math.max(1, bpm); // bpm already matches unit
-  const fillToBeats = (cell, beats) => {
-    const out = [];
-    let sum = 0;
-    while (sum + (Array.isArray(cell) ? cell.reduce((a,b)=>a+(b.dur??b),0) : (cell.dur ?? cell)) <= beats + 1e-9) {
-      if (Array.isArray(cell)) cell.forEach(x => out.push(typeof x === 'number' ? {dur:x} : x));
-      else out.push(typeof cell === 'number' ? {dur:cell} : cell);
-      sum = out.reduce((a,b)=>a+b.dur,0);
-    }
-    if (sum < beats - 1e-6) out.push({dur: beats - sum});
-    return out;
-  };
-  const group = (arr) => arr.map(x => (typeof x === 'number' ? { dur:x } : x));
-
-  const simple = (name, seqBeatArray, {sig='4/4', bpm=96, beats=4, accents, tier=2}={}) =>
-    R.push({ id:name, tier, name, sig, beatUnit:'quarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seqBeatArray), beats), customAccents:accents });
-
-  const compound = (name, seqBeatArray, {sig='6/8', bpm=96, beats=2, accents, tier=2}={}) =>
-    R.push({ id:name, tier, name, sig, beatUnit:'dottedQuarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seqBeatArray), beats), customAccents:accents });
-
-  const asym = (name, seqBeatArray, {sig='5/8', bpm=116, beats=5, accents, tier=4}={}) =>
-    R.push({ id:name, tier, name, sig, beatUnit:'eighth', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seqBeatArray), beats), customAccents:accents });
-
-  // ── Populate by tier: Basics → Core → Advanced → Odd/Asym ──────────────────
-  // TIER 1 — Basics
-  simple('Straight quarters',     [1],                         { tier:1 });
-  simple('Straight eighths',      [0.5],                      { tier:1 });
-  simple('Straight sixteenths',   [0.25],                     { tier:1, bpm:88 });
-  simple('Waltz quarters (oom-pah-pah)', [1,1,1],             { tier:1, sig:'3/4', beats:3, bpm:96 });
-  simple('Waltz: quarter + two 8ths',    [1,0.5,0.5],         { tier:1, sig:'3/4', beats:3, bpm:96 });
-  compound('6/8 jig (3+3 eighths)',      [1/3,1/3,1/3],       { tier:1, sig:'6/8', bpm:104 }); // twice per bar via fill
-
-  // TIER 2 — Core musical rhythms
-  simple('Dotted 8th–16th (long–short)', [0.75,0.25],         { tier:2, bpm:88 });
-  simple('Lombard (short–long)',         [0.25,0.75],         { tier:2, bpm:88 });
-  simple('Syncopation (8th–quarter–8th)',[0.5,1,0.5],         { tier:2, bpm:96 });
-  simple('Backbeat quarters (off-beat)', [{dur:0.5,rest:true},0.5], { tier:2, bpm:96 });
-  simple('Tie across beat (q tied to 8th + 8th)', [1.5,0.5],  { tier:2, bpm:92 });
-  simple('Eighth-note triplets',         [1/3,1/3,1/3],       { tier:2, bpm:72 });
-  compound('6/8 dotted (long–short)',    [2/3,1/3],           { tier:2, sig:'6/8', bpm:96 });
-  compound('6/8 reverse dotted',         [1/3,2/3],           { tier:2, sig:'6/8', bpm:96 });
-  compound('12/8 ballad (4 beats of 3)', [1/3,1/3,1/3],       { tier:2, sig:'12/8', beats:4, bpm:78 });
-
-  // TIER 3 — Advanced / less frequent
-  simple('Quarter-note triplets (3 in 2)', [2/3,2/3,2/3,2/3,2/3,2/3], { tier:3, bpm:72 });
-  (function(){
-    const seq = group([1,1,1,1,1,1]); // 6 quarters (two measures)
-    R.push({
-      id:'Hemiola (three halves over two bars of 3/4)',
-      tier:3,
-      name:'Hemiola (three halves over two bars of 3/4)',
-      sig:'3/4',
-      beatUnit:'quarter', bpm:84, beatsPerMeasure:6,
-      seq, customAccents:[0,2,4]
-    });
-  })();
-  simple('Cut-time marching halves', [1], { tier:3, sig:'2/2', beats:2, bpm:96 });
-  simple('Cut-time syncopation (8th-quarters-8th)', [0.5,1,0.5], { tier:3, sig:'2/2', beats:2, bpm:112 });
-  simple('Swinged 8ths (≈ triplet feel)', [2/3,1/3], { tier:3, bpm:84 });
-  compound('Siciliana (long–short–short)', [2/3,1/3,1/3], { tier:3, sig:'6/8', bpm:66 });
-  compound('9/8 slip-jig (3+3+3)', [1/3,1/3,1/3], { tier:3, sig:'9/8', beats:3, bpm:100 });
-
-  // TIER 4 — Odd / Asym & least common
-  asym('5/8 (2+3)',            [1,2],            { tier:4, sig:'5/8', bpm:116, accents:[0,2] });
-  asym('5/8 (3+2)',            [3,2].map(x=>x/1),{ tier:4, sig:'5/8', bpm:116, accents:[0,3] });
-  asym('7/8 (2+2+3)',          [2,2,3].map(x=>x/1), { tier:4, sig:'7/8', bpm:112, accents:[0,2,4] });
-  asym('7/8 (3+2+2)',          [3,2,2].map(x=>x/1), { tier:4, sig:'7/8', bpm:112, accents:[0,3,5] });
-  asym('7/8 (2+3+2)',          [2,3,2].map(x=>x/1), { tier:4, sig:'7/8', bpm:112, accents:[0,2,5] });
-  simple('5/4 (2+3)',          [1,1,1.5,1.5],    { tier:4, sig:'5/4', beats:5, bpm:88 });
-  simple('5/4 (3+2)',          [1.5,1.5,1,1],    { tier:4, sig:'5/4', beats:5, bpm:88 });
-
-  // ── audio: play one full measure (or span) ─────────────────────────────────
-  const playPattern = React.useCallback((pat) => {
-    clearTimers();
-    const durBeatMs = msPerBeat(pat.beatUnit, pat.bpm);
-    let tBeats = 0; // running in beats (of beatUnit)
-    pat.seq.forEach((step) => {
-      const seg = typeof step === 'number' ? { dur: step } : step;
-      const startBeats = tBeats;
-      const isMeasureStart = Math.abs(startBeats % pat.beatsPerMeasure) < 1e-6;
-      const onBeat = Math.abs(startBeats - Math.round(startBeats)) < 1e-6; // whole-beat boundary
-      const customStrong = Array.isArray(pat.customAccents) && pat.customAccents.some(b => Math.abs(b - startBeats) < 1e-6);
-      const level = seg.accent || (customStrong || isMeasureStart ? 'strong' : (onBeat ? 'beat' : 'weak'));
-      if (!seg.rest) scheduleClick(startBeats * durBeatMs, level);
-      tBeats += seg.dur;
-    });
-    const totalMs = tBeats * durBeatMs;
-    if (loop) {
-      const id = setTimeout(() => playPattern(pat), totalMs + 40);
-      timersRef.current.push(id);
-    }
-  }, [loop, clearTimers]);
-
-  // ── progressive selection helpers ──────────────────────────────────────────
-  const STATS = () => loadJSON('vmq.v4.stats', {});
-  const patKey = (p) => `rhythm:${p.id}`;
-  const accFor = (p, stats) => {
-    const st = stats[patKey(p)] || { correct:0, total:0 };
-    return st.total ? (st.correct / st.total) : 0;
-  };
-  const totalFor = (p, stats) => (stats[patKey(p)]?.total) || 0;
-
-  const TIER_MIN = 12;   // need at least 12 attempts across a tier
-  const TIER_ACC = 0.80; // …with ≥80% accuracy to unlock next
-
-  const tierMastered = (tier, stats) => {
-    const items = R.filter(p => p.tier === tier);
-    if (!items.length) return true;
-    const totals = items.reduce((a,p)=>{
-      const st = stats[patKey(p)] || {correct:0,total:0};
-      a.correct += st.correct||0; a.total += st.total||0; return a;
-    }, {correct:0,total:0});
-    return totals.total >= TIER_MIN && (totals.correct / Math.max(1, totals.total)) >= TIER_ACC;
-  };
-
-  const currentUnlockedTier = (stats) => {
-    const maxTier = 4;
-    for (let t=1; t<=maxTier; t++) {
-      if (!tierMastered(t, stats)) return t; // stop at first not-mastered tier
-    }
-    return 4; // everything mastered → keep full pool
-  };
-
-  // ── question generation (progressive + weighted by weakness) ───────────────
-  const pick = React.useCallback(() => {
-    const stats = STATS();
-    const unlocked = currentUnlockedTier(stats);
-
-    const pool = R.filter(p => p.tier <= unlocked);
-    // Weight by weakness (lower accuracy → higher chance)
-    const weights = pool.map(p => 1 - accFor(p, stats) + 0.05);
-    const totalW = weights.reduce((a,b)=>a+b,0) || 1;
-    let r = Math.random() * totalW;
-    let pat = pool[pool.length - 1];
-    for (let i=0;i<pool.length;i++) { r -= weights[i]; if (r <= 0) { pat = pool[i]; break; } }
-
-    const allSigs  = [...new Set(pool.map(x => x.sig))];
-    const allNames = pool.map(x => x.name);
-
-    if (mode === 'sig') {
-      const correct = pat.sig;
-      const opts = shuffle([correct, ...shuffle(allSigs.filter(s => s !== correct)).slice(0, 3)]);
-      setQ({ pattern: pat, prompt: 'Which time signature best matches the played measure?', options: opts, correct, stage: unlocked });
-    } else {
-      const correct = pat.name;
-      const opts = shuffle([correct, ...shuffle(allNames.filter(n => n !== correct)).slice(0, 3)]);
-      setQ({ pattern: pat, prompt: 'Identify the rhythm:', options: opts, correct, stage: unlocked });
-    }
-    playPattern(pat);
-  }, [mode, playPattern]);
-
-  // ── lifecycle ──────────────────────────────────────────────────────────────
-  React.useEffect(() => { pick(); return clearTimers; }, [pick, clearTimers]);
-  React.useEffect(() => {
-    if (paused) return;
-    const id = setInterval(() => setTime(t => (t <= 1 ? 0 : t - 1)), 1000);
-    return () => clearInterval(id);
-  }, [paused]);
-
-  // ── answer ─────────────────────────────────────────────────────────────────
-  const answer = (choice, i) => {
-    setAns(a => a + 1);
-    const ok = choice === q.correct;
-    speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
-    audioEngine.playFeedback(ok);
-    // persist per-pattern stats (drives progression)
-    updateStat(patKey(q.pattern), ok);
-    window.dispatchEvent(new CustomEvent('vmq:result', { detail: { ok, drill:'rhythm' } }));
-    if (ok) { setScore(s => s + 1); addXP(5); } else { addXP(2); }
-    setTimeout(() => pick(), 260);
-  };
-
-  useAnswerHotkeys(!!q, (i) => { if (q?.options[i]) answer(q.options[i], i); }, onBack, q?.options?.length ?? 4);
-
-  // ── render ─────────────────────────────────────────────────────────────────
-  if (time === 0) {
-    return (
-      <div className="card">
-        <h2>Rhythm Drills Complete</h2>
-        <p>Score {score}/{answered}</p>
-        <button className="btn btn-secondary" onClick={onBack}>Back</button>
-      </div>
-    );
-  }
-  if (!q) return null;
-
-  const STAGE_LABELS = {1:'Basics', 2:'Core', 3:'Advanced', 4:'Odd/Asym'};
-
-  return (
-    <div>
-      <div className="card">
-        <h2>Rhythm Drills</h2>
-        <p>Time {time}s | Score {score}/{answered}</p>
-
-        <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center'}}>
-          <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
-            {paused ? 'Resume' : 'Pause'}
-          </button>
-          <button className="btn btn-primary" onClick={() => playPattern(q.pattern)}>Play Again</button>
-          <PillToggle
-            label={`Loop ${loop ? 'On' : 'Off'}`}
-            pressed={loop}
-            onClick={() => setLoop(l => { const next = !l; saveJSON(LOOP_KEY, next); return next; })}
-          />
-          <PillToggle
-            label={mode==='sig' ? 'Mode: Signature' : 'Mode: Rhythm Name'}
-            pressed={mode==='name'}
-            onClick={() => setMode(m => m==='sig'?'name':'sig')}
-          />
+		// ── Rhythm Drills (comprehensive and progressive learning) ────────────────
+    function RhythmDrills({ onBack }) {
+      // ── UI state ───────────────────────────────────────────────────────────────
+      const [loop, setLoop]       = React.useState(false);
+      const [mode, setMode]       = React.useState('sig');   // 'sig' | 'name'
+      const [time, setTime]       = React.useState(60);
+      const [paused, setPaused]   = React.useState(false);
+      const [score, setScore]     = React.useState(0);
+      const [answered, setAns]    = React.useState(0);
+      const [q, setQ]             = React.useState(null);
+      const timersRef = React.useRef([]);
+      const xp  = loadJSON('vmq.v4.xp', 0);
+      const lvl = levelForXP(xp);
+    
+      // ── scheduling helpers ─────────────────────────────────────────────────────
+      const clearTimers = React.useCallback(() => {
+        timersRef.current.forEach(id => clearTimeout(id));
+        timersRef.current = [];
+      }, []);
+    
+      const scheduleClick = (msFromNow, level='weak') => {
+        // strong>beat>weak mapped to pleasant midi beeps
+        const midi = level === 'strong' ? 102 : level === 'beat' ? 95 : 88;
+        const id = setTimeout(() => {
+          try { audioEngine.playNote({ midi, durationMs: 120 }); } catch {}
+        }, msFromNow);
+        timersRef.current.push(id);
+      };
+    
+      // ── pattern library ────────────────────────────────────────────────────────
+      /**
+       * Each entry:
+       * {
+       *   name: 'Dotted 8th–16th (long–short)',
+       *   sig: '4/4',                     // display signature
+       *   beatUnit: 'quarter' | 'eighth' | 'dottedQuarter', // BPM unit
+       *   bpm: 92,                        // reasonable default
+       *   beatsPerMeasure: 4,             // meter beats
+       *   seq: [ number | {dur:number, rest?:true, accent?:'weak'|'beat'|'strong'} ... ],
+       *        // durations are in BEATS (of beatUnit). seq is one full measure (or two for hemiola).
+       *   customAccents?: number[],       // beat indices (0-based, in quarter/dottedQ/eighth beats) to force 'strong'
+       * }
+       */
+      const R = []; // we’ll push into this using small builders
+    
+      // Builders
+      const msPerBeat = (beatUnit, bpm) => 60000 / Math.max(1, bpm); // bpm already matches unit
+      const fillToBeats = (cell, beats) => {
+        const out = [];
+        let sum = 0;
+        while (sum + (Array.isArray(cell) ? cell.reduce((a,b)=>a+(b.dur??b),0) : (cell.dur ?? cell)) <= beats + 1e-9) {
+          if (Array.isArray(cell)) cell.forEach(x => out.push(typeof x === 'number' ? {dur:x} : x));
+          else out.push(typeof cell === 'number' ? {dur:cell} : cell);
+          sum = out.reduce((a,b)=>a+b.dur,0);
+        }
+        // top up if necessary (rare floating rounding)
+        if (sum < beats - 1e-6) out.push({dur: beats - sum});
+        return out;
+      };
+      const group = (arr) => arr.map(x => (typeof x === 'number' ? { dur:x } : x));
+    
+      // Simple meters (quarter = beat)
+      const simple = (name, seqBeatArray, {sig='4/4', bpm=96, beats=4, accents}={}) =>
+        R.push({ name, sig, beatUnit:'quarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seqBeatArray), beats), customAccents:accents });
+    
+      // Compound meters (dottedQuarter = beat; durations often 1/3)
+      const compound = (name, seqBeatArray, {sig='6/8', bpm=96, beats=2, accents}={}) =>
+        R.push({ name, sig, beatUnit:'dottedQuarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seqBeatArray), beats), customAccents:accents });
+    
+      // Eighth-beat meters (asymmetrical)
+      const asym = (name, seqBeatArray, {sig='5/8', bpm=116, beats=5, accents}={}) =>
+        R.push({ name, sig, beatUnit:'eighth', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seqBeatArray), beats), customAccents:accents });
+    
+      // ── Populate: common orchestral/chamber rhythms ────────────────────────────
+      // 4/4 basics
+      simple('Straight quarters',     [1]);
+      simple('Straight eighths',      [0.5]);
+      simple('Straight sixteenths',   [0.25], { bpm: 88 });
+    
+      // Dotted (long–short / Scotch-snap short–long)
+      simple('Dotted 8th–16th (long–short)', [0.75, 0.25], { bpm: 88 });
+      simple('Lombard (Scotch snap: short–long)', [0.25, 0.75], { bpm: 88 });
+    
+      // Syncopations
+      simple('Syncopation (8th–quarter–8th)', [0.5, 1, 0.5], { bpm: 96 }); // repeated
+      simple('Backbeat quarters (off-beat)',  [{dur:0.5, rest:true}, 0.5], { bpm: 96 }); // & on every beat
+      simple('Tie across beat (quarter tied to 8th, then 8th)', [1.5, 0.5], { bpm: 92 });
+    
+      // Triplet feels
+      simple('Eighth-note triplets',  [1/3, 1/3, 1/3], { bpm: 72 });
+      simple('Quarter-note triplets (3 in 2 beats)', [2/3, 2/3, 2/3, 2/3, 2/3, 2/3], { bpm: 72 });
+    
+      // 3/4 & hemiola
+      simple('Waltz quarters (oom-pah-pah)', [1, 1, 1], { sig:'3/4', beats:3, bpm: 96 });
+      simple('Waltz: quarter + two 8ths',    [1, 0.5, 0.5], { sig:'3/4', beats:3, bpm: 96 });
+      // Hemiola across two bars of 3/4 → feel 2+2+2 (accents at beats 0,2,4 out of 6 beats)
+      (function(){
+        const seq = group([1,1,1,1,1,1]); // 6 quarters (two measures)
+        R.push({
+          name: 'Hemiola (three halves over two bars of 3/4)',
+          sig: '3/4',
+          beatUnit:'quarter', bpm: 84, beatsPerMeasure:6, // treat span = 2 bars
+          seq, customAccents:[0,2,4]
+        });
+      })();
+    
+      // Cut time (alla breve)
+      simple('Cut-time marching halves', [1], { sig:'2/2', beats:2, bpm: 96 });
+      simple('Cut-time syncopation (8th-quarters-8th)', [0.5, 1, 0.5], { sig:'2/2', beats:2, bpm: 112 });
+    
+      // Compound: 6/8, 9/8, 12/8
+      compound('6/8 jig (3+3 eighths)',         [1/3,1/3,1/3], { sig:'6/8', bpm: 104 }); // twice per bar via fill
+      compound('6/8 dotted (long–short)',       [2/3,1/3],     { sig:'6/8', bpm: 96 });
+      compound('6/8 reverse dotted (short–long)',[1/3,2/3],    { sig:'6/8', bpm: 96 });
+      // 9/8 slip-jig feel
+      compound('9/8 slip-jig (3+3+3)',          [1/3,1/3,1/3], { sig:'9/8', beats:3, bpm: 100 });
+      // 12/8 gospel/ballad feel (4 dotted quarters)
+      compound('12/8 ballad (4 beats of 3)',    [1/3,1/3,1/3], { sig:'12/8', beats:4, bpm: 78 });
+    
+      // Asymmetrical (5/8, 7/8) – groupings by tradition
+      asym('5/8 (2+3)', [1, 2], { sig:'5/8', bpm: 116, accents:[0,2] });
+      asym('5/8 (3+2)', [3, 2].map(x=>x/1), { sig:'5/8', bpm: 116, accents:[0,3] });
+      asym('7/8 (2+2+3)', [2,2,3].map(x=>x/1), { sig:'7/8', bpm: 112, accents:[0,2,4] });
+      asym('7/8 (3+2+2)', [3,2,2].map(x=>x/1), { sig:'7/8', bpm: 112, accents:[0,3,5] });
+      asym('7/8 (2+3+2)', [2,3,2].map(x=>x/1), { sig:'7/8', bpm: 112, accents:[0,2,5] });
+    
+      // Siciliana-type lilt (often in 6/8 or 12/8): long–short–short
+      compound('Siciliana (long–short–short)', [2/3,1/3,1/3], { sig:'6/8', bpm: 66 });
+    
+      // Swung/shuffle (classical “swing-style” marking; approximate as triplet feel)
+      simple('Swinged 8ths (≈ triplet feel)',   [2/3,1/3], { bpm: 84 });
+    
+      // 5/4 (2+3 or 3+2) – (e.g., Tchaikovsky, Shostakovich)
+      simple('5/4 (2+3)', [1,1,1.5,1.5], { sig:'5/4', beats:5, bpm: 88 });
+      simple('5/4 (3+2)', [1.5,1.5,1,1], { sig:'5/4', beats:5, bpm: 88 });
+    
+      // ── audio: play one full measure (or span) ─────────────────────────────────
+      const playPattern = React.useCallback((pat) => {
+        clearTimers();
+        const durBeatMs = msPerBeat(pat.beatUnit, pat.bpm);
+        // Walk through seq; accent logic: strong at measure start or customAccents, medium on beat boundaries
+        let tBeats = 0; // running in beats (of beatUnit)
+        pat.seq.forEach((step, idx) => {
+          const seg = typeof step === 'number' ? { dur: step } : step;
+          const startBeats = tBeats;
+          const isMeasureStart = Math.abs(startBeats % pat.beatsPerMeasure) < 1e-6;
+          const onBeat = Math.abs(startBeats - Math.round(startBeats)) < 1e-6; // whole-beat boundary
+          const customStrong = Array.isArray(pat.customAccents) && pat.customAccents.some(b => Math.abs(b - startBeats) < 1e-6);
+          const level = seg.accent || (customStrong || isMeasureStart ? 'strong' : (onBeat ? 'beat' : 'weak'));
+          if (!seg.rest) scheduleClick(startBeats * durBeatMs, level);
+          tBeats += seg.dur;
+        });
+        const totalMs = tBeats * durBeatMs;
+        if (loop) {
+          const id = setTimeout(() => playPattern(pat), totalMs + 40);
+          timersRef.current.push(id);
+        }
+      }, [loop, clearTimers]);
+    
+      // ── question generation ────────────────────────────────────────────────────
+      const pick = React.useCallback(() => {
+        const pat = getRandom(R);
+        const allSigs  = [...new Set(R.map(x => x.sig))];
+        const allNames = R.map(x => x.name);
+        if (mode === 'sig') {
+          const correct = pat.sig;
+          const opts = shuffle([correct, ...shuffle(allSigs.filter(s => s !== correct)).slice(0, 3)]);
+          setQ({ pattern: pat, prompt: 'Which time signature best matches the played measure?', options: opts, correct });
+        } else {
+          const correct = pat.name;
+          const opts = shuffle([correct, ...shuffle(allNames.filter(n => n !== correct)).slice(0, 3)]);
+          setQ({ pattern: pat, prompt: 'Identify the rhythm:', options: opts, correct });
+        }
+        playPattern(pat);
+      }, [mode, playPattern]);
+    
+      // ── lifecycle ──────────────────────────────────────────────────────────────
+      React.useEffect(() => { pick(); return clearTimers; }, [pick, clearTimers]);
+      React.useEffect(() => {
+        if (paused) return;
+        const id = setInterval(() => setTime(t => (t <= 1 ? 0 : t - 1)), 1000);
+        return () => clearInterval(id);
+      }, [paused]);
+    
+      // ── answer ─────────────────────────────────────────────────────────────────
+      const answer = (choice, i) => {
+        setAns(a => a + 1);
+        const ok = choice === q.correct;
+        speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+        audioEngine.playFeedback(ok);
+        window.dispatchEvent(new CustomEvent('vmq:result', { detail: { ok, drill:'rhythm' } }));
+        if (ok) { setScore(s => s + 1); addXP(5); } else { addXP(2); }
+        setTimeout(() => pick(), 260);
+      };
+    
+      useAnswerHotkeys(!!q, (i) => { if (q?.options[i]) answer(q.options[i], i); }, onBack, q?.options?.length ?? 4);
+    
+      // ── render ─────────────────────────────────────────────────────────────────
+      if (time === 0) {
+        return (
+          <div className="card">
+            <h2>Rhythm Drills Complete</h2>
+            <p>Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={onBack}>Back</button>
+          </div>
+        );
+      }
+      if (!q) return null;
+    
+      return (
+        <div>
+          <div className="card">
+            <h2>Rhythm Drills</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+    
+            <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center'}}>
+              <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
+                {paused ? 'Resume' : 'Pause'}
+              </button>
+              <button className="btn btn-primary" onClick={() => playPattern(q.pattern)}>Play Again</button>
+              <PillToggle label={`Loop ${loop ? 'On' : 'Off'}`} pressed={loop} onClick={() => setLoop(l => !l)} />
+              <PillToggle label={mode==='sig' ? 'Mode: Signature' : 'Mode: Rhythm Name'}
+                          pressed={mode==='name'}
+                          onClick={() => setMode(m => m==='sig'?'name':'sig')} />
+            </div>
+    
+            <p style={{marginTop:'0.5rem'}}>
+              Badges:{' '}
+              <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
+                {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
+              </span>
+            </p>
+    
+            <p style={{marginTop:'0.5rem', color:'var(--ink-light)'}}>{q.prompt}</p>
+            <div role="radiogroup" aria-label="Choices">
+              {q.options.map((opt, i) => (
+                <OptionButton key={i} label={opt} selected={false} onClick={() => answer(opt, i)} />
+              ))}
+            </div>
+    
+            {/* Small hint legend */}
+            <details style={{marginTop:'0.5rem'}}>
+              <summary>What you might be hearing</summary>
+              <ul style={{marginLeft:'1rem'}}>
+                <li><strong>Simple meters (2/4, 3/4, 4/4):</strong> quarters as the pulse; sixteenths = ¼ beat.</li>
+                <li><strong>Compound meters (6/8, 9/8, 12/8):</strong> dotted-quarter pulses; inside each, three even eighths.</li>
+                <li><strong>Asymmetrical (5/8, 7/8):</strong> grouped 2s & 3s; listen for where the longer “3” lands.</li>
+                <li><strong>Dotted vs Lombard:</strong> long-short vs short-long within one beat.</li>
+                <li><strong>Hemiola:</strong> in 3/4, accents re-group as 2+2+2 over two bars.</li>
+                <li><strong>Triplets:</strong> three-in-the-space-of-two (eighth or quarter triplets).</li>
+                <li><strong>Backbeat/off-beat:</strong> clicks on the “&” of each beat.</li>
+              </ul>
+            </details>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
         </div>
-
-        <p style={{marginTop:'0.5rem'}}>
-          Badges:{' '}
-          <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
-            {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
-          </span>
-          <span style={{marginLeft:'0.75rem', color:'var(--ink-light)'}}>Stage: {STAGE_LABELS[q.stage]}</span>
-        </p>
-
-        <p style={{marginTop:'0.5rem', color:'var(--ink-light)'}}>{q.prompt}</p>
-        <div role="radiogroup" aria-label="Choices">
-          {q.options.map((opt, i) => (
-            <OptionButton key={i} label={opt} selected={false} onClick={() => answer(opt, i)} />
-          ))}
-        </div>
-
-        <details style={{marginTop:'0.5rem'}}>
-          <summary>What you might be hearing</summary>
-          <ul style={{marginLeft:'1rem'}}>
-            <li><strong>Simple meters (2/4, 3/4, 4/4):</strong> quarters as the pulse; sixteenths = ¼ beat.</li>
-            <li><strong>Compound meters (6/8, 9/8, 12/8):</strong> dotted-quarter pulses; inside each, three even eighths.</li>
-            <li><strong>Asymmetrical (5/8, 7/8):</strong> grouped 2s & 3s; listen for where the longer “3” lands.</li>
-            <li><strong>Dotted vs Lombard:</strong> long–short vs short–long within one beat.</li>
-            <li><strong>Hemiola:</strong> in 3/4, accents re-group as 2+2+2 over two bars.</li>
-            <li><strong>Triplets:</strong> three-in-the-space-of-two (eighth or quarter triplets).</li>
-            <li><strong>Backbeat/off-beat:</strong> clicks on the “&” of each beat.</li>
-          </ul>
-        </details>
-      </div>
-      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-    </div>
-  );
-}
+      );
+    }
 		// --- Ear Trainer (audio-first intervals) ------------------------------------
 		function EarTrainer({ onBack }) {
 		  const [time, setTime] = React.useState(60);
@@ -2291,7 +2268,6 @@ function RhythmDrills({ onBack }) {
 		    </div>
 		  );
 		}
-
 
     /**
      * Position Reference component
