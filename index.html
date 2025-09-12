@@ -1205,15 +1205,35 @@
     const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
     const TIME_SIGNATURES=[{sig:'2/4', description:'2 quarter-note beats per measure (simple duple)'},{sig:'3/4', description:'3 quarter-note beats per measure (simple triple)'},{sig:'4/4', description:'4 quarter-note beats per measure (common time)'},{sig:'6/8', description:'6 eighth-note beats grouped in 2 dotted quarter beats (compound duple)'},{sig:'9/8', description:'9 eighth-note beats grouped in 3 dotted quarter beats (compound triple)'},{sig:'12/8', description:'12 eighth-note beats grouped in 4 dotted quarter beats (compound quadruple)'}];
 
-    function TempoTrainer({onBack}){
-      const [i,setI]=React.useState(0);
-      const [show,setShow]=React.useState(false);
-      const next=()=>{ setShow(false); setI((i+1)%TEMPOS.length); };
-      const prev=()=>{ setShow(false); setI((i-1+TEMPOS.length)%TEMPOS.length); };
-      const t=TEMPOS[i];
-      const speak=(txt)=>{ try{ const u=new SpeechSynthesisUtterance(txt); u.rate=0.9; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch{} };
-      return (<div><div className="card"><h2>Tempo Trainer</h2><p><strong>{t.it}</strong></p>{show? (<p>{t.en} — {t.range}</p>) : (<button className="btn btn-primary" onClick={()=>setShow(true)}>Reveal</button>)}<div style={{marginTop:'0.5rem'}}><button className="btn btn-secondary" onClick={prev}>Prev</button><button className="btn btn-primary" onClick={next}>Next</button><button className="btn btn-success" onClick={()=>{ speak(t.it); speak(t.en); }}>Speak</button></div></div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
-    }
+    function TempoTrainer({ onBack }) {
+      const [i, setI] = React.useState(0);
+      const [show, setShow] = React.useState(false);
+      const next = () => { setShow(false); setI((i + 1) % TEMPOS.length); };
+      const prev = () => { setShow(false); setI((i - 1 + TEMPOS.length) % TEMPOS.length); };
+      const t = TEMPOS[i];
+    
+      return (
+        <div>
+          <div className="card">
+            <h2>Tempo Trainer</h2>
+            <p><strong>{t.it}</strong></p>
+            {show
+              ? <p>{t.en} — {t.range}</p>
+              : <button className="btn btn-primary" onClick={() => setShow(true)}>Reveal</button>}
+            <div style={{ marginTop: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={prev}>Prev</button>
+              <button className="btn btn-primary" onClick={next}>Next</button>
+              <button
+                className="btn btn-success"
+                onClick={() => { speak(t.it); speak(t.en); }}
+              >
+                Speak
+              </button>
+            </div>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
     function TempoTester({onBack}){
       const [cursor, setCursor] = React.useState(0);
       const [time,setTime]=React.useState(60);
