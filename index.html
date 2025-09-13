@@ -1579,8 +1579,8 @@
         </div>
       );
     }
-    // --- Arpeggio Trainer --------------------------------------------------------
-		function ArpeggioTrainer({ prefs, onBack }) {
+    // --- Arpeggio Tester --------------------------------------------------------
+		function ArpeggioTester({ prefs, onBack }) {
 		  const [time, setTime] = React.useState(60);
 		  const [paused, setPaused] = React.useState(false);
 		  const [score, setScore] = React.useState(0);
@@ -1625,7 +1625,7 @@
 		  if (time === 0) {
 		    return (
 		      <div className="card">
-		        <h2>Arpeggio Trainer Complete</h2>
+		        <h2>Arpeggio Tester Complete</h2>
 		        <p>Score {score}/{answered}</p>
 		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
 		      </div>
@@ -1634,7 +1634,7 @@
 		  if (!q) {
 		    return (
 		      <div className="card">
-		        <h2>Arpeggio Trainer</h2>
+		        <h2>Arpeggio Tester</h2>
 		        <p>No valid cells. Enable strings/positions in Settings.</p>
 		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
 		      </div>
@@ -1679,7 +1679,7 @@
 		  return (
 		    <div>
 		      <div className="card">
-		        <h2>Arpeggio Trainer</h2>
+		        <h2>Arpeggio Tester</h2>
 		        <p>Time {time}s | Score {score}/{answered}</p>
 		        <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
 		          {paused ? 'Resume' : 'Pause'}
@@ -2471,7 +2471,7 @@
       'tempo trainer': 'Tempo Trainer',
       'tempo tester': 'Tempo Tester',
       'ear trainer': 'Ear Trainer',
-      'arpeggio trainer': 'Arpeggio Trainer',
+      'arpeggio tester': 'Arpeggio Tester',
       'rhythm trainer': 'Rhythm Trainer',
       'rhythm drills': 'Rhythm Drills',
       'technique lab': 'Technique Lab',
@@ -3128,7 +3128,7 @@
 							    <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
-							    <button className="btn btn-primary" onClick={()=>setPage('arpeggio')}>Arpeggio Trainer</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('arpeggio')}>Arpeggio Tester</button>
 									<button className="btn btn-primary" onClick={()=>setPage('ear')}>Ear Trainer</button>
 									<button className="btn btn-primary" onClick={()=>setPage('rhythm')}>Rhythm Drills</button>
 									<button className="btn btn-primary" onClick={()=>setPage('custom')}>Custom Note Drill</button>
@@ -3163,11 +3163,11 @@
           {page==='timeTrainer'     && <TimeTrainer       onBack={()=>setPage('theoryHome')}/>}
           {page==='timeTester'      && <TimeTester        onBack={()=>setPage('theoryHome')}/>}
 
-          {page==='bieler'       && <BielerLab        onBack={()=>setPage('home')}/>}
-          {page==='arpeggio'     && <ArpeggioTrainer  prefs={prefs} onBack={()=>setPage('home')}/>}
-          {page==='ear'          && <EarTrainer       onBack={()=>setPage('home')}/>}
-          {page==='rhythm'       && <RhythmDrills     onBack={()=>setPage('home')}/>}
-          {page==='custom'       && <CustomDrill      prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='bieler'       && <BielerLab         onBack={()=>setPage('home')}/>}
+          {page==='arpeggio'     && <ArpeggioTester    prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='ear'          && <EarTrainer        onBack={()=>setPage('home')}/>}
+          {page==='rhythm'       && <RhythmDrills      onBack={()=>setPage('home')}/>}
+          {page==='custom'       && <CustomDrill       prefs={prefs} onBack={()=>setPage('home')}/>}
           {page==='positionRef'  && <PositionReference onBack={()=>setPage('home')}/>}
           {page==='journal'      && <PracticeJournal   onBack={()=>setPage('home')}/>}
         </div>
