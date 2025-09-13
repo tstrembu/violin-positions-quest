@@ -2349,8 +2349,8 @@
         </div>
       );
     }
-		// --- Ear Trainer (audio-first intervals) ------------------------------------
-		function EarTrainer({ onBack }) {
+		// --- Interval Ear Tester (audio-first intervals) ------------------------------------
+		function IntervalEarTester({ onBack }) {
 		  const [time, setTime] = React.useState(60);
 		  const [paused, setPaused] = React.useState(false);
 		  const [score, setScore] = React.useState(0);
@@ -2391,7 +2391,7 @@
 		  if (time === 0) {
 		    return (
 		      <div className="card">
-		        <h2>Ear Trainer Complete</h2>
+		        <h2>Interval Ear Tester Complete</h2>
 		        <p>Score {score}/{answered}</p>
 		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
 		      </div>
@@ -2411,7 +2411,7 @@
 		  return (
 		    <div>
 		      <div className="card">
-		        <h2>Ear Trainer</h2>
+		        <h2>Interval Ear Tester</h2>
 		        <p>Time {time}s | Score {score}/{answered}</p>
 		        <p style={{marginTop:'.5rem'}}>Which interval did you hear?</p>
 		        <div role="radiogroup" aria-label="Intervals">
@@ -2470,7 +2470,7 @@
       'time sig tester': 'Time Sig Tester',
       'tempo trainer': 'Tempo Trainer',
       'tempo tester': 'Tempo Tester',
-      'ear trainer': 'Ear Trainer',
+      'interval ear tester': 'Interval Ear Tester',
       'arpeggio tester': 'Arpeggio Tester',
       'rhythm trainer': 'Rhythm Trainer',
       'rhythm drills': 'Rhythm Drills',
@@ -3129,7 +3129,7 @@
 							    <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('arpeggio')}>Arpeggio Tester</button>
-									<button className="btn btn-primary" onClick={()=>setPage('ear')}>Ear Trainer</button>
+									<button className="btn btn-primary" onClick={()=>setPage('inteartest')}>Interval Ear Tester</button>
 									<button className="btn btn-primary" onClick={()=>setPage('rhythm')}>Rhythm Drills</button>
 									<button className="btn btn-primary" onClick={()=>setPage('custom')}>Custom Note Drill</button>
 							  </div>
