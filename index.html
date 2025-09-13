@@ -1137,69 +1137,148 @@
     }
 
     function StatsPage({onBack}){
-      const stats=loadJSON(STATS_KEY,{});
-      const xp=loadJSON(XP_KEY,0);
-      const lvl=levelForXP(xp);
-      const prev=lvl>1? nextLevelXP(lvl-1):0;
-      const next=nextLevelXP(lvl);
-      const pct=Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
-      const isCellKey=k=>{
-        const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
-      const filteredStats=Object.fromEntries(Object.entries(stats).filter(([k,_])=>isCellKey(k)));
-      return (
-        <div>
-          <div className="card">
-            <h2>Your Progress</h2>
-            <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
-            <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
-              <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div>
-            </div>
-						{/* Stats badges: cap to 10 and show multiplier */}
-						<p style={{marginTop:'0.5rem'}}>
-						  Badges:{' '}
-						  <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
-						    {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
-						  </span>
-						</p>
-          </div>
-          {STRINGS.map(s=>(
-            <div className="card" key={s}>
-              <h3>{s} string</h3>
-              <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem'}}>
-                {POSITIONS.map(p=>(
-                  <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
-                    {FINGERS.map(f=>{
-                      const k=`${s}:${p}:${f}`;
-                      const st=filteredStats[k]||{correct:0,total:0};
-                      const acc= st.total? st.correct/st.total:0;
-                      let col, ink='#fff';
-                      if(st.total===0) {
-                        col='var(--neutral)';
-                      } else if(acc<0.5) {
-                        col='var(--danger)';
-                      } else if(acc<0.75) {
-                        col='var(--warning)'; ink='#111';
-                      } else {
-                        col='var(--success)';
-                      }
-                      const label=st.total? `${Math.round(acc*100)}%`:'';
-                      return (
-                        <div key={f}
-                             className="heat-cell"
-                             style={{background:col,color:ink,fontSize:'0.65rem'}}
-                             title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-          <button className="btn btn-secondary" onClick={onBack}>Back</button>
-        </div>
-      );
-    }
-
+		  const stats = loadJSON(STATS_KEY,{});
+		  const xp    = loadJSON(XP_KEY,0);
+		  const lvl   = levelForXP(xp);
+		  const prev  = lvl>1? nextLevelXP(lvl-1):0;
+		  const next  = nextLevelXP(lvl);
+		  const pct   = Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
+		
+		  const isCellKey = (k)=>{
+		    const parts=k.split(':');
+		    return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])) && !parts[2].includes('-');
+		  };
+		  const isIntervalKey = (k)=>{
+		    const parts=k.split(':');
+		    return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && /^(1|2|3|4)-(1|2|3|4)$/.test(parts[2]);
+		  };
+		
+		  const filteredCells = Object.fromEntries(Object.entries(stats).filter(([k])=>isCellKey(k)));
+		  const intervalPairs = Object.entries(stats).filter(([k])=>isIntervalKey(k)).map(([k,st])=>{
+		    const [s,p,ab] = k.split(':'); const [a,b] = ab.split('-').map(Number);
+		    const diff = Math.abs(BASE_OFF[b]-BASE_OFF[a]);
+		    const typ  = diff===1 ? 'Half Step' : 'Whole Step';
+		    return { s, p:Number(p), a, b, type:typ, ...st };
+		  });
+		
+		  function csvEscape(v){ const s=String(v??''); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
+		  function exportCSV(){
+		    const student = prompt('Student name (optional):') || '';
+		    const klass   = prompt('Class/Teacher (optional):') || '';
+		    const dateStr = new Date().toISOString();
+		    const rows = [['Student','Class','Date','Category','Item','Correct','Total','Accuracy%']];
+		
+		    // Fingerboard notes
+		    for (const [k, st] of Object.entries(filteredCells)){
+		      const [s,p,f] = k.split(':');
+		      const acc = st.total ? Math.round((st.correct/st.total)*100) : 0;
+		      rows.push([student, klass, dateStr, 'Note (Fingerboard)', `${s}, ${ordinal(Number(p))} pos, F${f}`, st.correct, st.total, acc]);
+		    }
+		    // Intervals
+		    for (const it of intervalPairs){
+		      const acc = it.total ? Math.round((it.correct/it.total)*100) : 0;
+		      rows.push([student, klass, dateStr, 'Interval', `${it.s}, ${ordinal(it.p)} pos, F${it.a}\u2192F${it.b} (${it.type})`, it.correct, it.total, acc]);
+		    }
+		
+		    const csv = rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+		    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+		    const a = document.createElement('a');
+		    a.href = URL.createObjectURL(blob);
+		    a.download = `vmq-progress-${dateStr.slice(0,10)}.csv`;
+		    a.click();
+		    URL.revokeObjectURL(a.href);
+		  }
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Your Progress</h2>
+		        <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
+		        <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
+		          <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}} />
+		        </div>
+		        <p style={{marginTop:'0.5rem'}}>
+		          Badges:{' '}
+		          <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
+		            {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
+		          </span>
+		        </p>
+		        <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap',marginTop:'.5rem'}}>
+		          <button className="btn btn-primary" onClick={exportCSV}>Export CSV</button>
+		          <button className="btn btn-secondary" onClick={()=>{ speakSR('Preparing print view.'); window.print(); }}>Print Report</button>
+		        </div>
+		      </div>
+		
+		      {/* Heatmaps per string (unchanged visual) */}
+		      {STRINGS.map(s=>(
+		        <div className="card" key={s}>
+		          <h3>{s} string</h3>
+		          <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem', overflowX:'auto'}}>
+		            {POSITIONS.map(p=>(
+		              <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
+		                {FINGERS.map(f=>{
+		                  const k=`${s}:${p}:${f}`;
+		                  const st=filteredCells[k]||{correct:0,total:0};
+		                  const acc= st.total? st.correct/st.total:0;
+		                  let col, ink='#fff';
+		                  if(st.total===0) { col='var(--neutral)'; }
+		                  else if(acc<0.5){ col='var(--danger)'; }
+		                  else if(acc<0.75){ col='var(--warning)'; ink='#111'; }
+		                  else { col='var(--success)'; }
+		                  const label=st.total? `${Math.round(acc*100)}%`:'';
+		                  return (
+		                    <div key={f}
+		                      className="heat-cell"
+		                      style={{background:col,color:ink,fontSize:'0.65rem'}}
+		                      title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>
+		                  );
+		                })}
+		              </div>
+		            ))}
+		          </div>
+		        </div>
+		      ))}
+		
+		      {/* Interval summaries */}
+		      <div className="card">
+		        <h3>Intervals (summary)</h3>
+		        {intervalPairs.length===0 ? (
+		          <p style={{color:'var(--ink-light)'}}>No interval data yet.</p>
+		        ) : (
+		          <div style={{overflowX:'auto'}}>
+		            <table style={{width:'100%', borderCollapse:'collapse'}}>
+		              <thead>
+		                <tr>
+		                  <th style={{textAlign:'left', borderBottom:'1px solid var(--border)'}}>Item</th>
+		                  <th style={{textAlign:'right', borderBottom:'1px solid var(--border)'}}>Correct</th>
+		                  <th style={{textAlign:'right', borderBottom:'1px solid var(--border)'}}>Total</th>
+		                  <th style={{textAlign:'right', borderBottom:'1px solid var(--border)'}}>Accuracy</th>
+		                </tr>
+		              </thead>
+		              <tbody>
+		                {intervalPairs
+		                  .sort((a,b)=> (a.total? a.correct/a.total:0) - (b.total? b.correct/b.total:0)) /* weakest first */
+		                  .map((it, i)=>{
+		                    const acc = it.total ? Math.round((it.correct/it.total)*100) : 0;
+		                    return (
+		                      <tr key={i}>
+		                        <td>{it.s}, {ordinal(it.p)} pos, F{it.a}→F{it.b} ({it.type})</td>
+		                        <td style={{textAlign:'right'}}>{it.correct}</td>
+		                        <td style={{textAlign:'right'}}>{it.total}</td>
+		                        <td style={{textAlign:'right'}}>{acc}%</td>
+		                      </tr>
+		                    );
+		                  })}
+		              </tbody>
+		            </table>
+		          </div>
+		        )}
+		      </div>
+		
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
     const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
     const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
@@ -2335,7 +2414,7 @@
             <details style={{marginTop:'0.5rem'}}>
               <summary>What you might be hearing</summary>
               <ul style={{marginLeft:'1rem'}}>
-                <li><strong>Simple meters (2/4, 3/4, 4/4):</strong> quarters as the pulse; sixteenths = ¼ beat.</li>
+                <li><strong>Simple meters (2/4, 3/4, 4/4):</strong> quarters as the pulse; sixteenths = 1⁄4 beat.</li>
                 <li><strong>Compound meters (6/8, 9/8, 12/8):</strong> dotted-quarter pulses; inside each, three even eighths.</li>
                 <li><strong>Asymmetrical (5/8, 7/8):</strong> grouped 2s & 3s; listen for where the longer “3” lands.</li>
                 <li><strong>Dotted vs Lombard:</strong> long-short vs short-long within one beat.</li>
@@ -2857,7 +2936,7 @@
                       value={e.notes || ''}
                       onChange={(ev)=>updateNotes(e.id, ev.target.value)}
                       rows={3}
-                      placeholder="Add a note about this session…"
+                      placeholder="Add a note about this session..."
                       style={{width:'100%', padding:'0.5rem', borderRadius:8, border:'1px solid var(--border)', marginTop:'0.4rem'}}
                     />
                   </details>
