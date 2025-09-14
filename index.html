@@ -2210,393 +2210,381 @@
 		  );
 		}
     // --- Rhythm Trainer (Study) ---------------------------------------------------
-    function RhythmTrainer({ onBack }) {
-      // ── prefs/state ─────────────────────────────────────────────────────────────
-      const LOOP_KEY = 'vmq.v5.rhythmTrainer.loop';
-      const DIFF_KEY = 'vmq.v5.rhythmTrainer.diff';
-      const [loop, setLoop]       = React.useState(() => loadJSON(LOOP_KEY, true));
-      const [mode, setMode]       = React.useState('listen'); // 'listen' | 'tap'
-      const [diff, setDiff]       = React.useState(() => loadJSON(DIFF_KEY, 'Normal'));
-      const [stage, setStage]     = React.useState(1);
-      const [i, setI]             = React.useState(0);
-      const [playing, setPlaying] = React.useState(false);
-      const [showHelp, setHelp]   = React.useState(false);
-    
-      // Tap results
-      const [taps, setTaps]       = React.useState([]); // [{ms, err, ok}]
-      const [acc, setAcc]         = React.useState({ pct: null, n: 0, g: 0 });
-      const [streak, setStreak]   = React.useState(0);
-    
-      const timersRef        = React.useRef([]);
-      const startMsRef       = React.useRef(0);
-      const lastLoopStartRef = React.useRef(0);
-      const patternRef       = React.useRef(null);
-    
-      const clearTimers = React.useCallback(() => {
-        timersRef.current.forEach(id => clearTimeout(id));
-        timersRef.current = [];
-      }, []);
-    
-      const schedule = (fn, ms) => {
-        const id = setTimeout(fn, ms);
-        timersRef.current.push(id);
-        return id;
-      };
-    
-      // ── helpers (time + audio) ─────────────────────────────────────────────────
-      const msPerBeat = (beatUnit, bpm) => 60000 / Math.max(1, bpm);
-      const scheduleClick = (msFromNow, level = 'weak') => {
-        const midi = level === 'strong' ? 102 : level === 'beat' ? 95 : 88;
-        schedule(() => { try { audioEngine.playNote({ midi, durationMs: 120 }); } catch {} }, msFromNow);
-      };
-    
-      // Build a flat onset list (in beats of pat.beatUnit)
-      const onsetsFor = (pat) => {
-        const onsets = [];
-        let t = 0;
-        pat.seq.forEach(step => {
-          const seg = (typeof step === 'number') ? { dur: step } : step;
-          onsets.push({ t, rest: !!seg.rest });
-          t += seg.dur;
-        });
-        return { onsets, totalBeats: t };
-      };
-    
-      // ── rhythm library (built once) ─────────────────────────────────────────────
-      const LIB = React.useMemo(() => {
-        const R = [];
-        const group = arr => arr.map(x => (typeof x === 'number' ? { dur: x } : x));
-        const fillToBeats = (cell, beats) => {
-          const out = []; let sum = 0;
-          const add = (seg) => out.push(typeof seg === 'number' ? { dur: seg } : seg);
-          const cellSum = Array.isArray(cell) ? cell.reduce((a,b)=>a+(b.dur??b),0) : (cell.dur ?? cell);
-          while (sum + cellSum <= beats + 1e-9) { Array.isArray(cell) ? cell.forEach(add) : add(cell); sum = out.reduce((a,b)=>a+b.dur,0); }
-          if (sum < beats - 1e-6) out.push({ dur: beats - sum });
-          return out;
-        };
-        const simple   = (id, name, seq, {sig='4/4', bpm=96, beats=4, accents, tier=1}={}) =>
-          R.push({ id, tier, name, sig, beatUnit:'quarter',       bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
-        const compound = (id, name, seq, {sig='6/8', bpm=96, beats=2, accents, tier=2}={}) =>
-          R.push({ id, tier, name, sig, beatUnit:'dottedQuarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
-        const asym     = (id, name, seq, {sig='5/8', bpm=116, beats=5, accents, tier=4}={}) =>
-          R.push({ id, tier, name, sig, beatUnit:'eighth',        bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
-    
-        // Tier 1 — Basics
-        simple('q',  'Straight quarters',           [1],                 { tier:1 });
-        simple('e',  'Straight eighths',            [0.5],               { tier:1 });
-        simple('s',  'Straight sixteenths',         [0.25],              { tier:1, bpm:88 });
-        simple('w3', 'Waltz quarters (3/4)',        [1,1,1],             { tier:1, sig:'3/4', beats:3, bpm:96 });
-        compound('j6','6/8 jig (3+3)',              [1/3,1/3,1/3],       { tier:1, sig:'6/8', bpm:104 });
-    
-        // Tier 2 — Core
-        simple('dls','Dotted 8th–16th (long–short)',[0.75,0.25],         { tier:2, bpm:88 });
-        simple('dsl','Lombard (short–long)',        [0.25,0.75],         { tier:2, bpm:88 });
-        simple('s808','Syncopation (8th–q–8th)',    [0.5,1,0.5],         { tier:2, bpm:96 });
-        simple('off4','Backbeat quarters (off-beat)',[{dur:0.5,rest:true},0.5], { tier:2, bpm:96 });
-        simple('tie','Tie across beat (q+8th, 8th)',[1.5,0.5],           { tier:2, bpm:92 });
-        simple('tri8','Eighth-note triplets',       [1/3,1/3,1/3],       { tier:2, bpm:72 });
-        compound('d6','6/8 dotted (long–short)',    [2/3,1/3],           { tier:2, sig:'6/8', bpm:96 });
-    
-        // Tier 3 — Advanced
-        simple('tri4','Quarter-note triplets (3 in 2)', [2/3,2/3,2/3,2/3,2/3,2/3], { tier:3, bpm:72 });
-        simple('hemi','Hemiola over two bars (3/4)',    [1,1,1,1,1,1],             { tier:3, sig:'3/4', beats:6, bpm:84 });
-        simple('ct2','Cut-time halves (2/2)',           [1],                        { tier:3, sig:'2/2', beats:2, bpm:96 });
-        simple('swing','Swinged 8ths (≈ triplet feel)', [2/3,1/3],                  { tier:3, bpm:84 });
-        compound('sic','Siciliana (2/3,1/3,1/3)',       [2/3,1/3,1/3],              { tier:3, sig:'6/8', bpm:66 });
-    
-        // Tier 4 — Odd/Asym
-        asym('5a','5/8 (2+3)',        [1,2],               { tier:4, sig:'5/8', accents:[0,2] });
-        asym('5b','5/8 (3+2)',        [3,2],               { tier:4, sig:'5/8', accents:[0,3] });
-        asym('7a','7/8 (2+2+3)',      [2,2,3],             { tier:4, sig:'7/8', accents:[0,2,4] });
-        asym('7b','7/8 (3+2+2)',      [3,2,2],             { tier:4, sig:'7/8', accents:[0,3,5] });
-        simple('54a','5/4 (2+3)',     [1,1,1.5,1.5],       { tier:4, sig:'5/4', beats:5, bpm:88 });
-    
-        return R;
-      }, []);
-    
-      const STAGE_LABELS = {1:'Basics',2:'Core',3:'Advanced',4:'Odd/Asym'};
-    
-      // ── pick pattern for the current stage/index ─────────────────────────────────
-      const listForStage = React.useMemo(() => LIB.filter(r => r.tier === stage), [LIB, stage]);
-      const pat = listForStage.length
-        ? listForStage[(i % listForStage.length + listForStage.length) % listForStage.length]
-        : null;
-      patternRef.current = pat;
-    
-      // ── playback (count-in → loop bar) ───────────────────────────────────────────
-      const play = React.useCallback(() => {
-        if (!pat) return;
-        clearTimers();
-        setPlaying(true);
-    
-        // count-in = one bar of beats (strong on 1)
-        const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
-        const countBeats = pat.beatsPerMeasure;
-        for (let b = 0; b < countBeats; b++) {
-          scheduleClick(b * beatMs, b === 0 ? 'strong' : 'beat');
-        }
-        const t0 = performance.now() + countBeats * beatMs;
-        startMsRef.current = t0;
-        lastLoopStartRef.current = t0;
-    
-        const { onsets, totalBeats } = onsetsFor(pat);
-        const totalMs = totalBeats * beatMs;
-    
-        // schedule this bar
-        const scheduleBar = (base) => {
-          // beat grid (with custom accents as "strong")
-          for (let k = 0; k < Math.ceil(totalBeats); k++) {
-            const at = base + k * beatMs;
-            const isStrong = (k % pat.beatsPerMeasure) === 0 || (pat.customAccents?.includes(k));
-            scheduleClick(at - performance.now(), isStrong ? 'strong' : 'beat');
-          }
-          // pattern onsets
-          onsets.forEach((o) => {
-            if (o.rest) return;
-            const beatIdx = Math.round(o.t);
-            const strongIdx = (beatIdx % pat.beatsPerMeasure) === 0 || (pat.customAccents?.includes(beatIdx));
-            const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
-            const lvl = strongIdx ? 'strong' : (onBeat ? 'beat' : 'weak');
-            scheduleClick(base + o.t * beatMs - performance.now(), lvl);
-          });
-        };
-    
-        // first bar after count-in
-        scheduleBar(t0);
-    
-        // loop bars
-        const scheduleNext = (base) => {
-          if (!loop) return;
-          schedule(() => {
-            lastLoopStartRef.current = base + totalMs;
-            scheduleBar(base + totalMs);
-            scheduleNext(base + totalMs);
-          }, (base + totalMs) - performance.now() - 8);
-        };
-        scheduleNext(t0);
-      }, [pat, loop, clearTimers]);
-    
-      const stop = React.useCallback(() => {
-        clearTimers();
-        setPlaying(false);
-      }, [clearTimers]);
-    
-      React.useEffect(() => () => clearTimers(), [clearTimers]);
-      React.useEffect(() => { if (playing) { stop(); setTimeout(() => play(), 40); } }, [pat, loop, diff]); // restart when pattern/tolerance/loop changes
-    
-      // ── Tap along grading ────────────────────────────────────────────────────────
-      const tolMs = ({ 'Lenient':160, 'Normal':120, 'Strict':80 })[diff] ?? 120;
-    
-      const gradeTap = (tapMs) => {
-        const pat = patternRef.current; if (!pat) return;
-        const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
-        const { onsets, totalBeats } = onsetsFor(pat);
-        const barMs = totalBeats * beatMs;
-        if (barMs <= 0) return;
-    
-        // Find nearest onset within current loop
-        const base = lastLoopStartRef.current || startMsRef.current || performance.now();
-        const pos = ((tapMs - base) % barMs + barMs) % barMs; // 0..barMs
-        const expect = onsets.filter(o => !o.rest).map(o => o.t * beatMs);
-    
-        let best = { err: Infinity, at: 0 };
-        for (const e of expect) {
-          const delta = pos - e;
-          const wrapped = Math.abs(delta) <= Math.abs(delta - barMs) ? delta : delta - barMs; // handle wrap
-          const abs = Math.abs(wrapped);
-          if (abs < Math.abs(best.err)) best = { err: wrapped, at: e };
-        }
-    
-        const ok = Math.abs(best.err) <= tolMs;
-        const rec = { ms: tapMs, err: Math.round(best.err), ok };
-        setTaps(prev => [rec, ...prev].slice(0, 8));
-    
-        setAcc(prev => {
-          const n = prev.n + 1;
-          const g = prev.g + (ok ? 1 : 0);
-          return { pct: Math.round((g / n) * 100), n, g };
-        });
-    
-        setStreak(s => {
-          const nxt = ok ? s + 1 : 0;
-          if (ok && nxt >= 8) { speakSR('Great groove!'); }
-          return nxt;
-        });
-    
-        updateStat(`trainer.rhythm:${pat.id}`, ok);
-        addXP(ok ? 2 : 1);
-        audioEngine.playFeedback(ok);
-      };
-    
-      React.useEffect(() => {
-        const onKey = (e) => {
-          if (mode !== 'tap') return;
-          const t = e.target;
-          const tag = (t && t.tagName || '').toLowerCase();
-          if (tag === 'input' || tag === 'textarea' || (t && t.isContentEditable)) return;
-          if (e.key === ' ' || e.key === 'Enter') {
-            e.preventDefault(); gradeTap(performance.now());
-          }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [mode, tolMs]);
-    
-      // ── visual strip for the bar ────────────────────────────────────────────────
-      function RhythmStrip({ pat }) {
-        if (!pat) return null;
-        const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
-        const { onsets, totalBeats } = onsetsFor(pat);
-        const W = 640, H = 84, pad = 14;
-        const total = totalBeats;
-        const x = (beats) => pad + (W - 2*pad) * (beats / total);
-    
-        return (
-          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="img" aria-label="Rhythm visualization">
-            {/* background */}
-            <rect x="0" y="0" width={W} height={H} rx="8" fill="var(--card)" stroke="var(--border)"/>
-            {/* beat grid */}
-            {[...Array(Math.ceil(total)+1)].map((_,k)=>{
-              const X = x(k);
-              const strong = (k % pat.beatsPerMeasure) === 0 || (pat.customAccents?.includes(k));
-              return <line key={k} x1={X} y1={8} x2={X} y2={H-8} stroke={strong?'var(--primary)':'var(--border)'} strokeWidth={strong?1.5:1}/>;
-            })}
-            {/* onsets */}
-            {onsets.map((o, idx)=>{
-              const X = x(o.t);
-              const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
-              const col = o.rest ? 'var(--neutral)' : (onBeat ? 'var(--primary)' : 'var(--warning)');
-              const h = o.rest ? 10 : 24;
-              return (
-                <g key={idx}>
-                  <rect x={X-3} y={H/2 - h/2} width={6} height={h} rx="2" fill={col}/>
-                  {!o.rest && <text x={X} y={H-12} textAnchor="middle" fontSize="10" fill="var(--ink-light)">{onBeat?'•':'·'}</text>}
-                </g>
-              );
-            })}
-            {/* labels */}
-            <text x={W-10} y={16} textAnchor="end" fontSize="11" fill="var(--ink-light)">{pat.sig} • {pat.bpm} BPM</text>
-          </svg>
-        );
-      }
-    
-      // ── UI actions ─────────────────────────────────────────────────────────────
-      const next = () => setI(i => i + 1);
-      const prev = () => setI(i => i - 1);
-    
-      const togglePlay = () => { playing ? stop() : play(); };
-    
-      // ── render ─────────────────────────────────────────────────────────────────
-      if (!pat) {
-        return (
-          <div>
-            <div className="card">
-              <h2>Rhythm Trainer</h2>
-              <p>No patterns available.</p>
-            </div>
-            <button className="btn btn-secondary" onClick={onBack}>Back</button>
-          </div>
-        );
-      }
-    
-      return (
-        <div>
-          <div className="card">
-            <h2>Rhythm Trainer</h2>
-            <p style={{marginTop:-6, color:'var(--ink-light)'}}>Listen, visualize, then (optionally) tap along to build inner pulse before Rhythm Drills.</p>
-    
-            {/* controls row */}
-            <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center', margin:'.25rem 0 .75rem'}}>
-              <PillToggle
-                label={mode==='listen' ? 'Mode: Listen' : 'Mode: Tap-Along'}
-                pressed={mode==='tap'}
-                onClick={()=>setMode(m => m==='listen' ? 'tap' : 'listen')}
-              />
-              <PillToggle
-                label={`Loop ${loop ? 'On' : 'Off'}`}
-                pressed={loop}
-                onClick={() => { const v = !loop; setLoop(v); saveJSON(LOOP_KEY, v); }}
-              />
-              <PillToggle
-                label={`Tolerance: ${diff}`}
-                pressed={diff!=='Normal'}
-                onClick={() => {
-                  const nxt = diff==='Normal' ? 'Lenient' : diff==='Lenient' ? 'Strict' : 'Normal';
-                  setDiff(nxt); saveJSON(DIFF_KEY, nxt);
-                }}
-              />
-              <button className="btn btn-primary" onClick={togglePlay}>{playing ? 'Stop' : 'Count-in & Play'}</button>
-              <button className="btn btn-secondary" onClick={()=>{ stop(); setHelp(h=>!h); }}>{showHelp?'Hide Help':'Help'}</button>
-            </div>
-    
-            {/* stage/pattern nav */}
-            <div style={{display:'flex', gap:'.5rem', alignItems:'center', flexWrap:'wrap', marginBottom:'.5rem'}}>
-              <div className="btn btn-secondary" onClick={()=>{ setStage(1); setI(0); }}>Basics</div>
-              <div className="btn btn-secondary" onClick={()=>{ setStage(2); setI(0); }}>Core</div>
-              <div className="btn btn-secondary" onClick={()=>{ setStage(3); setI(0); }}>Advanced</div>
-              <div className="btn btn-secondary" onClick={()=>{ setStage(4); setI(0); }}>Odd/Asym</div>
-              <span style={{marginLeft:'.5rem', color:'var(--ink-light)'}}>Stage: <strong>{STAGE_LABELS[stage]}</strong></span>
-            </div>
-    
-            {/* pattern header */}
-            <div className="card" style={{padding:'0.75rem', marginBottom:'0.5rem'}}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:'.5rem'}}>
-                <div>
-                  <div style={{fontWeight:700}}>{pat.name}</div>
-                  <div style={{color:'var(--ink-light)', fontSize:'0.9rem'}}>{pat.sig} • Beat: {pat.beatUnit === 'quarter' ? 'quarter' : pat.beatUnit === 'dottedQuarter' ? 'dotted quarter' : 'eighth'} • {pat.bpm} BPM</div>
-                </div>
-                <div>
-                  <button className="btn btn-secondary" onClick={prev}>Prev</button>
-                  <button className="btn btn-primary" onClick={next}>Next</button>
-                </div>
-              </div>
-              <div style={{marginTop:'.5rem'}}><RhythmStrip pat={pat} /></div>
-            </div>
-    
-            {/* Tap-along panel */}
-            {mode === 'tap' ? (
-              <div className="card" style={{padding:'0.75rem'}}>
-                <div style={{display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap'}}>
-                  <button
-                    className="btn btn-success"
-                    style={{minWidth:180}}
-                    onPointerDown={(e)=>{ e.preventDefault(); gradeTap(performance.now()); }}
-                  >
-                    Tap (Space/Enter)
-                  </button>
-                  <div>
-                    <div><strong>Accuracy:</strong> {acc.pct != null ? `${acc.pct}%` : '—'}</div>
-                    <div style={{color:'var(--ink-light)'}}>Streak: {streak}</div>
-                  </div>
-                </div>
-                <div style={{marginTop:'0.5rem', fontSize:'0.9rem', color:'var(--ink-light)'}}>
-                  {taps.length===0 ? 'Tap with the clicks (count-in first if not playing).'
-                   : taps.map((t,idx)=>(
-                      <span key={idx} style={{marginRight:8}}>
-                        {t.ok ? '✓' : (t.err<0?'⟵':'⟶')} {Math.abs(t.err)}ms
-                      </span>
-                   ))}
-                </div>
-              </div>
-            ) : null}
-    
-            {showHelp && (
-              <details open style={{marginTop:'0.5rem'}}>
-                <summary style={{fontWeight:600}}>What to listen for</summary>
-                <ul style={{marginLeft:'1rem'}}>
-                  <li><strong>Strong vs beat vs weak clicks:</strong> bar start is strongest, beat edges medium, subdivisions light.</li>
-                  <li><strong>Triplets/compound:</strong> feel the <em>three-inside-one</em> sway; don’t squeeze them into straight 8ths.</li>
-                  <li><strong>Dotted vs Lombard:</strong> long–short vs short–long within one beat.</li>
-                  <li><strong>Syncopation/off-beats:</strong> notes arrive between beats — keep your inner pulse steady.</li>
-                  <li><strong>Odd meters:</strong> group 2s & 3s (e.g., 2+2+3); count group accents, not just raw 7.</li>
-                </ul>
-              </details>
-            )}
-          </div>
-          <button className="btn btn-secondary" onClick={()=>{ stop(); onBack(); }}>Back</button>
-        </div>
-      );
-    }
+		function RhythmTrainer({ onBack }) {
+		  // ── prefs/state ─────────────────────────────────────────────────────────────
+		  const LOOP_KEY = 'vmq.v5.rhythmTrainer.loop';
+		  const DIFF_KEY = 'vmq.v5.rhythmTrainer.diff';
+		  const [loop, setLoop]       = React.useState(() => loadJSON(LOOP_KEY, true));
+		  const [mode, setMode]       = React.useState('listen'); // 'listen' | 'tap'
+		  const [diff, setDiff]       = React.useState(() => loadJSON(DIFF_KEY, 'Normal'));
+		  const [stage, setStage]     = React.useState(1);
+		  const [i, setI]             = React.useState(0);
+		  const [playing, setPlaying] = React.useState(false);
+		  const [showHelp, setHelp]   = React.useState(false);
+		
+		  // Tap results
+		  const [taps, setTaps]       = React.useState([]); // [{ms, err, ok}]
+		  const [acc, setAcc]         = React.useState({ pct: null, n: 0, g: 0 });
+		  const [streak, setStreak]   = React.useState(0);
+		
+		  const timersRef        = React.useRef([]);
+		  const startMsRef       = React.useRef(0);
+		  const lastLoopStartRef = React.useRef(0);
+		  const patternRef       = React.useRef(null);
+		
+		  const clearTimers = React.useCallback(() => {
+		    timersRef.current.forEach(id => clearTimeout(id));
+		    timersRef.current = [];
+		  }, []);
+		
+		  const schedule = (fn, ms) => {
+		    const id = setTimeout(fn, ms);
+		    timersRef.current.push(id);
+		    return id;
+		  };
+		
+		  // ── helpers (time + audio) ─────────────────────────────────────────────────
+		  const msPerBeat = (beatUnit, bpm) => 60000 / Math.max(1, bpm);
+		  const scheduleClick = (msFromNow, level = 'weak') => {
+		    const midi = level === 'strong' ? 102 : level === 'beat' ? 95 : 88;
+		    schedule(() => { try { audioEngine.playNote({ midi, durationMs: 120 }); } catch {} }, msFromNow);
+		  };
+		
+		  // Build a flat onset list (in beats of pat.beatUnit)
+		  const onsetsFor = (pat) => {
+		    const onsets = [];
+		    let t = 0;
+		    pat.seq.forEach(step => {
+		      const seg = (typeof step === 'number') ? { dur: step } : step;
+		      onsets.push({ t, rest: !!seg.rest });
+		      t += seg.dur;
+		    });
+		    return { onsets, totalBeats: t };
+		  };
+		
+		  // ── rhythm library (built once) ─────────────────────────────────────────────
+		  const LIB = React.useMemo(() => {
+		    const R = [];
+		    const group = arr => arr.map(x => (typeof x === 'number' ? { dur: x } : x));
+		    const fillToBeats = (cell, beats) => {
+		      const out = []; let sum = 0;
+		      const add = (seg) => out.push(typeof seg === 'number' ? { dur: seg } : seg);
+		      const cellSum = Array.isArray(cell) ? cell.reduce((a,b)=>a+(b.dur??b),0) : (cell.dur ?? cell);
+		      while (sum + cellSum <= beats + 1e-9) { Array.isArray(cell) ? cell.forEach(add) : add(cell); sum = out.reduce((a,b)=>a+b.dur,0); }
+		      if (sum < beats - 1e-6) out.push({ dur: beats - sum });
+		      return out;
+		    };
+		    const simple   = (id, name, seq, {sig='4/4', bpm=96, beats=4, accents, tier=1}={}) =>
+		      R.push({ id, tier, name, sig, beatUnit:'quarter',       bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
+		    const compound = (id, name, seq, {sig='6/8', bpm=96, beats=2, accents, tier=2}={}) =>
+		      R.push({ id, tier, name, sig, beatUnit:'dottedQuarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
+		    const asym     = (id, name, seq, {sig='5/8', bpm=116, beats=5, accents, tier=4}={}) =>
+		      R.push({ id, tier, name, sig, beatUnit:'eighth',        bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
+		
+		    // Tier 1 — Basics
+		    simple('q',   'Straight quarters',             [1],                   { tier:1 });
+		    simple('e',   'Straight eighths',              [0.5],                 { tier:1 });
+		    simple('s',   'Straight sixteenths',           [0.25],                { tier:1, bpm:88 });
+		    simple('w3',  'Waltz quarters (3/4)',          [1,1,1],               { tier:1, sig:'3/4', beats:3, bpm:96 });
+		    compound('j6','6/8 jig (3+3)',                 [1/3,1/3,1/3],         { tier:1, sig:'6/8', bpm:104 });
+		
+		    // Tier 2 — Core
+		    simple('dls','Dotted 8th–16th (long–short)',   [0.75,0.25],           { tier:2, bpm:88 });
+		    simple('dsl','Lombard (short–long)',           [0.25,0.75],           { tier:2, bpm:88 });
+		    simple('s808','Syncopation (8th–q–8th)',       [0.5,1,0.5],           { tier:2, bpm:96 });
+		    simple('off4','Backbeat quarters (off-beat)',  [{dur:0.5,rest:true},0.5], { tier:2, bpm:96 });
+		    simple('tie','Tie across beat (q+8th, 8th)',   [1.5,0.5],             { tier:2, bpm:92 });
+		    simple('tri8','Eighth-note triplets',          [1/3,1/3,1/3],         { tier:2, bpm:72 });
+		    compound('d6','6/8 dotted (long–short)',       [2/3,1/3],             { tier:2, sig:'6/8', bpm:96 });
+		
+		    // Tier 3 — Advanced
+		    simple('tri4','Quarter-note triplets (3 in 2)',[2/3,2/3,2/3,2/3,2/3,2/3], { tier:3, bpm:72 });
+		    simple('hemi','Hemiola over two bars (3/4)',   [1,1,1,1,1,1],         { tier:3, sig:'3/4', beats:6, bpm:84 });
+		    simple('ct2','Cut-time halves (2/2)',          [1],                    { tier:3, sig:'2/2', beats:2, bpm:96 });
+		    simple('swing','Swinged 8ths (≈ triplet feel)',[2/3,1/3],              { tier:3, bpm:84 });
+		    compound('sic','Siciliana (2/3,1/3,1/3)',      [2/3,1/3,1/3],          { tier:3, sig:'6/8', bpm:66 });
+		
+		    // Tier 4 — Odd/least common
+		    asym('5a','5/8 (2+3)', [1,2].map(x=>x/1),          { tier:4, sig:'5/8', accents:[0,2] });
+		    asym('5b','5/8 (3+2)', [3,2].map(x=>x/1),          { tier:4, sig:'5/8', accents:[0,3] });
+		    asym('7a','7/8 (2+2+3)', [2,2,3].map(x=>x/1),      { tier:4, sig:'7/8', accents:[0,2,4] });
+		    asym('7b','7/8 (3+2+2)', [3,2,2].map(x=>x/1),      { tier:4, sig:'7/8', accents:[0,3,5] });
+		    simple('54a','5/4 (2+3)', [1,1,1.5,1.5],           { tier:4, sig:'5/4', beats:5, bpm:88 });
+		
+		    return R;
+		  }, []);
+		
+		  const STAGE_LABELS = {1:'Basics',2:'Core',3:'Advanced',4:'Odd/Asym'};
+		
+		  // ── pick pattern for the current stage/index ─────────────────────────────────
+		  const listForStage = React.useMemo(() => LIB.filter(r => r.tier === stage), [LIB, stage]);
+		  const pat = listForStage.length ? listForStage[(i % listForStage.length + listForStage.length) % listForStage.length] : null;
+		  patternRef.current = pat;
+		
+		  // ── playback (count-in → loop bar) ───────────────────────────────────────────
+		  const play = React.useCallback(() => {
+		    if (!pat) return;
+		    clearTimers();
+		    setPlaying(true);
+		    // count-in = one bar of beats (strong on 1)
+		    const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
+		    const countBeats = pat.beatsPerMeasure;
+		    for (let b=0; b<countBeats; b++) {
+		      scheduleClick(b*beatMs, b===0 ? 'strong' : 'beat');
+		    }
+		    const t0 = performance.now() + countBeats*beatMs;
+		    startMsRef.current = t0;
+		    lastLoopStartRef.current = t0;
+		
+		    const { onsets, totalBeats } = onsetsFor(pat);
+		    const totalMs = totalBeats * beatMs;
+		
+		    // schedule this bar
+		    const scheduleBar = (base) => {
+		      // accents & beat grid
+		      for (let k=0;k<Math.ceil(totalBeats)+1;k++){
+		        const at = base + k*beatMs;
+		        const isStrong = (k % pat.beatsPerMeasure) === 0;
+		        scheduleClick(at - performance.now(), isStrong ? 'strong' : 'beat');
+		      }
+		      // pattern onsets
+		      onsets.forEach((o) => {
+		        if (o.rest) return;
+		        const strongIdx = (Math.round(o.t) % pat.beatsPerMeasure) === 0;
+		        const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
+		        const lvl = strongIdx ? 'strong' : (onBeat ? 'beat' : 'weak');
+		        scheduleClick(base + o.t*beatMs - performance.now(), lvl);
+		      });
+		    };
+		
+		    // first bar after count-in
+		    scheduleBar(t0);
+		
+		    // loop bars
+		    const scheduleNext = (base) => {
+		      if (!loop) return;
+		      schedule(() => {
+		        lastLoopStartRef.current = base + totalMs;
+		        scheduleBar(base + totalMs);
+		        scheduleNext(base + totalMs);
+		      }, (base + totalMs) - performance.now() - 8);
+		    };
+		    scheduleNext(t0);
+		
+		  }, [pat, loop, clearTimers]);
+		
+		  const stop = React.useCallback(() => {
+		    clearTimers();
+		    setPlaying(false);
+		  }, [clearTimers]);
+		
+		  React.useEffect(() => () => clearTimers(), [clearTimers]);
+		  React.useEffect(() => { if (playing) { stop(); setTimeout(() => play(), 40); } }, [pat, loop, diff]); // restart when pattern/tolerance/loop changes
+		
+		  // ── Tap along grading ────────────────────────────────────────────────────────
+		  const tolMs = ({ 'Lenient':160, 'Normal':120, 'Strict':80 })[diff] ?? 120;
+		
+		  const gradeTap = (tapMs) => {
+		    const pat = patternRef.current; if (!pat) return;
+		    const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
+		    const { onsets, totalBeats } = onsetsFor(pat);
+		    const barMs = totalBeats * beatMs;
+		    if (barMs <= 0) return;
+		
+		    // Find nearest onset within current loop
+		    const base = lastLoopStartRef.current || startMsRef.current || performance.now();
+		    const pos = ((tapMs - base) % barMs + barMs) % barMs; // 0..barMs
+		    const expect = onsets.filter(o => !o.rest).map(o => o.t * beatMs);
+		    let best = { err: Infinity, at: 0 };
+		    for (const e of expect) {
+		      const delta = pos - e;
+		      const wrapped = Math.abs(delta) <= Math.abs(delta - barMs) ? delta : delta - barMs; // handle wrap
+		      const abs = Math.abs(wrapped);
+		      if (abs < Math.abs(best.err)) best = { err: wrapped, at: e };
+		    }
+		    const ok = Math.abs(best.err) <= tolMs;
+		    const rec = { ms: tapMs, err: Math.round(best.err), ok };
+		    setTaps(prev => [rec, ...prev].slice(0, 8));
+		    setAcc(prev => {
+		      const n = prev.n + 1;
+		      const g = prev.g + (ok ? 1 : 0);
+		      return { pct: Math.round((g / n) * 100), n, g };
+		    });
+		    setStreak(s => ok ? s+1 : 0);
+		    updateStat(`trainer.rhythm:${pat.id}`, ok);
+		    addXP(ok ? 2 : 1);
+		    audioEngine.playFeedback(ok);
+		    if (ok && (streak+1) >= 8) { speakSR('Great groove!'); }
+		  };
+		
+		  React.useEffect(() => {
+		    const onKey = (e) => {
+		      if (mode !== 'tap') return;
+		      const t = e.target;
+		      const tag = (t && t.tagName || '').toLowerCase();
+		      if (tag === 'input' || tag === 'textarea' || (t && t.isContentEditable)) return;
+		      if (e.key === ' ' || e.key === 'Enter') {
+		        e.preventDefault(); gradeTap(performance.now());
+		      }
+		    };
+		    window.addEventListener('keydown', onKey);
+		    return () => window.removeEventListener('keydown', onKey);
+		  }, [mode, tolMs, streak]);
+		
+		  // ── visual strip for the bar ────────────────────────────────────────────────
+		  function RhythmStrip({ pat }) {
+		    if (!pat) return null;
+		    const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
+		    const { onsets, totalBeats } = onsetsFor(pat);
+		    const W = 640, H = 84, pad = 14;
+		    const total = totalBeats;
+		    const x = (beats) => pad + (W - 2*pad) * (beats / total);
+		
+		    return (
+		      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="img" aria-label="Rhythm visualization">
+		        {/* background */}
+		        <rect x="0" y="0" width={W} height={H} rx="8" fill="var(--card)" stroke="var(--border)"/>
+		        {/* beat grid */}
+		        {[...Array(Math.ceil(total)+1)].map((_,k)=>{
+		          const X = x(k);
+		          const strong = (k % pat.beatsPerMeasure) === 0;
+		          return <line key={k} x1={X} y1={8} x2={X} y2={H-8} stroke={strong?'var(--primary)':'var(--border)'} strokeWidth={strong?1.5:1}/>;
+		        })}
+		        {/* onsets */}
+		        {onsets.map((o, idx)=>{
+		          const X = x(o.t);
+		          const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
+		          const col = o.rest ? 'var(--neutral)' : (onBeat ? 'var(--primary)' : 'var(--warning)');
+		          const h = o.rest ? 10 : 24;
+		          return (
+		            <g key={idx}>
+		              <rect x={X-3} y={H/2 - h/2} width={6} height={h} rx="2" fill={col}/>
+		              {!o.rest && <text x={X} y={H-12} textAnchor="middle" fontSize="10" fill="var(--ink-light)">{onBeat?'•':'·'}</text>}
+		            </g>
+		          );
+		        })}
+		        {/* labels */}
+		        <text x={W-10} y={16} textAnchor="end" fontSize="11" fill="var(--ink-light)">{pat.sig} • {pat.bpm} BPM</text>
+		      </svg>
+		    );
+		  }
+		
+		  // ── UI actions ──────────────────────────────────────────────────────────────
+		  const next = () => setI(i => i + 1);
+		  const prev = () => setI(i => i - 1);
+		  const togglePlay = () => { if (playing) { stop(); } else { play(); } };
+		
+		  // ── render ──────────────────────────────────────────────────────────────────
+		  if (!pat) {
+		    return (
+		      <div>
+		        <div className="card">
+		          <h2>Rhythm Trainer</h2>
+		          <p>No patterns available.</p>
+		        </div>
+		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		      </div>
+		    );
+		  }
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Rhythm Trainer</h2>
+		        <p style={{marginTop:-6, color:'var(--ink-light)'}}>Listen, visualize, then (optionally) tap along to build inner pulse before Rhythm Drills.</p>
+		
+		        {/* controls row */}
+		        <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center', margin:'.25rem 0 .75rem'}}>
+		          <PillToggle
+		            label={mode==='listen' ? 'Mode: Listen' : 'Mode: Tap-Along'}
+		            pressed={mode==='tap'}
+		            onClick={()=>setMode(m => m==='listen' ? 'tap' : 'listen')}
+		          />
+		          <PillToggle
+		            label={`Loop ${loop ? 'On' : 'Off'}`}
+		            pressed={loop}
+		            onClick={() => { const v = !loop; setLoop(v); saveJSON(LOOP_KEY,v); }}
+		          />
+		          <PillToggle
+		            label={`Tolerance: ${diff}`}
+		            pressed={diff!=='Normal'}
+		            onClick={() => {
+		              const nxt = diff==='Normal' ? 'Lenient' : diff==='Lenient' ? 'Strict' : 'Normal';
+		              setDiff(nxt); saveJSON(DIFF_KEY, nxt);
+		            }}
+		          />
+		          <button className="btn btn-primary" onClick={togglePlay}>{playing ? 'Stop' : 'Count-in & Play'}</button>
+		          <button className="btn btn-secondary" onClick={()=>{ stop(); setHelp(h=>!h); }}>{showHelp?'Hide Help':'Help'}</button>
+		        </div>
+		
+		        {/* stage/pattern nav */}
+		        <div style={{display:'flex', gap:'.5rem', alignItems:'center', flexWrap:'wrap', marginBottom:'.5rem'}}>
+		          <div className="btn btn-secondary" onClick={()=>{ setStage(1); setI(0); }}>Basics</div>
+		          <div className="btn btn-secondary" onClick={()=>{ setStage(2); setI(0); }}>Core</div>
+		          <div className="btn btn-secondary" onClick={()=>{ setStage(3); setI(0); }}>Advanced</div>
+		          <div className="btn btn-secondary" onClick={()=>{ setStage(4); setI(0); }}>Odd/Asym</div>
+		          <span style={{marginLeft:'.5rem', color:'var(--ink-light)'}}>Stage: <strong>{STAGE_LABELS[stage]}</strong></span>
+		        </div>
+		
+		        {/* pattern header */}
+		        <div className="card" style={{padding:'0.75rem', marginBottom:'0.5rem'}}>
+		          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:'.5rem'}}>
+		            <div>
+		              <div style={{fontWeight:700}}>{pat.name}</div>
+		              <div style={{color:'var(--ink-light)', fontSize:'0.9rem'}}>{pat.sig} • Beat: {pat.beatUnit === 'quarter' ? 'quarter' : pat.beatUnit === 'dottedQuarter' ? 'dotted quarter' : 'eighth'} • {pat.bpm} BPM</div>
+		            </div>
+		            <div>
+		              <button className="btn btn-secondary" onClick={prev}>Prev</button>
+		              <button className="btn btn-primary" onClick={next}>Next</button>
+		            </div>
+		          </div>
+		          <div style={{marginTop:'.5rem'}}><RhythmStrip pat={pat} /></div>
+		        </div>
+		
+		        {/* Tap-along panel */}
+		        {mode === 'tap' ? (
+		          <div className="card" style={{padding:'0.75rem'}}>
+		            <div style={{display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap'}}>
+		              <button
+		                className="btn btn-success"
+		                style={{minWidth:180}}
+		                onPointerDown={(e)=>{ e.preventDefault(); gradeTap(performance.now()); }}
+		              >
+		                Tap (Space/Enter)
+		              </button>
+		              <div>
+		                <div><strong>Accuracy:</strong> {acc.pct != null ? `${acc.pct}%` : '—'}</div>
+		                <div style={{color:'var(--ink-light)'}}>Streak: {streak}</div>
+		              </div>
+		            </div>
+		            <div style={{marginTop:'0.5rem', fontSize:'0.9rem', color:'var(--ink-light)'}}>
+		              {taps.length===0 ? 'Tap with the clicks (count-in first if not playing).'
+		               : taps.map((t,idx)=>(
+		                  <span key={idx} style={{marginRight:8}}>
+		                    {t.ok ? '✓' : (t.err<0?'⟵':'⟶')} {Math.abs(t.err)}ms
+		                  </span>
+		               ))}
+		            </div>
+		          </div>
+		        ) : null}
+		
+		        {showHelp && (
+		          <details open style={{marginTop:'0.5rem'}}>
+		            <summary style={{fontWeight:600}}>What to listen for</summary>
+		            <ul style={{marginLeft:'1rem'}}>
+		              <li><strong>Strong vs beat vs weak clicks:</strong> bar start is strongest, beat edges medium, subdivisions light.</li>
+		              <li><strong>Triplets/compound:</strong> feel the <em>three-inside-one</em> sway; don’t squeeze them into straight 8ths.</li>
+		              <li><strong>Dotted vs Lombard:</strong> long–short vs short–long within one beat.</li>
+		              <li><strong>Syncopation/off-beats:</strong> notes arrive between beats — keep your inner pulse steady.</li>
+		              <li><strong>Odd meters:</strong> group 2s & 3s (e.g., 2+2+3); count group accents, not just raw 7.</li>
+		            </ul>
+		          </details>
+		        )}
+		      </div>
+		      <button className="btn btn-secondary" onClick={()=>{ stop(); onBack(); }}>Back</button>
+		    </div>
+		  );
+		}
 		// ── Rhythm Drills (comprehensive and progressive learning) ────────────────
     function RhythmDrills({ onBack }) {
       // ── UI state ───────────────────────────────────────────────────────────────
