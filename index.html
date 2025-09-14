@@ -355,9 +355,9 @@
 		  );
 		}
     // =========================================================
-    // Technique definitions and lab component (unchanged except feedback)
+    // Bieler Method definitions and lab component (unchanged except feedback)
     // =========================================================
-    const TECHNIQUE_VOCAB = [
+    const BIELER_VOCAB = [
       { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
       { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
       { term:'Hand Frame', def:'Stable spacing of fingers across semitone/whole-tone patterns; frame travels during shifts.' },
@@ -382,29 +382,29 @@
       { term:'Knowledge', def:'Clear mental models: maps, sound ideals, mechanics.' },
       { term:'Necessity', def:'Technique serves musical intent; choose tools by purpose.' },
     ];
-    const TECHNIQUE_CONCEPT_QA = [
+    const BIELER_CONCEPT_QA = [
       { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
       { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
       { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
       { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
     ];
-    const TECHNIQUE_APPLY = [
+    const BIELER_APPLY = [
       { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
       { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
       { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
     ];
-    function TechniqueLab({ onBack }) {
+    function BielerLab({ onBack }) {
       const [mode,setMode] = React.useState('vocab');
       const [vi,setVi] = React.useState(0);
       const [reveal,setReveal] = React.useState(false);
-      const nextV=()=>{ setReveal(false); setVi((vi+1)%TECHNIQUE_VOCAB.length); };
-      const prevV=()=>{ setReveal(false); setVi((vi-1+TECHNIQUE_VOCAB.length)%TECHNIQUE_VOCAB.length); };
+      const nextV=()=>{ setReveal(false); setVi((vi+1)%BIELER_VOCAB.length); };
+      const prevV=()=>{ setReveal(false); setVi((vi-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
       const makeConceptQ = React.useCallback(()=>{
-        const item = getRandom(TECHNIQUE_CONCEPT_QA);
+        const item = getRandom(BIELER_CONCEPT_QA);
         return { prompt:item.q, correct:item.a, options: shuffle([item.a, ...shuffle(item.wrong).slice(0,3)]) };
       },[]);
       const makeApplyQ = React.useCallback(()=>{
-        const item = getRandom(TECHNIQUE_APPLY);
+        const item = getRandom(BIELER_APPLY);
         return { prompt:item.scenario, correct:item.answer, options: shuffle([item.answer, ...shuffle(item.wrong).slice(0,3)]) };
       },[]);
       const [cq,setCq] = React.useState(makeConceptQ);
@@ -470,9 +470,9 @@
             {mode==='vocab' && (
               <div>
                 <div className="card" style={{padding:'1rem',textAlign:'center',marginBottom:'0.5rem'}}>
-                  <div style={{fontWeight:700,fontSize:'1.15rem'}}>{TECHNIQUE_VOCAB[vi].term}</div>
+                  <div style={{fontWeight:700,fontSize:'1.15rem'}}>{BIELER_VOCAB[vi].term}</div>
                   {reveal
-                    ? <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{TECHNIQUE_VOCAB[vi].def}</div>
+                    ? <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{BIELER_VOCAB[vi].def}</div>
                     : <div style={{marginTop:'0.5rem',fontStyle:'italic',color:'var(--ink-light)'}}>Press Reveal to show definition.</div>}
                 </div>
                 <div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}>
@@ -481,9 +481,9 @@
                   <button className="btn btn-secondary" onClick={nextV}>Next</button>
                 </div>
                 <div style={{marginTop:'0.5rem',textAlign:'center',color:'var(--ink-light)'}}>
-                  <small>Card {vi+1} / {TECHNIQUE_VOCAB.length}</small>
+                  <small>Card {vi+1} / {BIELER_VOCAB.length}</small>
                   <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}>
-                    <div style={{width:`${((vi+1)/TECHNIQUE_VOCAB.length)*100}%`,height:'100%',background:'var(--primary)'}}/>
+                    <div style={{width:`${((vi+1)/BIELER_VOCAB.length)*100}%`,height:'100%',background:'var(--primary)'}}/>
                   </div>
                 </div>
               </div>
@@ -3117,7 +3117,7 @@
 							    <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Music Theory</button>
 							    <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
                   <button className="btn btn-primary" onClick={()=>setPage('rhythmTrainer')}>Rhythm Trainer</button>
-							    <button className="btn btn-primary" onClick={()=>setPage('technique')}>Technique Lab</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Technique Lab</button>
 							  </div>
 							
 							  {/* 🎻 Play SECOND */}
@@ -3163,7 +3163,7 @@
           {page==='timeTrainer'     && <TimeTrainer       onBack={()=>setPage('theoryHome')}/>}
           {page==='timeTester'      && <TimeTester        onBack={()=>setPage('theoryHome')}/>}
 
-          {page==='technique'    && <TechniqueLab             onBack={()=>setPage('home')}/>}
+          {page==='bieler'       && <BielerLab                onBack={()=>setPage('home')}/>}
           {page==='arpeggio'     && <ArpeggioTester           prefs={prefs} onBack={()=>setPage('home')}/>}
           {page==='inteartest'   && <IntervalEarTester        onBack={()=>setPage('home')}/>}
           {page==='rhythm'       && <RhythmDrills             onBack={()=>setPage('home')}/>}
