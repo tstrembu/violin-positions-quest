@@ -57,6 +57,7 @@
 		  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 		}
   </style>
+	</script>
   <script>
     (function(){
       const KEY='vmq.theme';
@@ -72,6 +73,11 @@
       window.__setTheme=(d)=>{ localStorage.setItem(KEY,d?'dark':'light'); document.documentElement.classList.toggle('dark', d); };
     })();
   </script>
+  <script type="module">
+	  import { PitchDetector } from 'https://unpkg.com/pitchy/dist/pitchy.min.mjs';
+	  // expose to the rest of the app
+	  window.__PITCHY = { PitchDetector };
+	</script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -212,7 +218,274 @@
     const audioEngine=new AudioEngine();
     // Unlock audio on first tap/click (mobile Safari, etc.)
     window.addEventListener('pointerdown', () => { try { audioEngine.ensure(); } catch {} }, { once: true });
-
+		// === Microphone Pitch Engine + Tuner UI + Generic Listen&Play Panel ============
+		// Uses Web Audio API. If window.__PITCHY is present, uses that library; otherwise
+		// a robust autocorrelation fallback is used.
+		
+		// Utilities
+		const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+		const midiToHz = (m)=> 440*Math.pow(2,(m-69)/12);
+		const hzToMidi = (hz)=> 69 + 12*Math.log2(hz/440);
+		const centsDiff = (hz, refHz)=> 1200*Math.log2(hz/refHz);
+		const pcFromMidi = (m)=> ((Math.round(m)%12)+12)%12;
+		const ENH_PC = {0:'C',1:'C#/Db',2:'D',3:'D#/Eb',4:'E',5:'F',6:'F#/Gb',7:'G',8:'G#/Ab',9:'A',10:'A#/Bb',11:'B'};
+		
+		// --- Autocorrelation detector (fallback) ---------------------------------------
+		function autoCorrelate(buf, sampleRate){
+		  // RMS gate (ignore if too quiet)
+		  let rms = 0;
+		  for(let i=0;i<buf.length;i++){ const v=buf[i]; rms+=v*v; }
+		  rms = Math.sqrt(rms/buf.length);
+		  if (rms < 0.008) return { hz: null, clarity: 0 }; // too quiet
+		
+		  // Autocorrelation
+		  const SIZE = buf.length;
+		  const minHz = 65, maxHz = 1047; // ~C2..C6 (violin range is higher; keep broad)
+		  const maxLag = Math.floor(sampleRate/minHz);
+		  const minLag = Math.floor(sampleRate/maxHz);
+		  let bestLag = -1, bestCorr = 0;
+		
+		  for(let lag=minLag; lag<=maxLag; lag++){
+		    let corr = 0;
+		    for(let i=0;i<SIZE-lag;i++){
+		      corr += buf[i] * buf[i+lag];
+		    }
+		    if (corr > bestCorr){
+		      bestCorr = corr;
+		      bestLag = lag;
+		    }
+		  }
+		  if (bestLag <= 0) return { hz: null, clarity: 0 };
+		
+		  // Parabolic interpolation around bestLag for better precision
+		  const prevLag = bestLag-1 >= minLag ? bestLag-1 : bestLag;
+		  const nextLag = bestLag+1 <= maxLag ? bestLag+1 : bestLag;
+		  let c0=0,c1=0,c2=0;
+		  for(let i=0;i<SIZE-prevLag;i++){ c0 += buf[i]*buf[i+prevLag]; }
+		  for(let i=0;i<SIZE-bestLag;i++){ c1 += buf[i]*buf[i+bestLag]; }
+		  for(let i=0;i<SIZE-nextLag;i++){ c2 += buf[i]*buf[i+nextLag]; }
+		  const denom = 2*(2*c1 - c0 - c2) || 1;
+		  const offset = (c0 - c2) / denom;
+		  const refinedLag = bestLag + clamp(offset, -1, 1);
+		
+		  const hz = sampleRate / refinedLag;
+		  // crude clarity metric
+		  const clarity = clamp(bestCorr / (SIZE - bestLag) / (rms || 1e-9), 0, 1);
+		  if (!Number.isFinite(hz) || hz < 30 || hz > 4000) return { hz:null, clarity:0 };
+		  return { hz, clarity };
+		}
+		
+		// --- MicPitch: singleton mic manager ------------------------------------------
+		class MicPitch {
+		  constructor(){
+		    this.ctx = null;
+		    this.analyser = null;
+		    this.src = null;
+		    this.stream = null;
+		    this.buf = new Float32Array(2048);
+		    this.running = false;
+		    this._raf = 0;
+		    this._usePitchy = false;
+		    this._pitchyDetector = null;
+		    this.subscribers = new Set();
+		  }
+		  async enable(){
+		    if (this.running) return;
+		    // Use the existing audioEngine context (better on iOS)
+		    this.ctx = audioEngine.ensure();
+		    // getUserMedia
+		    const stream = await navigator.mediaDevices.getUserMedia({
+		      audio: {
+		        echoCancellation: true,
+		        noiseSuppression: true,
+		        autoGainControl: true,
+		        channelCount: 1
+		      }
+		    });
+		    this.stream = stream;
+		    this.src = this.ctx.createMediaStreamSource(stream);
+		    this.analyser = this.ctx.createAnalyser();
+		    this.analyser.fftSize = 2048;
+		    this.src.connect(this.analyser);
+		
+		    // Try Pitchy if present
+		    if (window.__PITCHY?.PitchDetector){
+		      this._usePitchy = true;
+		      this._pitchyDetector = window.__PITCHY.PitchDetector.forFloat32Array(this.ctx.sampleRate);
+		    } else {
+		      this._usePitchy = false;
+		      this._pitchyDetector = null;
+		    }
+		  }
+		  on(cb){ this.subscribers.add(cb); return ()=>this.subscribers.delete(cb); }
+		
+		  start(){
+		    if (!this.analyser) throw new Error('MicPitch not enabled. Call enable() after user gesture.');
+		    if (this.running) return;
+		    this.running = true;
+		    const loop = ()=>{
+		      if (!this.running) return;
+		      this.analyser.getFloatTimeDomainData(this.buf);
+		      let hz=null, clarity=0;
+		      if (this._usePitchy){
+		        const [f, c] = this._pitchyDetector.findPitch(this.buf, this.ctx.sampleRate);
+		        hz = (f && Number.isFinite(f)) ? f : null;
+		        clarity = Number.isFinite(c) ? c : 0;
+		      } else {
+		        const r = autoCorrelate(this.buf, this.ctx.sampleRate);
+		        hz = r.hz; clarity = r.clarity;
+		      }
+		      this.subscribers.forEach(cb=>cb({ hz, clarity }));
+		      this._raf = requestAnimationFrame(loop);
+		    };
+		    this._raf = requestAnimationFrame(loop);
+		  }
+		  stop(){
+		    this.running = false;
+		    if (this._raf) cancelAnimationFrame(this._raf);
+		    this._raf = 0;
+		  }
+		  async disable(){
+		    this.stop();
+		    try { this.src && this.src.disconnect(); } catch {}
+		    try { this.analyser && this.analyser.disconnect(); } catch {}
+		    try { this.stream && this.stream.getTracks().forEach(t=>t.stop()); } catch {}
+		    this.src = null; this.analyser = null; this.stream = null;
+		  }
+		}
+		const micPitch = new MicPitch();
+		
+		// --- Tuner needle (±50 cents) --------------------------------------------------
+		function TunerNeedle({ cents=0, clarity=0, active=false }){
+		  const C = clamp(cents, -50, 50);
+		  const ok = Math.abs(C) <= 10 && clarity >= 0.6;
+		  const barW = ((C+50)/100)*100; // 0..100%
+		
+		  return (
+		    <div className="card" style={{padding:'0.75rem'}}>
+		      <div style={{display:'flex', alignItems:'center', gap:'0.75rem', flexWrap:'wrap'}}>
+		        <div style={{flex:'1 1 280px'}}>
+		          {/* Bar tuner */}
+		          <div style={{height:10, background:'var(--border)', borderRadius:9999, position:'relative', overflow:'hidden'}}>
+		            <div style={{position:'absolute', left:'50%', top:0, bottom:0, width:2, background:'var(--ink-light)', opacity:0.35}}/>
+		            <div style={{height:'100%', width:`${barW}%`, background: ok?'var(--success)':'var(--warning)'}}/>
+		          </div>
+		          <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--ink-light)', marginTop:4}}>
+		            <span>-50¢</span><span>0</span><span>+50¢</span>
+		          </div>
+		        </div>
+		        <div style={{minWidth:140, textAlign:'center'}}>
+		          <div style={{fontWeight:700, color: ok ? 'var(--success)' : 'var(--ink)'}}>{ok ? 'IN TUNE' : 'Adjust'}</div>
+		          <div style={{fontSize:12, color:'var(--ink-light)'}}>Δ {Math.round(C)}¢ • clarity {Math.round(clarity*100)}%</div>
+		        </div>
+		      </div>
+		    </div>
+		  );
+		}
+		
+		// --- Generic Listen & Play panel ----------------------------------------------
+		// Props:
+		//  - targetMidi: exact MIDI to match (mode='exact')
+		//  - targetPc: pitch-class (0..11) to match in any octave (mode='class')
+		//  - label: text shown to user
+		//  - onSuccess(): called when stable within ±20¢ for ~400ms
+		//  - running: boolean (false pauses detection)
+		//  - allowReplay: show Play Target button
+		function ListenPlayPanel({ targetMidi, targetPc, mode='exact', label, onSuccess, running=true, allowReplay=true }){
+		  const [enabled, setEnabled] = React.useState(false);
+		  const [cents, setCents] = React.useState(0);
+		  const [clarity, setClarity] = React.useState(0);
+		  const [stableMs, setStableMs] = React.useState(0);
+		  const good = Math.abs(cents) <= 20 && clarity >= 0.6;
+		
+		  React.useEffect(()=>{
+		    let off = null, tId = 0, lastTs = performance.now();
+		    if (!enabled || !running) { setStableMs(0); return; }
+		
+		    off = micPitch.on(({hz, clarity:c})=>{
+		      const now = performance.now();
+		      const dt = now - lastTs; lastTs = now;
+		
+		      if (!hz){ setClarity(c||0); setStableMs(0); return; }
+		
+		      // compute target reference
+		      let refHz = null;
+		      if (mode==='exact' && Number.isFinite(targetMidi)) {
+		        refHz = midiToHz(targetMidi);
+		      } else if (mode==='class' && Number.isFinite(targetPc)) {
+		        // pick the nearest pitch-class to measured MIDI
+		        const m = hzToMidi(hz);
+		        // nearest midi with targetPc
+		        const nearest = Math.round(m);
+		        let cand = nearest + ((targetPc - (nearest%12) + 12) % 12);
+		        if (Math.abs(cand - m) > 6) cand -= 12; // pull to nearest octave if needed
+		        refHz = midiToHz(cand);
+		      }
+		      if (!refHz){ setStableMs(0); return; }
+		
+		      const cts = centsDiff(hz, refHz);
+		      setCents(cts);
+		      setClarity(c||0);
+		
+		      // accumulate stability time
+		      if (Math.abs(cts) <= 20 && (c||0) >= 0.6){
+		        setStableMs(s=>s + dt);
+		      } else {
+		        setStableMs(0);
+		      }
+		    });
+		
+		    return ()=> { off && off(); };
+		  }, [enabled, running, targetMidi, targetPc, mode]);
+		
+		  // success after ~0.4s inside tolerance
+		  React.useEffect(()=>{
+		    if (stableMs >= 400){
+		      onSuccess?.();
+		      setStableMs(0);
+		    }
+		  }, [stableMs, onSuccess]);
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h3 style={{marginTop:0}}>Listen &amp; Play</h3>
+		        <p style={{marginTop:-6, color:'var(--ink-light)'}}>{label}</p>
+		        {!enabled ? (
+		          <button className="btn btn-primary" onClick={async()=>{
+		            try{
+		              await micPitch.enable();
+		              micPitch.start();
+		              setEnabled(true);
+		            } catch (e) {
+		              alert('Microphone permission is needed to use Listen & Play.');
+		            }
+		          }}>Enable Microphone</button>
+		        ) : (
+		          <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center'}}>
+		            {allowReplay && (
+		              <button className="btn btn-secondary" onClick={()=>{
+		                try{
+		                  if (mode==='exact' && Number.isFinite(targetMidi)){
+		                    audioEngine.playNote({ midi: targetMidi, durationMs: 900 });
+		                  }
+		                }catch{}
+		              }}>Play Target</button>
+		            )}
+		            <button className="btn" style={{background: running ? 'var(--warning)' : 'var(--primary)'}}
+		              onClick={()=>{
+		                if (running){ micPitch.stop(); } else { micPitch.start(); }
+		              }}>
+		              {running ? 'Pause Listening' : 'Resume Listening'}
+		            </button>
+		            <button className="btn btn-danger" onClick={async()=>{ await micPitch.disable(); setEnabled(false); }}>Disable Mic</button>
+		          </div>
+		        )}
+		      </div>
+		      <TunerNeedle cents={cents} clarity={clarity} active={enabled && running}/>
+		    </div>
+		  );
+		}
     const canonicalBase=(s,p,f)=>{ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return NOTE_NAME[((semi%12)+12)%12]; };
     const CELLS=[]; for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f,canon:canonicalBase(s,p,f)}); }
     const XP_KEY='vmq.v4.xp';
@@ -685,67 +958,169 @@
     }
 
     function SpeedDrill({prefs,onBack}){
-      const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
-      const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
-      const [time,setTime]=React.useState(90);
-      const [paused,setPaused]=React.useState(false);
-      const [score,setScore]=React.useState(0);
-      const [answered,setAnswered]=React.useState(0);
-      const [q,setQ]=React.useState(null);
-      const [selected,setSelected]=React.useState(null);
-      const pick = React.useCallback((statsArg) => {
-			  if (!cells.length) { setQ(null); return; }
-			  const sstats = statsArg ?? stats;
-			  const weight = c => {
-			    const k = `${c.s}:${c.p}:${c.f}`;
-			    const st = sstats[k] || { correct: 0, total: 0 };
-			    const acc = st.total ? st.correct / st.total : 0;
-			    return 1 - acc + 0.05;
-			  };
-        const total=cells.reduce((sum,c)=>sum+weight(c),0);
-        let r=Math.random()*total; let chosen=cells[cells.length-1];
-        for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break;} }
-        const correct=chosen.canon;
-        const pool=[...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct);
-        const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
-        setQ({cell:chosen,options:opts}); setSelected(null);
-        try {
-          const midi=MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f];
-          audioEngine.playNote({midi});
-        }catch{}
-      },[cells,stats]);
-      React.useEffect(()=>{ pick(); },[cells]);
-      React.useEffect(()=>{
-        if(paused) return;
-        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
-        return ()=>clearInterval(id);
-      },[paused]);
-      const answer=(opt,idx)=>{
-        if(selected !== null) return;
-        setSelected(idx);
-        setTimeout(()=>{
-          const ok= opt===q.cell.canon;
-          speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
-          audioEngine.playFeedback(ok);
-          setAnswered(a=>a+1);
-          if(ok) setScore(s=>s+1);
-          setStats(prev=>{
-					  const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
-					  const st = prev[k] || { correct: 0, total: 0 };
-					  const next = { ...prev, [k]: { correct: st.correct + (ok ? 1 : 0), total: st.total + 1 } };
-					  saveJSON(STATS_KEY, next);
-					  setTimeout(() => pick(next), 0);
-					  return next;
-					});
-          addXP(ok?8:2);
-        },200);
-      };
-      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
-      if(time===0) return <div className="card"><h2>Speed Drill Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      if(!cells.length) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (<div><div className="card"><h2>Speed Drill</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>{q && (<div><p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p><div role="radiogroup" aria-label="Answer choices">{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
-    }
-
+		  const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
+		  const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
+		  const [time,setTime]=React.useState(90);
+		  const [paused,setPaused]=React.useState(false);
+		  const [score,setScore]=React.useState(0);
+		  const [answered,setAnswered]=React.useState(0);
+		  const [q,setQ]=React.useState(null);
+		  const [selected,setSelected]=React.useState(null);
+		
+		  // NEW: mode toggle
+		  const [mode, setMode] = React.useState('choose'); // 'choose' | 'listen'
+		
+		  const pick = React.useCallback((statsArg) => {
+		    if(!cells.length){ setQ(null); return; }
+		    const sstats = statsArg ?? stats;
+		    const weight = c => {
+		      const k = `${c.s}:${c.p}:${c.f}`;
+		      const st = sstats[k] || { correct: 0, total: 0 };
+		      const acc = st.total ? st.correct / st.total : 0;
+		      return 1 - acc + 0.05;
+		    };
+		    const total=cells.reduce((sum,c)=>sum+weight(c),0);
+		    let r=Math.random()*total; let chosen=cells[cells.length-1];
+		    for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break;} }
+		    const correct=chosen.canon;
+		    const pool=[...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct);
+		    const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
+		    setQ({cell:chosen,options:opts});
+		    setSelected(null);
+		
+		    // play target immediately
+		    try {
+		      const midi=MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f];
+		      audioEngine.playNote({midi});
+		    }catch{}
+		  },[cells,stats]);
+		
+		  React.useEffect(()=>{ pick(); },[cells]);
+		
+		  React.useEffect(()=>{
+		    if(paused) return;
+		    const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+		    return ()=>clearInterval(id);
+		  },[paused]);
+		
+		  // --- multiple-choice flow (original) -----------------------------------------
+		  const answer=(opt,idx)=>{
+		    if(selected !== null) return;
+		    setSelected(idx);
+		    setTimeout(()=>{
+		      const ok= opt===q.cell.canon;
+		      speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+		      audioEngine.playFeedback(ok);
+		      setAnswered(a=>a+1);
+		      if(ok) setScore(s=>s+1);
+		      setStats(prev=>{
+		        const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
+		        const st = prev[k] || { correct: 0, total: 0 };
+		        const next = { ...prev, [k]: { correct: st.correct + (ok ? 1 : 0), total: st.total + 1 } };
+		        saveJSON(STATS_KEY, next);
+		        setTimeout(() => pick(next), 0);
+		        return next;
+		      });
+		      addXP(ok?8:2);
+		    },200);
+		  };
+		  useAnswerHotkeys(mode==='choose' && !!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
+		
+		  // --- listen & play flow -------------------------------------------------------
+		  const listenLabel = React.useMemo(()=>{
+		    if (!q) return '';
+		    return `Play ${q.cell.canon} (finger ${q.cell.f}) in ${ordinal(q.cell.p)} position on ${q.cell.s} string`;
+		  }, [q]);
+		
+		  const handleListenSuccess = React.useCallback(()=>{
+		    if (!q) return;
+		    const ok = true;
+		    speakSR('Correct, in tune!');
+		    audioEngine.playFeedback(true);
+		    setAnswered(a=>a+1);
+		    setScore(s=>s+1);
+		    setStats(prev=>{
+		      const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
+		      const st = prev[k] || { correct: 0, total: 0 };
+		      const next = { ...prev, [k]: { correct: st.correct + 1, total: st.total + 1 } };
+		      saveJSON(STATS_KEY, next);
+		      setTimeout(() => pick(next), 0);
+		      return next;
+		    });
+		    addXP(10);
+		  }, [q, pick]);
+		
+		  if(time===0) return (
+		    <div className="card">
+		      <h2>Speed Drill Complete</h2>
+		      <p>Score {score}/{answered}</p>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		  if(!cells.length) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+		
+		  // --- render -------------------------------------------------------------------
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Speed Drill</h2>
+		        <p>Time {time}s | Score {score}/{answered}</p>
+		        <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap',alignItems:'center',marginBottom:'.5rem'}}>
+		          <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+		          <PillToggle label={mode==='choose' ? 'Mode: Choose' : 'Mode: Listen & Play'} pressed={mode==='listen'} onClick={()=>setMode(m=> m==='choose' ? 'listen' : 'choose')} />
+		        </div>
+		
+		        {q && mode==='choose' && (
+		          <div>
+		            <p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p>
+		            <div role="radiogroup" aria-label="Answer choices">
+		              {q.options.map((opt,i)=>(
+		                <OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>
+		              ))}
+		            </div>
+		          </div>
+		        )}
+		
+		        {q && mode==='listen' && (
+		          <div>
+		            <ListenPlayPanel
+		              targetMidi={MIDI_BASE[q.cell.s] + POS_SHIFT[q.cell.p] + BASE_OFF[q.cell.f]}
+		              mode="exact"
+		              label={listenLabel}
+		              running={!paused}
+		              onSuccess={handleListenSuccess}
+		            />
+		            <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap'}}>
+		              <button className="btn btn-secondary" onClick={()=>{
+		                // replay
+		                try{
+		                  const midi=MIDI_BASE[q.cell.s] + POS_SHIFT[q.cell.p] + BASE_OFF[q.cell.f];
+		                  audioEngine.playNote({midi});
+		                }catch{}
+		              }}>Replay Target</button>
+		              <button className="btn btn-warning" onClick={()=>{
+		                // count as a miss and move on
+		                speakSR('Skipping.');
+		                audioEngine.playFeedback(false);
+		                setAnswered(a=>a+1);
+		                setStats(prev=>{
+		                  const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
+		                  const st = prev[k] || { correct: 0, total: 0 };
+		                  const next = { ...prev, [k]: { correct: st.correct, total: st.total + 1 } };
+		                  saveJSON(STATS_KEY, next);
+		                  setTimeout(() => pick(next), 0);
+		                  return next;
+		                });
+		                addXP(1);
+		              }}>Skip</button>
+		            </div>
+		          </div>
+		        )}
+		      </div>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
     function Flashcards({prefs,onBack}){
       const buildCards=React.useCallback(()=>{
         const cells=filteredCells(prefs);
@@ -971,97 +1346,150 @@
     }
 
     function NoteLocator({prefs,onBack}){
-      const [time,setTime]=React.useState(60);
-      const [paused,setPaused]=React.useState(false);
-      const [score,setScore]=React.useState(0);
-      const [answered,setAnswered]=React.useState(0);
-      const [q,setQ]=React.useState(null);
-      const [selected,setSelected]=React.useState(null);
-      const pick=()=>{
-        const strings=STRINGS.filter(s=>prefs.strings[s]);
-        const pos=POSITIONS.filter(p=>prefs.positions[p]);
-        if(!strings.length || !pos.length){ setQ(null); return; }
-        const cells=CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p]);
-        const chosen=getRandom(cells);
-        const note=chosen.canon;
-        const correct={s:chosen.s,p:chosen.p,f:chosen.f};
-        const samePitch=cells.filter(c=>c.canon===note && !(c.s===correct.s && c.p===correct.p && c.f===correct.f));
-        const distract= samePitch.length>=3? shuffle(samePitch).slice(0,3) : shuffle(cells.filter(c=>c.canon!==note)).slice(0,3);
-        const opts=shuffle([{...correct},...distract.map(c=>({s:c.s,p:c.p,f:c.f}))]).slice(0,4);
-        setQ({note,correct,options:opts}); setSelected(null);
-      };
-      React.useEffect(()=>{ pick(); },[]);
-      React.useEffect(()=>{
-        if(paused) return;
-        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
-        return ()=>clearInterval(id);
-      },[paused]);
-      const answer=(opt,idx)=>{
-        if(selected !== null) return;
-        setSelected(idx);
-        const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
-        setQ(prev => prev && {
-          ...prev,
-          feedback: prev.options.map(o => {
-            const isCorrect = (o.s===prev.correct.s && o.p===prev.correct.p && o.f===prev.correct.f);
-            const isChosen  = (o.s===opt.s && o.p===opt.p && o.f===opt.f);
-            return {...o, kind: isCorrect ? 'correct' : isChosen ? 'chosen' : 'distractor'};
-          })
-        });
-        setTimeout(()=>{
-          speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
-          audioEngine.playFeedback(ok);
-          setAnswered(a=>a+1);
-          if(ok) setScore(s=>s+1);
-          updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
-          addXP(ok?4:1);
-          pick();
-        },450);
-      };
-      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
-      if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-      return (
-        <div>
-          <div className="card">
-            <h2>Note Locator</h2>
-            <p>Time {time}s | Score {score}/{answered}</p>
-            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-            <p>Where can you play {q.note}? Click the fingerboard:</p>
-            <VisualFingerboard
-              highlight={(q.feedback || q.options).map(o=>({
-                s:o.s,
-                p:o.p,
-                f:o.f,
-                kind:o.kind || 'distractor'
-              }))}
-              disabled={!!q.feedback}
-              onSelect={(cell)=>answer(cell,0)}
-            />
-            {/* Legend explaining the icons and patterns used on the fingerboard.  Colours alone are insufficient for some users, so we provide text and symbols to aid interpretation【408173630527642†L99-L124】. */}
-            <div style={{display:'flex',gap:'0.75rem',alignItems:'center',marginTop:'0.5rem',flexWrap:'wrap',fontSize:'0.75rem',color:'var(--ink-light)'}}>
-              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
-                <span style={{display:'inline-block',background:'var(--success)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✓</span>
-                Correct
-              </span>
-              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
-                <span style={{display:'inline-block',background:'var(--primary)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✕</span>
-                Your choice
-              </span>
-              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
-                <span style={{display:'inline-block',background:'var(--warning)',borderRadius:'3px',padding:'0 4px',backgroundImage:'linear-gradient(45deg, var(--warning) 25%, var(--card) 25%, var(--card) 50%, var(--warning) 50%, var(--warning) 75%, var(--card) 75%, var(--card) 100%)',backgroundSize:'8px 8px',height:'1em',width:'1em'}}></span>
-                Available option (click to choose)
-              </span>
-            </div>
-            <details style={{marginTop:'0.5rem'}}>
-              <summary>List options</summary>
-              {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
-            </details>
-          </div>
-          <button className="btn btn-secondary" onClick={onBack}>Back</button>
-        </div>
-      );
-    }
+		  const [time,setTime]=React.useState(60);
+		  const [paused,setPaused]=React.useState(false);
+		  const [score,setScore]=React.useState(0);
+		  const [answered,setAnswered]=React.useState(0);
+		  const [q,setQ]=React.useState(null);
+		  const [selected,setSelected]=React.useState(null);
+		  const [mode, setMode] = React.useState('choose'); // 'choose' | 'listen'
+		
+		  const pick=()=>{
+		    const strings=STRINGS.filter(s=>prefs.strings[s]);
+		    const pos=POSITIONS.filter(p=>prefs.positions[p]);
+		    if(!strings.length || !pos.length){ setQ(null); return; }
+		    const cells=CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p]);
+		    const chosen=getRandom(cells);
+		    const note=chosen.canon;
+		    const correct={s:chosen.s,p:chosen.p,f:chosen.f};
+		    const samePitch=cells.filter(c=>c.canon===note && !(c.s===correct.s && c.p===correct.p && c.f===correct.f));
+		    const distract= samePitch.length>=3? shuffle(samePitch).slice(0,3) : shuffle(cells.filter(c=>c.canon!==note)).slice(0,3);
+		    const opts=shuffle([{...correct},...distract.map(c=>({s:c.s,p:c.p,f:c.f}))]).slice(0,4);
+		    setQ({note,correct,options:opts, feedback:null});
+		    setSelected(null);
+		
+		    // preview tone (one of the correct locations)
+		    try{
+		      const midi = MIDI_BASE[correct.s] + POS_SHIFT[correct.p] + BASE_OFF[correct.f];
+		      audioEngine.playNote({midi});
+		    }catch{}
+		  };
+		  React.useEffect(()=>{ pick(); },[]);
+		  React.useEffect(()=>{
+		    if(paused) return;
+		    const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+		    return ()=>clearInterval(id);
+		  },[paused]);
+		
+		  // --- original click mode ------------------------------------------------------
+		  const answer=(opt,idx)=>{
+		    if(selected !== null) return;
+		    setSelected(idx);
+		    const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
+		    setQ(prev => prev && {
+		      ...prev,
+		      feedback: prev.options.map(o => {
+		        const isCorrect = (o.s===prev.correct.s && o.p===prev.correct.p && o.f===prev.correct.f);
+		        const isChosen  = (o.s===opt.s && o.p===opt.p && o.f===opt.f);
+		        return {...o, kind: isCorrect ? 'correct' : isChosen ? 'chosen' : 'distractor'};
+		      })
+		    });
+		    setTimeout(()=>{
+		      speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+		      audioEngine.playFeedback(ok);
+		      setAnswered(a=>a+1);
+		      if(ok) setScore(s=>s+1);
+		      updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
+		      addXP(ok?4:1);
+		      pick();
+		    },450);
+		  };
+		  useAnswerHotkeys(mode==='choose' && !!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
+		
+		  // --- listen & play mode -------------------------------------------------------
+		  const targetPc = React.useMemo(()=> NOTE_TO_PC[q?.note || ''] ?? null, [q]);
+		  const listenLabel = React.useMemo(()=> q ? `Play the note ${q.note} (any octave)` : '', [q]);
+		
+		  const handleListenSuccess = React.useCallback(()=>{
+		    if (!q) return;
+		    speakSR('Correct, in tune!');
+		    audioEngine.playFeedback(true);
+		    setAnswered(a=>a+1);
+		    setScore(s=>s+1);
+		    // we can’t know the specific location the user played; log to a mic bucket
+		    updateStat(`mic.note:${q.note}`, true);
+		    addXP(8);
+		    pick();
+		  }, [q]);
+		
+		  if(time===0) return (
+		    <div className="card">
+		      <h2>Note Locator Complete</h2>
+		      <p>Score {score}/{answered}</p>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		  if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+		
+		  return (
+		    <div>
+		      <div className="card">
+		        <h2>Note Locator</h2>
+		        <p>Time {time}s | Score {score}/{answered}</p>
+		        <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap',alignItems:'center',marginBottom:'.5rem'}}>
+		          <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+		          <PillToggle label={mode==='choose' ? 'Mode: Choose' : 'Mode: Listen & Play'} pressed={mode==='listen'} onClick={()=>setMode(m=> m==='choose' ? 'listen' : 'choose')} />
+		        </div>
+		
+		        {mode==='choose' && (
+		          <>
+		            <p>Where can you play {q.note}? Click the fingerboard:</p>
+		            <VisualFingerboard
+		              highlight={(q.feedback || q.options).map(o=>({
+		                s:o.s, p:o.p, f:o.f, kind:o.kind || 'distractor'
+		              }))}
+		              disabled={!!q.feedback}
+		              onSelect={(cell)=>answer(cell,0)}
+		            />
+		            <div style={{display:'flex',gap:'0.75rem',alignItems:'center',marginTop:'0.5rem',flexWrap:'wrap',fontSize:'0.75rem',color:'var(--ink-light)'}}>
+		              <span><strong>✓</strong> Correct</span>
+		              <span><strong>✕</strong> Your choice</span>
+		              <span>Pattern = available options</span>
+		            </div>
+		            <details style={{marginTop:'0.5rem'}}>
+		              <summary>List options</summary>
+		              {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
+		            </details>
+		          </>
+		        )}
+		
+		        {mode==='listen' && (
+		          <>
+		            <ListenPlayPanel
+		              targetPc={targetPc}
+		              mode="class"
+		              label={listenLabel}
+		              running={!paused}
+		              allowReplay={false /* we don’t have a single “target octave” here */}
+		              onSuccess={handleListenSuccess}
+		            />
+		            <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap'}}>
+		              <button className="btn btn-warning" onClick={()=>{
+		                speakSR('Skipping.');
+		                audioEngine.playFeedback(false);
+		                setAnswered(a=>a+1);
+		                updateStat(`mic.note:${q.note}`, false);
+		                addXP(1);
+		                pick();
+		              }}>Skip</button>
+		            </div>
+		          </>
+		        )}
+		      </div>
+		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
+		    </div>
+		  );
+		}
 
     function Settings({prefs,setPrefs,onBack}){
       const [muted, setMuted] = 		React.useState(audioEngine.mute);
