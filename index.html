@@ -98,7 +98,10 @@
 	  }
 	})();
 	</script>
-  <script type="text/babel" data-presets="env,react">
+  <script
+	  type="text/babel"
+	  data-presets="env,react"
+	  data-plugins="transform-optional-chaining,transform-nullish-coalescing-operator">
     // Helpers
     // ---- Safe speech helper (covers iOS/Safari quirks) --------------------------
     function speak(text, { rate = 0.9, pitch = 1, lang, voiceName } = {}) {
