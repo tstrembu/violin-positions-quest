@@ -72,13 +72,16 @@
       window.__setTheme=(d)=>{ localStorage.setItem(KEY,d?'dark':'light'); document.documentElement.classList.toggle('dark', d); };
     })();
   </script>
-  <script type="module">
+	  <script type="module">
 	  import { PitchDetector } from 'https://unpkg.com/pitchy/dist/pitchy.min.mjs';
 	  // expose to the rest of the app
 	  window.__PITCHY = { PitchDetector };
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+	</script>
+	
+	<!-- Load these as normal (UMD) scripts after closing the module tag -->
+	<script src="https://unpkg.com/react@18/umd/react.production.min.js" defer></script>
+	<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" defer></script>
+	<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
