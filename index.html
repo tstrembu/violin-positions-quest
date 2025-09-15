@@ -97,11 +97,13 @@
 	    };
 	  }
 	})();
-	</script>
-  <script
-	  type="text/babel"
-	  data-presets="env,react"
-	  data-plugins="transform-optional-chaining,transform-nullish-coalescing-operator">
+
+	<script type="text/babel">
+  function App(){
+    return <div className="container"><div className="card">Hi</div></div>;
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
     // Helpers
     // ---- Safe speech helper (covers iOS/Safari quirks) --------------------------
     function speak(text, { rate = 0.9, pitch = 1, lang, voiceName } = {}) {
@@ -3611,82 +3613,83 @@
 		  );
 		}
 		
-    // --- APP SHELL + MOUNT (add at the very bottom) ------------------------------------------
+    <!-- everything above (libs, CSS, root div, etc.) -->
 
-		function Home({ onGo }) {
-		  return (
-		    <div className="card">
-		      <h2>Violin Mastery Quest</h2>
-		      <p style={{ color: 'var(--ink-light)', marginTop: -6 }}>
-		        Choose a trainer to begin.
-		      </p>
+		<!-- Your app code + mount in ONE Babel block -->
+		<script
+		  type="text/babel"
+		  data-presets="env,react"
+		  data-plugins="@babel/plugin-transform-optional-chaining,@babel/plugin-transform-nullish-coalescing-operator"
+		>
+		  // --- APP SHELL ----------------------------------------------------
+		  function Home({ onGo }) {
+		    return (
+		      <div className="card">
+		        <h2>Violin Mastery Quest</h2>
+		        <p style={{ color: 'var(--ink-light)', marginTop: -6 }}>Choose a trainer to begin.</p>
 		
-		      <h3>Fingerboard & Ear</h3>
-		      <button className="btn btn-primary" onClick={() => onGo('note')}>Note Locator</button>
-		      <button className="btn btn-primary" onClick={() => onGo('speed')}>Speed Drill</button>
-		      <button className="btn btn-primary" onClick={() => onGo('snapshot')}>Snapshot</button>
-		      <button className="btn btn-primary" onClick={() => onGo('intervalSprint')}>Interval Sprint</button>
-		      <button className="btn btn-primary" onClick={() => onGo('flash')}>Flashcards</button>
-		      <button className="btn btn-primary" onClick={() => onGo('arpeggio')}>Arpeggio Tester</button>
+		        <h3>Fingerboard &amp; Ear</h3>
+		        <button className="btn btn-primary" onClick={() => onGo('note')}>Note Locator</button>
+		        <button className="btn btn-primary" onClick={() => onGo('speed')}>Speed Drill</button>
+		        <button className="btn btn-primary" onClick={() => onGo('snapshot')}>Snapshot</button>
+		        <button className="btn btn-primary" onClick={() => onGo('intervalSprint')}>Interval Sprint</button>
+		        <button className="btn btn-primary" onClick={() => onGo('flash')}>Flashcards</button>
+		        <button className="btn btn-primary" onClick={() => onGo('arpeggio')}>Arpeggio Tester</button>
 		
-		      <h3 style={{ marginTop: '0.75rem' }}>Technique</h3>
-		      <button className="btn btn-primary" onClick={() => onGo('technique')}>Technique Lab (Technique)</button>
+		        <h3 style={{ marginTop: '0.75rem' }}>Technique</h3>
+		        <button className="btn btn-primary" onClick={() => onGo('technique')}>Technique Lab (Technique)</button>
 		
-		      <h3 style={{ marginTop: '0.75rem' }}>Tempo & Theory</h3>
-		      <button className="btn btn-primary" onClick={() => onGo('tempoTrainer')}>Tempo Trainer</button>
-		      <button className="btn btn-primary" onClick={() => onGo('tempoTester')}>Tempo Tester</button>
-		      <button className="btn btn-primary" onClick={() => onGo('theory')}>Music Theory Suite</button>
+		        <h3 style={{ marginTop: '0.75rem' }}>Tempo &amp; Theory</h3>
+		        <button className="btn btn-primary" onClick={() => onGo('tempoTrainer')}>Tempo Trainer</button>
+		        <button className="btn btn-primary" onClick={() => onGo('tempoTester')}>Tempo Tester</button>
+		        <button className="btn btn-primary" onClick={() => onGo('theory')}>Music Theory Suite</button>
 		
-		      <h3 style={{ marginTop: '0.75rem' }}>Progress & Settings</h3>
-		      <button className="btn btn-secondary" onClick={() => onGo('stats')}>Your Progress</button>
-		      <button className="btn btn-secondary" onClick={() => onGo('settings')}>Settings</button>
-		    </div>
-		  );
-		}
+		        <h3 style={{ marginTop: '0.75rem' }}>Progress &amp; Settings</h3>
+		        <button className="btn btn-secondary" onClick={() => onGo('stats')}>Your Progress</button>
+		        <button className="btn btn-secondary" onClick={() => onGo('settings')}>Settings</button>
+		      </div>
+		    );
+		  }
 		
-		function App() {
-		  const [page, setPage] = React.useState('home');
-		  const [prefs, setPrefs] = React.useState(() => loadJSON(PREFS_KEY, defaultPrefs));
-		  const onBack = () => setPage('home');
+		  function App() {
+		    const [page, setPage] = React.useState('home');
+		    const [prefs, setPrefs] = React.useState(() => loadJSON(PREFS_KEY, defaultPrefs));
+		    const onBack = () => setPage('home');
 		
-		  return (
-		    <div className="container">
-		      {page === 'home' && <Home onGo={setPage} />}
+		    return (
+		      <div className="container">
+		        {page === 'home' && <Home onGo={setPage} />}
 		
-		      {page === 'note'           && <NoteLocator    prefs={prefs} onBack={onBack} />}
-		      {page === 'speed'          && <SpeedDrill     prefs={prefs} onBack={onBack} />}
-		      {page === 'snapshot'       && <Snapshot       prefs={prefs} onBack={onBack} />}
-		      {page === 'intervalSprint' && <IntervalSprint prefs={prefs} onBack={onBack} />}
-		      {page === 'flash'          && <Flashcards     prefs={prefs} onBack={onBack} />}
-		      {page === 'arpeggio'       && <ArpeggioTester prefs={prefs} onBack={onBack} />}
+		        {page === 'note'           && <NoteLocator    prefs={prefs} onBack={onBack} />}
+		        {page === 'speed'          && <SpeedDrill     prefs={prefs} onBack={onBack} />}
+		        {page === 'snapshot'       && <Snapshot       prefs={prefs} onBack={onBack} />}
+		        {page === 'intervalSprint' && <IntervalSprint prefs={prefs} onBack={onBack} />}
+		        {page === 'flash'          && <Flashcards     prefs={prefs} onBack={onBack} />}
+		        {page === 'arpeggio'       && <ArpeggioTester prefs={prefs} onBack={onBack} />}
 		
-		      {page === 'technique'      && <TechniqueLab onBack={onBack} />}
+		        {page === 'technique'      && <TechniqueLab onBack={onBack} />}
 		
-		      {page === 'tempoTrainer'   && <TempoTrainer onBack={onBack} />}
-		      {page === 'tempoTester'    && <TempoTester  onBack={onBack} />}
+		        {page === 'tempoTrainer'   && <TempoTrainer onBack={onBack} />}
+		        {page === 'tempoTester'    && <TempoTester  onBack={onBack} />}
 		
-		      {page === 'theory'         && (
-		        <TheoryHome
-		          onBack={onBack}
-		          onNavigate={(sub) => setPage(sub)}
-		        />
-		      )}
-		      {page === 'intervalTrainer'&& <IntervalTrainer onBack={onBack} />}
-		      {page === 'intervalTester' && <IntervalTester  onBack={onBack} />}
-		      {page === 'keyTrainer'     && <KeyTrainer      onBack={onBack} />}
-		      {page === 'keyTester'      && <KeyTester       onBack={onBack} />}
-		      {page === 'timeTrainer'    && <TimeTrainer     onBack={onBack} />}
-		      {page === 'timeTester'     && <TimeTester      onBack={onBack} />}
+		        {page === 'theory'         && (
+		          <TheoryHome onBack={onBack} onNavigate={(sub) => setPage(sub)} />
+		        )}
+		        {page === 'intervalTrainer'&& <IntervalTrainer onBack={onBack} />}
+		        {page === 'intervalTester' && <IntervalTester  onBack={onBack} />}
+		        {page === 'keyTrainer'     && <KeyTrainer      onBack={onBack} />}
+		        {page === 'keyTester'      && <KeyTester       onBack={onBack} />}
+		        {page === 'timeTrainer'    && <TimeTrainer     onBack={onBack} />}
+		        {page === 'timeTester'     && <TimeTester      onBack={onBack} />}
 		
-		      {page === 'stats'          && <StatsPage onBack={onBack} />}
-		      {page === 'settings'       && <Settings  prefs={prefs} setPrefs={setPrefs} onBack={onBack} />}
-		    </div>
-		  );
-		}
+		        {page === 'stats'          && <StatsPage onBack={onBack} />}
+		        {page === 'settings'       && <Settings  prefs={prefs} setPrefs={setPrefs} onBack={onBack} />}
+		      </div>
+		    );
+		  }
 		
-		// Mount (React 18)
-		const rootEl = document.getElementById('root');
-		ReactDOM.createRoot(rootEl).render(<App />);
-  </script>
+		  // --- MOUNT (exactly once) ----------------------------------------------------
+		  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+		</script>
 </body>
 </html>
