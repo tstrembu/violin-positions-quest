@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Enhanced Trainer (v5+ with Improvements)</title>
+  <title>Violin Mastery Quest – Enhanced Trainer (v5)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,65 +57,29 @@
 		  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 		}
   </style>
-	<!-- Theme + SR helper -->
-	<script>
-	  (function(){
-	    const KEY='vmq.theme';
-	    const saved=localStorage.getItem(KEY);
-	    window.speakSR = (txt) => { const el = document.getElementById('sr'); if (el) el.textContent = txt; };
-	    const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-	    const dark=saved? saved==='dark':prefers;
-	    document.documentElement.classList.toggle('dark', dark);
-	    window.__setTheme=(d)=>{ localStorage.setItem(KEY,d?'dark':'light'); document.documentElement.classList.toggle('dark', d); };
-	  })();
-	</script>
-	
-	<!-- Optional: Pitchy (module is fine; ignored by old browsers) -->
-	<script type="module">
-	  import { PitchDetector } from 'https://unpkg.com/pitchy/dist/pitchy.min.mjs';
-	  window.__PITCHY = { PitchDetector };
-	</script>
-	
-	<!-- ✅ IMPORTANT: React and ReactDOM must load synchronously (NO defer) -->
-	<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-	<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-	
-	<!-- Babel Standalone -->
-	<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    (function(){
+      const KEY='vmq.theme';
+      const saved=localStorage.getItem(KEY);
+      // make screen-reader announcements available everywhere
+      window.speakSR = (txt) => {
+			  const el = document.getElementById('sr');
+			  if (el) el.textContent = txt;
+			};
+      const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const dark=saved? saved==='dark':prefers;
+      document.documentElement.classList.toggle('dark', dark);
+      window.__setTheme=(d)=>{ localStorage.setItem(KEY,d?'dark':'light'); document.documentElement.classList.toggle('dark', d); };
+    })();
+  </script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
   <div id="sr" class="sr-only" aria-live="polite"></div>
-
-  <!-- Display a message if JavaScript is disabled -->
-  <noscript>
-    <div class="container">
-      <div class="card">
-        <h2>JavaScript Required</h2>
-        <p>Violin Mastery Quest relies on modern JavaScript features. Please enable JavaScript in your browser to use this trainer.</p>
-      </div>
-    </div>
-  </noscript>
-  <!--
-    The main application script is compiled on the fly using Babel.  It
-    contains JSX syntax for React components, so we explicitly set the
-    script type to `text/babel`.  Without this attribute the browser
-    would attempt to execute the raw JSX and throw a syntax error.  See
-    https://babeljs.io/docs/babel-standalone for details.
-  -->
-  <script type="text/babel"
-          data-presets="env,react"
-          data-plugins="@babel/plugin-transform-optional-chaining,@babel/plugin-transform-nullish-coalescing-operator">
-	/* Minimal polyfills for broader Safari/Android support */
-	(function () {
-	  if (!Object.fromEntries) {
-	    Object.fromEntries = function (iter) {
-	      var obj = {};
-	      for (var pair of iter) obj[pair[0]] = pair[1];
-	      return obj;
-	    };
-	  }
-	})();
+  <script type="text/babel" data-presets="react">
     // Helpers
     // ---- Safe speech helper (covers iOS/Safari quirks) --------------------------
     function speak(text, { rate = 0.9, pitch = 1, lang, voiceName } = {}) {
@@ -248,274 +212,7 @@
     const audioEngine=new AudioEngine();
     // Unlock audio on first tap/click (mobile Safari, etc.)
     window.addEventListener('pointerdown', () => { try { audioEngine.ensure(); } catch {} }, { once: true });
-		// === Microphone Pitch Engine + Tuner UI + Generic Listen&Play Panel ============
-		// Uses Web Audio API. If window.__PITCHY is present, uses that library; otherwise
-		// a robust autocorrelation fallback is used.
-		
-		// Utilities
-		const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
-		const midiToHz = (m)=> 440*Math.pow(2,(m-69)/12);
-		const hzToMidi = (hz)=> 69 + 12*Math.log2(hz/440);
-		const centsDiff = (hz, refHz)=> 1200*Math.log2(hz/refHz);
-		const pcFromMidi = (m)=> ((Math.round(m)%12)+12)%12;
-		const ENH_PC = {0:'C',1:'C#/Db',2:'D',3:'D#/Eb',4:'E',5:'F',6:'F#/Gb',7:'G',8:'G#/Ab',9:'A',10:'A#/Bb',11:'B'};
-		
-		// --- Autocorrelation detector (fallback) ---------------------------------------
-		function autoCorrelate(buf, sampleRate){
-		  // RMS gate (ignore if too quiet)
-		  let rms = 0;
-		  for(let i=0;i<buf.length;i++){ const v=buf[i]; rms+=v*v; }
-		  rms = Math.sqrt(rms/buf.length);
-		  if (rms < 0.008) return { hz: null, clarity: 0 }; // too quiet
-		
-		  // Autocorrelation
-		  const SIZE = buf.length;
-		  const minHz = 65, maxHz = 1047; // ~C2..C6 (violin range is higher; keep broad)
-		  const maxLag = Math.floor(sampleRate/minHz);
-		  const minLag = Math.floor(sampleRate/maxHz);
-		  let bestLag = -1, bestCorr = 0;
-		
-		  for(let lag=minLag; lag<=maxLag; lag++){
-		    let corr = 0;
-		    for(let i=0;i<SIZE-lag;i++){
-		      corr += buf[i] * buf[i+lag];
-		    }
-		    if (corr > bestCorr){
-		      bestCorr = corr;
-		      bestLag = lag;
-		    }
-		  }
-		  if (bestLag <= 0) return { hz: null, clarity: 0 };
-		
-		  // Parabolic interpolation around bestLag for better precision
-		  const prevLag = bestLag-1 >= minLag ? bestLag-1 : bestLag;
-		  const nextLag = bestLag+1 <= maxLag ? bestLag+1 : bestLag;
-		  let c0=0,c1=0,c2=0;
-		  for(let i=0;i<SIZE-prevLag;i++){ c0 += buf[i]*buf[i+prevLag]; }
-		  for(let i=0;i<SIZE-bestLag;i++){ c1 += buf[i]*buf[i+bestLag]; }
-		  for(let i=0;i<SIZE-nextLag;i++){ c2 += buf[i]*buf[i+nextLag]; }
-		  const denom = 2*(2*c1 - c0 - c2) || 1;
-		  const offset = (c0 - c2) / denom;
-		  const refinedLag = bestLag + clamp(offset, -1, 1);
-		
-		  const hz = sampleRate / refinedLag;
-		  // crude clarity metric
-		  const clarity = clamp(bestCorr / (SIZE - bestLag) / (rms || 1e-9), 0, 1);
-		  if (!Number.isFinite(hz) || hz < 30 || hz > 4000) return { hz:null, clarity:0 };
-		  return { hz, clarity };
-		}
-		
-		// --- MicPitch: singleton mic manager ------------------------------------------
-		class MicPitch {
-		  constructor(){
-		    this.ctx = null;
-		    this.analyser = null;
-		    this.src = null;
-		    this.stream = null;
-		    this.buf = new Float32Array(2048);
-		    this.running = false;
-		    this._raf = 0;
-		    this._usePitchy = false;
-		    this._pitchyDetector = null;
-		    this.subscribers = new Set();
-		  }
-		  async enable(){
-		    if (this.running) return;
-		    // Use the existing audioEngine context (better on iOS)
-		    this.ctx = audioEngine.ensure();
-		    // getUserMedia
-		    const stream = await navigator.mediaDevices.getUserMedia({
-		      audio: {
-		        echoCancellation: true,
-		        noiseSuppression: true,
-		        autoGainControl: true,
-		        channelCount: 1
-		      }
-		    });
-		    this.stream = stream;
-		    this.src = this.ctx.createMediaStreamSource(stream);
-		    this.analyser = this.ctx.createAnalyser();
-		    this.analyser.fftSize = 2048;
-		    this.src.connect(this.analyser);
-		
-		    // Try Pitchy if present
-		    if (window.__PITCHY?.PitchDetector){
-		      this._usePitchy = true;
-		      this._pitchyDetector = window.__PITCHY.PitchDetector.forFloat32Array(this.ctx.sampleRate);
-		    } else {
-		      this._usePitchy = false;
-		      this._pitchyDetector = null;
-		    }
-		  }
-		  on(cb){ this.subscribers.add(cb); return ()=>this.subscribers.delete(cb); }
-		
-		  start(){
-		    if (!this.analyser) throw new Error('MicPitch not enabled. Call enable() after user gesture.');
-		    if (this.running) return;
-		    this.running = true;
-		    const loop = ()=>{
-		      if (!this.running) return;
-		      this.analyser.getFloatTimeDomainData(this.buf);
-		      let hz=null, clarity=0;
-		      if (this._usePitchy){
-		        const [f, c] = this._pitchyDetector.findPitch(this.buf, this.ctx.sampleRate);
-		        hz = (f && Number.isFinite(f)) ? f : null;
-		        clarity = Number.isFinite(c) ? c : 0;
-		      } else {
-		        const r = autoCorrelate(this.buf, this.ctx.sampleRate);
-		        hz = r.hz; clarity = r.clarity;
-		      }
-		      this.subscribers.forEach(cb=>cb({ hz, clarity }));
-		      this._raf = requestAnimationFrame(loop);
-		    };
-		    this._raf = requestAnimationFrame(loop);
-		  }
-		  stop(){
-		    this.running = false;
-		    if (this._raf) cancelAnimationFrame(this._raf);
-		    this._raf = 0;
-		  }
-		  async disable(){
-		    this.stop();
-		    try { this.src && this.src.disconnect(); } catch {}
-		    try { this.analyser && this.analyser.disconnect(); } catch {}
-		    try { this.stream && this.stream.getTracks().forEach(t=>t.stop()); } catch {}
-		    this.src = null; this.analyser = null; this.stream = null;
-		  }
-		}
-		const micPitch = new MicPitch();
-		
-		// --- Tuner needle (±50 cents) --------------------------------------------------
-		function TunerNeedle({ cents=0, clarity=0, active=false }){
-		  const C = clamp(cents, -50, 50);
-		  const ok = Math.abs(C) <= 10 && clarity >= 0.6;
-		  const barW = ((C+50)/100)*100; // 0..100%
-		
-		  return (
-		    <div className="card" style={{padding:'0.75rem'}}>
-		      <div style={{display:'flex', alignItems:'center', gap:'0.75rem', flexWrap:'wrap'}}>
-		        <div style={{flex:'1 1 280px'}}>
-		          {/* Bar tuner */}
-		          <div style={{height:10, background:'var(--border)', borderRadius:9999, position:'relative', overflow:'hidden'}}>
-		            <div style={{position:'absolute', left:'50%', top:0, bottom:0, width:2, background:'var(--ink-light)', opacity:0.35}}/>
-		            <div style={{height:'100%', width:`${barW}%`, background: ok?'var(--success)':'var(--warning)'}}/>
-		          </div>
-		          <div style={{display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--ink-light)', marginTop:4}}>
-		            <span>-50¢</span><span>0</span><span>+50¢</span>
-		          </div>
-		        </div>
-		        <div style={{minWidth:140, textAlign:'center'}}>
-		          <div style={{fontWeight:700, color: ok ? 'var(--success)' : 'var(--ink)'}}>{ok ? 'IN TUNE' : 'Adjust'}</div>
-		          <div style={{fontSize:12, color:'var(--ink-light)'}}>Δ {Math.round(C)}¢ • clarity {Math.round(clarity*100)}%</div>
-		        </div>
-		      </div>
-		    </div>
-		  );
-		}
-		
-		// --- Generic Listen & Play panel ----------------------------------------------
-		// Props:
-		//  - targetMidi: exact MIDI to match (mode='exact')
-		//  - targetPc: pitch-class (0..11) to match in any octave (mode='class')
-		//  - label: text shown to user
-		//  - onSuccess(): called when stable within ±20¢ for ~400ms
-		//  - running: boolean (false pauses detection)
-		//  - allowReplay: show Play Target button
-		function ListenPlayPanel({ targetMidi, targetPc, mode='exact', label, onSuccess, running=true, allowReplay=true }){
-		  const [enabled, setEnabled] = React.useState(false);
-		  const [cents, setCents] = React.useState(0);
-		  const [clarity, setClarity] = React.useState(0);
-		  const [stableMs, setStableMs] = React.useState(0);
-		  const good = Math.abs(cents) <= 20 && clarity >= 0.6;
-		
-		  React.useEffect(()=>{
-		    let off = null, tId = 0, lastTs = performance.now();
-		    if (!enabled || !running) { setStableMs(0); return; }
-		
-		    off = micPitch.on(({hz, clarity:c})=>{
-		      const now = performance.now();
-		      const dt = now - lastTs; lastTs = now;
-		
-		      if (!hz){ setClarity(c||0); setStableMs(0); return; }
-		
-		      // compute target reference
-		      let refHz = null;
-		      if (mode==='exact' && Number.isFinite(targetMidi)) {
-		        refHz = midiToHz(targetMidi);
-		      } else if (mode==='class' && Number.isFinite(targetPc)) {
-		        // pick the nearest pitch-class to measured MIDI
-		        const m = hzToMidi(hz);
-		        // nearest midi with targetPc
-		        const nearest = Math.round(m);
-		        let cand = nearest + ((targetPc - (nearest%12) + 12) % 12);
-		        if (Math.abs(cand - m) > 6) cand -= 12; // pull to nearest octave if needed
-		        refHz = midiToHz(cand);
-		      }
-		      if (!refHz){ setStableMs(0); return; }
-		
-		      const cts = centsDiff(hz, refHz);
-		      setCents(cts);
-		      setClarity(c||0);
-		
-		      // accumulate stability time
-		      if (Math.abs(cts) <= 20 && (c||0) >= 0.6){
-		        setStableMs(s=>s + dt);
-		      } else {
-		        setStableMs(0);
-		      }
-		    });
-		
-		    return ()=> { off && off(); };
-		  }, [enabled, running, targetMidi, targetPc, mode]);
-		
-		  // success after ~0.4s inside tolerance
-		  React.useEffect(()=>{
-		    if (stableMs >= 400){
-		      onSuccess?.();
-		      setStableMs(0);
-		    }
-		  }, [stableMs, onSuccess]);
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h3 style={{marginTop:0}}>Listen &amp; Play</h3>
-		        <p style={{marginTop:-6, color:'var(--ink-light)'}}>{label}</p>
-		        {!enabled ? (
-		          <button className="btn btn-primary" onClick={async()=>{
-		            try{
-		              await micPitch.enable();
-		              micPitch.start();
-		              setEnabled(true);
-		            } catch (e) {
-		              alert('Microphone permission is needed to use Listen & Play.');
-		            }
-		          }}>Enable Microphone</button>
-		        ) : (
-		          <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center'}}>
-		            {allowReplay && (
-		              <button className="btn btn-secondary" onClick={()=>{
-		                try{
-		                  if (mode==='exact' && Number.isFinite(targetMidi)){
-		                    audioEngine.playNote({ midi: targetMidi, durationMs: 900 });
-		                  }
-		                }catch{}
-		              }}>Play Target</button>
-		            )}
-		            <button className="btn" style={{background: running ? 'var(--warning)' : 'var(--primary)'}}
-		              onClick={()=>{
-		                if (running){ micPitch.stop(); } else { micPitch.start(); }
-		              }}>
-		              {running ? 'Pause Listening' : 'Resume Listening'}
-		            </button>
-		            <button className="btn btn-danger" onClick={async()=>{ await micPitch.disable(); setEnabled(false); }}>Disable Mic</button>
-		          </div>
-		        )}
-		      </div>
-		      <TunerNeedle cents={cents} clarity={clarity} active={enabled && running}/>
-		    </div>
-		  );
-		}
+
     const canonicalBase=(s,p,f)=>{ const semi=OPEN_PC[s]+POS_SHIFT[p]+BASE_OFF[f]; return NOTE_NAME[((semi%12)+12)%12]; };
     const CELLS=[]; for(const s of STRINGS) for(const p of POSITIONS) for(const f of FINGERS){ CELLS.push({s,p,f,canon:canonicalBase(s,p,f)}); }
     const XP_KEY='vmq.v4.xp';
@@ -658,9 +355,9 @@
 		  );
 		}
     // =========================================================
-    // Technique definitions and lab component (unchanged except feedback)
+    // Bieler Method definitions and lab component (unchanged except feedback)
     // =========================================================
-    const TECHNIQUE_VOCAB = [
+    const BIELER_VOCAB = [
       { term:'Basic Left-Hand Position', def:'Balanced, rounded hand with natural finger curvature over the string; thumb relaxed opposite 1st–2nd finger.' },
       { term:'Three-Dimensional Positioning', def:'Aligns height, depth, and angle of the violin relative to torso to free both hands.' },
       { term:'Hand Frame', def:'Stable spacing of fingers across semitone/whole-tone patterns; frame travels during shifts.' },
@@ -685,29 +382,29 @@
       { term:'Knowledge', def:'Clear mental models: maps, sound ideals, mechanics.' },
       { term:'Necessity', def:'Technique serves musical intent; choose tools by purpose.' },
     ];
-    const TECHNIQUE_CONCEPT_QA = [
+    const BIELER_CONCEPT_QA = [
       { q:'Why does “hand frame” matter before speed drills?', a:'It stabilizes finger spacing so motion stays accurate as tempo rises.', wrong:['It builds arm muscle only','It makes vibrato louder','It avoids all shifts'] },
       { q:'Best cue to pick a contact point?', a:'Balance of bow speed & pressure to the tone color you want.', wrong:['Player height','String brand','Left-hand position only'] },
       { q:'Core difference: spiccato vs sautillé?', a:'Spiccato is placed/rebounded; sautillé is natural spring at faster tempi.', wrong:['Spiccato is legato','Sautillé is always loud','They are the same stroke'] },
       { q:'What should move in most string crossings?', a:'Forearm level first, then upper arm for large distances.', wrong:['Fingers only','Wrist only','Whole torso always'] },
     ];
-    const TECHNIQUE_APPLY = [
+    const BIELER_APPLY = [
       { scenario:'Bright forte in 1st position on A string, clear projection.', answer:'Move soundpoint closer to bridge, increase bow speed with supportive index; keep hand frame stable for intonation.', wrong:['Move to fingerboard with lighter bow','Only vibrato faster','Tighten right thumb and press hard'] },
       { scenario:'Clean off-string articulation at MM=100, 8ths.', answer:'Spiccato near balance point with small vertical energy; consistent level changes.', wrong:['Wide arm throws at tip','Heavy martelé at frog','Fast ricochet near bridge'] },
       { scenario:'Warm dolce line in 3rd position', answer:'More over-fingerboard soundpoint, lower pressure, continuous legato changes; left-hand frame glides in shifts.', wrong:['Stiff wrist collé','Firm staccato','Always play sul ponticello'] },
     ];
-    function TechniqueLab({ onBack }) {
+    function BielerLab({ onBack }) {
       const [mode,setMode] = React.useState('vocab');
       const [vi,setVi] = React.useState(0);
       const [reveal,setReveal] = React.useState(false);
-      const nextV=()=>{ setReveal(false); setVi((vi+1)%TECHNIQUE_VOCAB.length); };
-      const prevV=()=>{ setReveal(false); setVi((vi-1+TECHNIQUE_VOCAB.length)%TECHNIQUE_VOCAB.length); };
+      const nextV=()=>{ setReveal(false); setVi((vi+1)%BIELER_VOCAB.length); };
+      const prevV=()=>{ setReveal(false); setVi((vi-1+BIELER_VOCAB.length)%BIELER_VOCAB.length); };
       const makeConceptQ = React.useCallback(()=>{
-        const item = getRandom(TECHNIQUE_CONCEPT_QA);
+        const item = getRandom(BIELER_CONCEPT_QA);
         return { prompt:item.q, correct:item.a, options: shuffle([item.a, ...shuffle(item.wrong).slice(0,3)]) };
       },[]);
       const makeApplyQ = React.useCallback(()=>{
-        const item = getRandom(TECHNIQUE_APPLY);
+        const item = getRandom(BIELER_APPLY);
         return { prompt:item.scenario, correct:item.answer, options: shuffle([item.answer, ...shuffle(item.wrong).slice(0,3)]) };
       },[]);
       const [cq,setCq] = React.useState(makeConceptQ);
@@ -773,9 +470,9 @@
             {mode==='vocab' && (
               <div>
                 <div className="card" style={{padding:'1rem',textAlign:'center',marginBottom:'0.5rem'}}>
-                  <div style={{fontWeight:700,fontSize:'1.15rem'}}>{TECHNIQUE_VOCAB[vi].term}</div>
+                  <div style={{fontWeight:700,fontSize:'1.15rem'}}>{BIELER_VOCAB[vi].term}</div>
                   {reveal
-                    ? <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{TECHNIQUE_VOCAB[vi].def}</div>
+                    ? <div style={{marginTop:'0.5rem',color:'var(--ink-light)'}}>{BIELER_VOCAB[vi].def}</div>
                     : <div style={{marginTop:'0.5rem',fontStyle:'italic',color:'var(--ink-light)'}}>Press Reveal to show definition.</div>}
                 </div>
                 <div style={{display:'flex',gap:'0.5rem',justifyContent:'center'}}>
@@ -784,9 +481,9 @@
                   <button className="btn btn-secondary" onClick={nextV}>Next</button>
                 </div>
                 <div style={{marginTop:'0.5rem',textAlign:'center',color:'var(--ink-light)'}}>
-                  <small>Card {vi+1} / {TECHNIQUE_VOCAB.length}</small>
+                  <small>Card {vi+1} / {BIELER_VOCAB.length}</small>
                   <div style={{height:'6px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden',marginTop:'2px'}}>
-                    <div style={{width:`${((vi+1)/TECHNIQUE_VOCAB.length)*100}%`,height:'100%',background:'var(--primary)'}}/>
+                    <div style={{width:`${((vi+1)/BIELER_VOCAB.length)*100}%`,height:'100%',background:'var(--primary)'}}/>
                   </div>
                 </div>
               </div>
@@ -988,169 +685,67 @@
     }
 
     function SpeedDrill({prefs,onBack}){
-		  const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
-		  const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
-		  const [time,setTime]=React.useState(90);
-		  const [paused,setPaused]=React.useState(false);
-		  const [score,setScore]=React.useState(0);
-		  const [answered,setAnswered]=React.useState(0);
-		  const [q,setQ]=React.useState(null);
-		  const [selected,setSelected]=React.useState(null);
-		
-		  // NEW: mode toggle
-		  const [mode, setMode] = React.useState('choose'); // 'choose' | 'listen'
-		
-		  const pick = React.useCallback((statsArg) => {
-		    if(!cells.length){ setQ(null); return; }
-		    const sstats = statsArg ?? stats;
-		    const weight = c => {
-		      const k = `${c.s}:${c.p}:${c.f}`;
-		      const st = sstats[k] || { correct: 0, total: 0 };
-		      const acc = st.total ? st.correct / st.total : 0;
-		      return 1 - acc + 0.05;
-		    };
-		    const total=cells.reduce((sum,c)=>sum+weight(c),0);
-		    let r=Math.random()*total; let chosen=cells[cells.length-1];
-		    for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break;} }
-		    const correct=chosen.canon;
-		    const pool=[...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct);
-		    const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
-		    setQ({cell:chosen,options:opts});
-		    setSelected(null);
-		
-		    // play target immediately
-		    try {
-		      const midi=MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f];
-		      audioEngine.playNote({midi});
-		    }catch{}
-		  },[cells,stats]);
-		
-		  React.useEffect(()=>{ pick(); },[cells]);
-		
-		  React.useEffect(()=>{
-		    if(paused) return;
-		    const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
-		    return ()=>clearInterval(id);
-		  },[paused]);
-		
-		  // --- multiple-choice flow (original) -----------------------------------------
-		  const answer=(opt,idx)=>{
-		    if(selected !== null) return;
-		    setSelected(idx);
-		    setTimeout(()=>{
-		      const ok= opt===q.cell.canon;
-		      speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
-		      audioEngine.playFeedback(ok);
-		      setAnswered(a=>a+1);
-		      if(ok) setScore(s=>s+1);
-		      setStats(prev=>{
-		        const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
-		        const st = prev[k] || { correct: 0, total: 0 };
-		        const next = { ...prev, [k]: { correct: st.correct + (ok ? 1 : 0), total: st.total + 1 } };
-		        saveJSON(STATS_KEY, next);
-		        setTimeout(() => pick(next), 0);
-		        return next;
-		      });
-		      addXP(ok?8:2);
-		    },200);
-		  };
-		  useAnswerHotkeys(mode==='choose' && !!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
-		
-		  // --- listen & play flow -------------------------------------------------------
-		  const listenLabel = React.useMemo(()=>{
-		    if (!q) return '';
-		    return `Play ${q.cell.canon} (finger ${q.cell.f}) in ${ordinal(q.cell.p)} position on ${q.cell.s} string`;
-		  }, [q]);
-		
-		  const handleListenSuccess = React.useCallback(()=>{
-		    if (!q) return;
-		    const ok = true;
-		    speakSR('Correct, in tune!');
-		    audioEngine.playFeedback(true);
-		    setAnswered(a=>a+1);
-		    setScore(s=>s+1);
-		    setStats(prev=>{
-		      const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
-		      const st = prev[k] || { correct: 0, total: 0 };
-		      const next = { ...prev, [k]: { correct: st.correct + 1, total: st.total + 1 } };
-		      saveJSON(STATS_KEY, next);
-		      setTimeout(() => pick(next), 0);
-		      return next;
-		    });
-		    addXP(10);
-		  }, [q, pick]);
-		
-		  if(time===0) return (
-		    <div className="card">
-		      <h2>Speed Drill Complete</h2>
-		      <p>Score {score}/{answered}</p>
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		  if(!cells.length) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-		
-		  // --- render -------------------------------------------------------------------
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Speed Drill</h2>
-		        <p>Time {time}s | Score {score}/{answered}</p>
-		        <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap',alignItems:'center',marginBottom:'.5rem'}}>
-		          <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-		          <PillToggle label={mode==='choose' ? 'Mode: Choose' : 'Mode: Listen & Play'} pressed={mode==='listen'} onClick={()=>setMode(m=> m==='choose' ? 'listen' : 'choose')} />
-		        </div>
-		
-		        {q && mode==='choose' && (
-		          <div>
-		            <p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p>
-		            <div role="radiogroup" aria-label="Answer choices">
-		              {q.options.map((opt,i)=>(
-		                <OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>
-		              ))}
-		            </div>
-		          </div>
-		        )}
-		
-		        {q && mode==='listen' && (
-		          <div>
-		            <ListenPlayPanel
-		              targetMidi={MIDI_BASE[q.cell.s] + POS_SHIFT[q.cell.p] + BASE_OFF[q.cell.f]}
-		              mode="exact"
-		              label={listenLabel}
-		              running={!paused}
-		              onSuccess={handleListenSuccess}
-		            />
-		            <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap'}}>
-		              <button className="btn btn-secondary" onClick={()=>{
-		                // replay
-		                try{
-		                  const midi=MIDI_BASE[q.cell.s] + POS_SHIFT[q.cell.p] + BASE_OFF[q.cell.f];
-		                  audioEngine.playNote({midi});
-		                }catch{}
-		              }}>Replay Target</button>
-		              <button className="btn btn-warning" onClick={()=>{
-		                // count as a miss and move on
-		                speakSR('Skipping.');
-		                audioEngine.playFeedback(false);
-		                setAnswered(a=>a+1);
-		                setStats(prev=>{
-		                  const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
-		                  const st = prev[k] || { correct: 0, total: 0 };
-		                  const next = { ...prev, [k]: { correct: st.correct, total: st.total + 1 } };
-		                  saveJSON(STATS_KEY, next);
-		                  setTimeout(() => pick(next), 0);
-		                  return next;
-		                });
-		                addXP(1);
-		              }}>Skip</button>
-		            </div>
-		          </div>
-		        )}
-		      </div>
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		}
+      const [stats,setStats]=React.useState(()=>loadJSON(STATS_KEY,{}));
+      const cells = React.useMemo(() => filteredCells(prefs), [prefs]);
+      const [time,setTime]=React.useState(90);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick = React.useCallback((statsArg) => {
+			  if (!cells.length) { setQ(null); return; }
+			  const sstats = statsArg ?? stats;
+			  const weight = c => {
+			    const k = `${c.s}:${c.p}:${c.f}`;
+			    const st = sstats[k] || { correct: 0, total: 0 };
+			    const acc = st.total ? st.correct / st.total : 0;
+			    return 1 - acc + 0.05;
+			  };
+        const total=cells.reduce((sum,c)=>sum+weight(c),0);
+        let r=Math.random()*total; let chosen=cells[cells.length-1];
+        for(const c of cells){ r-=weight(c); if(r<=0){ chosen=c; break;} }
+        const correct=chosen.canon;
+        const pool=[...new Set(cells.map(c=>c.canon))].filter(n=>n!==correct);
+        const opts=shuffle([correct,...shuffle(pool).slice(0,3)]);
+        setQ({cell:chosen,options:opts}); setSelected(null);
+        try {
+          const midi=MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f];
+          audioEngine.playNote({midi});
+        }catch{}
+      },[cells,stats]);
+      React.useEffect(()=>{ pick(); },[cells]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        setTimeout(()=>{
+          const ok= opt===q.cell.canon;
+          speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          setStats(prev=>{
+					  const k = `${q.cell.s}:${q.cell.p}:${q.cell.f}`;
+					  const st = prev[k] || { correct: 0, total: 0 };
+					  const next = { ...prev, [k]: { correct: st.correct + (ok ? 1 : 0), total: st.total + 1 } };
+					  saveJSON(STATS_KEY, next);
+					  setTimeout(() => pick(next), 0);
+					  return next;
+					});
+          addXP(ok?8:2);
+        },200);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
+      if(time===0) return <div className="card"><h2>Speed Drill Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      if(!cells.length) return <div className="card"><h2>No valid cells</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (<div><div className="card"><h2>Speed Drill</h2><p>Time {time}s | Score {score}/{answered}</p><button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>{q && (<div><p>What is the base note at <strong>{ordinal(q.cell.p)} pos, {ordinal(q.cell.f)} finger on {q.cell.s}</strong>?</p><div role="radiogroup" aria-label="Answer choices">{q.options.map((opt,i)=>(<OptionButton key={i} label={opt} selected={selected===i} onClick={()=>answer(opt,i)}/>))}</div></div>)}</div><button className="btn btn-secondary" onClick={onBack}>Back</button></div>);
+    }
+
     function Flashcards({prefs,onBack}){
       const buildCards=React.useCallback(()=>{
         const cells=filteredCells(prefs);
@@ -1376,150 +971,97 @@
     }
 
     function NoteLocator({prefs,onBack}){
-		  const [time,setTime]=React.useState(60);
-		  const [paused,setPaused]=React.useState(false);
-		  const [score,setScore]=React.useState(0);
-		  const [answered,setAnswered]=React.useState(0);
-		  const [q,setQ]=React.useState(null);
-		  const [selected,setSelected]=React.useState(null);
-		  const [mode, setMode] = React.useState('choose'); // 'choose' | 'listen'
-		
-		  const pick=()=>{
-		    const strings=STRINGS.filter(s=>prefs.strings[s]);
-		    const pos=POSITIONS.filter(p=>prefs.positions[p]);
-		    if(!strings.length || !pos.length){ setQ(null); return; }
-		    const cells=CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p]);
-		    const chosen=getRandom(cells);
-		    const note=chosen.canon;
-		    const correct={s:chosen.s,p:chosen.p,f:chosen.f};
-		    const samePitch=cells.filter(c=>c.canon===note && !(c.s===correct.s && c.p===correct.p && c.f===correct.f));
-		    const distract= samePitch.length>=3? shuffle(samePitch).slice(0,3) : shuffle(cells.filter(c=>c.canon!==note)).slice(0,3);
-		    const opts=shuffle([{...correct},...distract.map(c=>({s:c.s,p:c.p,f:c.f}))]).slice(0,4);
-		    setQ({note,correct,options:opts, feedback:null});
-		    setSelected(null);
-		
-		    // preview tone (one of the correct locations)
-		    try{
-		      const midi = MIDI_BASE[correct.s] + POS_SHIFT[correct.p] + BASE_OFF[correct.f];
-		      audioEngine.playNote({midi});
-		    }catch{}
-		  };
-		  React.useEffect(()=>{ pick(); },[]);
-		  React.useEffect(()=>{
-		    if(paused) return;
-		    const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
-		    return ()=>clearInterval(id);
-		  },[paused]);
-		
-		  // --- original click mode ------------------------------------------------------
-		  const answer=(opt,idx)=>{
-		    if(selected !== null) return;
-		    setSelected(idx);
-		    const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
-		    setQ(prev => prev && {
-		      ...prev,
-		      feedback: prev.options.map(o => {
-		        const isCorrect = (o.s===prev.correct.s && o.p===prev.correct.p && o.f===prev.correct.f);
-		        const isChosen  = (o.s===opt.s && o.p===opt.p && o.f===opt.f);
-		        return {...o, kind: isCorrect ? 'correct' : isChosen ? 'chosen' : 'distractor'};
-		      })
-		    });
-		    setTimeout(()=>{
-		      speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
-		      audioEngine.playFeedback(ok);
-		      setAnswered(a=>a+1);
-		      if(ok) setScore(s=>s+1);
-		      updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
-		      addXP(ok?4:1);
-		      pick();
-		    },450);
-		  };
-		  useAnswerHotkeys(mode==='choose' && !!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
-		
-		  // --- listen & play mode -------------------------------------------------------
-		  const targetPc = React.useMemo(()=> NOTE_TO_PC[q?.note || ''] ?? null, [q]);
-		  const listenLabel = React.useMemo(()=> q ? `Play the note ${q.note} (any octave)` : '', [q]);
-		
-		  const handleListenSuccess = React.useCallback(()=>{
-		    if (!q) return;
-		    speakSR('Correct, in tune!');
-		    audioEngine.playFeedback(true);
-		    setAnswered(a=>a+1);
-		    setScore(s=>s+1);
-		    // we can’t know the specific location the user played; log to a mic bucket
-		    updateStat(`mic.note:${q.note}`, true);
-		    addXP(8);
-		    pick();
-		  }, [q]);
-		
-		  if(time===0) return (
-		    <div className="card">
-		      <h2>Note Locator Complete</h2>
-		      <p>Score {score}/{answered}</p>
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		  if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Note Locator</h2>
-		        <p>Time {time}s | Score {score}/{answered}</p>
-		        <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap',alignItems:'center',marginBottom:'.5rem'}}>
-		          <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
-		          <PillToggle label={mode==='choose' ? 'Mode: Choose' : 'Mode: Listen & Play'} pressed={mode==='listen'} onClick={()=>setMode(m=> m==='choose' ? 'listen' : 'choose')} />
-		        </div>
-		
-		        {mode==='choose' && (
-		          <>
-		            <p>Where can you play {q.note}? Click the fingerboard:</p>
-		            <VisualFingerboard
-		              highlight={(q.feedback || q.options).map(o=>({
-		                s:o.s, p:o.p, f:o.f, kind:o.kind || 'distractor'
-		              }))}
-		              disabled={!!q.feedback}
-		              onSelect={(cell)=>answer(cell,0)}
-		            />
-		            <div style={{display:'flex',gap:'0.75rem',alignItems:'center',marginTop:'0.5rem',flexWrap:'wrap',fontSize:'0.75rem',color:'var(--ink-light)'}}>
-		              <span><strong>✓</strong> Correct</span>
-		              <span><strong>✕</strong> Your choice</span>
-		              <span>Pattern = available options</span>
-		            </div>
-		            <details style={{marginTop:'0.5rem'}}>
-		              <summary>List options</summary>
-		              {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
-		            </details>
-		          </>
-		        )}
-		
-		        {mode==='listen' && (
-		          <>
-		            <ListenPlayPanel
-		              targetPc={targetPc}
-		              mode="class"
-		              label={listenLabel}
-		              running={!paused}
-		              allowReplay={false /* we don’t have a single “target octave” here */}
-		              onSuccess={handleListenSuccess}
-		            />
-		            <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap'}}>
-		              <button className="btn btn-warning" onClick={()=>{
-		                speakSR('Skipping.');
-		                audioEngine.playFeedback(false);
-		                setAnswered(a=>a+1);
-		                updateStat(`mic.note:${q.note}`, false);
-		                addXP(1);
-		                pick();
-		              }}>Skip</button>
-		            </div>
-		          </>
-		        )}
-		      </div>
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		}
+      const [time,setTime]=React.useState(60);
+      const [paused,setPaused]=React.useState(false);
+      const [score,setScore]=React.useState(0);
+      const [answered,setAnswered]=React.useState(0);
+      const [q,setQ]=React.useState(null);
+      const [selected,setSelected]=React.useState(null);
+      const pick=()=>{
+        const strings=STRINGS.filter(s=>prefs.strings[s]);
+        const pos=POSITIONS.filter(p=>prefs.positions[p]);
+        if(!strings.length || !pos.length){ setQ(null); return; }
+        const cells=CELLS.filter(c=>prefs.strings[c.s] && prefs.positions[c.p]);
+        const chosen=getRandom(cells);
+        const note=chosen.canon;
+        const correct={s:chosen.s,p:chosen.p,f:chosen.f};
+        const samePitch=cells.filter(c=>c.canon===note && !(c.s===correct.s && c.p===correct.p && c.f===correct.f));
+        const distract= samePitch.length>=3? shuffle(samePitch).slice(0,3) : shuffle(cells.filter(c=>c.canon!==note)).slice(0,3);
+        const opts=shuffle([{...correct},...distract.map(c=>({s:c.s,p:c.p,f:c.f}))]).slice(0,4);
+        setQ({note,correct,options:opts}); setSelected(null);
+      };
+      React.useEffect(()=>{ pick(); },[]);
+      React.useEffect(()=>{
+        if(paused) return;
+        const id=setInterval(()=>setTime(t=>t<=1?0:t-1),1000);
+        return ()=>clearInterval(id);
+      },[paused]);
+      const answer=(opt,idx)=>{
+        if(selected !== null) return;
+        setSelected(idx);
+        const ok = opt.s===q.correct.s && opt.p===q.correct.p && opt.f===q.correct.f;
+        setQ(prev => prev && {
+          ...prev,
+          feedback: prev.options.map(o => {
+            const isCorrect = (o.s===prev.correct.s && o.p===prev.correct.p && o.f===prev.correct.f);
+            const isChosen  = (o.s===opt.s && o.p===opt.p && o.f===opt.f);
+            return {...o, kind: isCorrect ? 'correct' : isChosen ? 'chosen' : 'distractor'};
+          })
+        });
+        setTimeout(()=>{
+          speakSR(ok ? 'Correct, great job!' : 'Oops, almost!');
+          audioEngine.playFeedback(ok);
+          setAnswered(a=>a+1);
+          if(ok) setScore(s=>s+1);
+          updateStat(`${q.correct.s}:${q.correct.p}:${q.correct.f}`, ok);
+          addXP(ok?4:1);
+          pick();
+        },450);
+      };
+      useAnswerHotkeys(!!q,(i)=>{ if(q && q.options[i]) answer(q.options[i],i); },onBack,q?.options?.length??4);
+      if(time===0) return <div className="card"><h2>Note Locator Complete</h2><p>Score {score}/{answered}</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      if(!q) return <div className="card"><h2>No valid notes</h2><p>Enable strings and positions in Settings.</p><button className="btn btn-secondary" onClick={onBack}>Back</button></div>;
+      return (
+        <div>
+          <div className="card">
+            <h2>Note Locator</h2>
+            <p>Time {time}s | Score {score}/{answered}</p>
+            <button className="btn btn-secondary" onClick={()=>setPaused(p=>!p)}>{paused?'Resume':'Pause'}</button>
+            <p>Where can you play {q.note}? Click the fingerboard:</p>
+            <VisualFingerboard
+              highlight={(q.feedback || q.options).map(o=>({
+                s:o.s,
+                p:o.p,
+                f:o.f,
+                kind:o.kind || 'distractor'
+              }))}
+              disabled={!!q.feedback}
+              onSelect={(cell)=>answer(cell,0)}
+            />
+            {/* Legend explaining the icons and patterns used on the fingerboard.  Colours alone are insufficient for some users, so we provide text and symbols to aid interpretation【408173630527642†L99-L124】. */}
+            <div style={{display:'flex',gap:'0.75rem',alignItems:'center',marginTop:'0.5rem',flexWrap:'wrap',fontSize:'0.75rem',color:'var(--ink-light)'}}>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--success)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✓</span>
+                Correct
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--primary)',color:'var(--card)',borderRadius:'3px',padding:'0 4px',fontWeight:'bold'}}>✕</span>
+                Your choice
+              </span>
+              <span style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                <span style={{display:'inline-block',background:'var(--warning)',borderRadius:'3px',padding:'0 4px',backgroundImage:'linear-gradient(45deg, var(--warning) 25%, var(--card) 25%, var(--card) 50%, var(--warning) 50%, var(--warning) 75%, var(--card) 75%, var(--card) 100%)',backgroundSize:'8px 8px',height:'1em',width:'1em'}}></span>
+                Available option (click to choose)
+              </span>
+            </div>
+            <details style={{marginTop:'0.5rem'}}>
+              <summary>List options</summary>
+              {q.options.map((o,i)=>(<OptionButton key={i} label={`${o.s}: Pos ${o.p}, F${o.f}`} selected={false} onClick={()=>answer(o,i)}/>))}
+            </details>
+          </div>
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
 
     function Settings({prefs,setPrefs,onBack}){
       const [muted, setMuted] = 		React.useState(audioEngine.mute);
@@ -1595,148 +1137,69 @@
     }
 
     function StatsPage({onBack}){
-		  const stats = loadJSON(STATS_KEY,{});
-		  const xp    = loadJSON(XP_KEY,0);
-		  const lvl   = levelForXP(xp);
-		  const prev  = lvl>1? nextLevelXP(lvl-1):0;
-		  const next  = nextLevelXP(lvl);
-		  const pct   = Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
-		
-		  const isCellKey = (k)=>{
-		    const parts=k.split(':');
-		    return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])) && !parts[2].includes('-');
-		  };
-		  const isIntervalKey = (k)=>{
-		    const parts=k.split(':');
-		    return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && /^(1|2|3|4)-(1|2|3|4)$/.test(parts[2]);
-		  };
-		
-		  const filteredCells = Object.fromEntries(Object.entries(stats).filter(([k])=>isCellKey(k)));
-		  const intervalPairs = Object.entries(stats).filter(([k])=>isIntervalKey(k)).map(([k,st])=>{
-		    const [s,p,ab] = k.split(':'); const [a,b] = ab.split('-').map(Number);
-		    const diff = Math.abs(BASE_OFF[b]-BASE_OFF[a]);
-		    const typ  = diff===1 ? 'Half Step' : 'Whole Step';
-		    return { s, p:Number(p), a, b, type:typ, ...st };
-		  });
-		
-		  function csvEscape(v){ const s=String(v??''); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
-		  function exportCSV(){
-		    const student = prompt('Student name (optional):') || '';
-		    const klass   = prompt('Class/Teacher (optional):') || '';
-		    const dateStr = new Date().toISOString();
-		    const rows = [['Student','Class','Date','Category','Item','Correct','Total','Accuracy%']];
-		
-		    // Fingerboard notes
-		    for (const [k, st] of Object.entries(filteredCells)){
-		      const [s,p,f] = k.split(':');
-		      const acc = st.total ? Math.round((st.correct/st.total)*100) : 0;
-		      rows.push([student, klass, dateStr, 'Note (Fingerboard)', `${s}, ${ordinal(Number(p))} pos, F${f}`, st.correct, st.total, acc]);
-		    }
-		    // Intervals
-		    for (const it of intervalPairs){
-		      const acc = it.total ? Math.round((it.correct/it.total)*100) : 0;
-		      rows.push([student, klass, dateStr, 'Interval', `${it.s}, ${ordinal(it.p)} pos, F${it.a}\u2192F${it.b} (${it.type})`, it.correct, it.total, acc]);
-		    }
-		
-		    const csv = rows.map(r=>r.map(csvEscape).join(',')).join('\n');
-		    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-		    const a = document.createElement('a');
-		    a.href = URL.createObjectURL(blob);
-		    a.download = `vmq-progress-${dateStr.slice(0,10)}.csv`;
-		    a.click();
-		    URL.revokeObjectURL(a.href);
-		  }
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Your Progress</h2>
-		        <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
-		        <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
-		          <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}} />
-		        </div>
-		        <p style={{marginTop:'0.5rem'}}>
-		          Badges:{' '}
-		          <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
-		            {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
-		          </span>
-		        </p>
-		        <div style={{display:'flex',gap:'.5rem',flexWrap:'wrap',marginTop:'.5rem'}}>
-		          <button className="btn btn-primary" onClick={exportCSV}>Export CSV</button>
-		          <button className="btn btn-secondary" onClick={()=>{ speakSR('Preparing print view.'); window.print(); }}>Print Report</button>
-		        </div>
-		      </div>
-		
-		      {/* Heatmaps per string (unchanged visual) */}
-		      {STRINGS.map(s=>(
-		        <div className="card" key={s}>
-		          <h3>{s} string</h3>
-		          <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem', overflowX:'auto'}}>
-		            {POSITIONS.map(p=>(
-		              <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
-		                {FINGERS.map(f=>{
-		                  const k=`${s}:${p}:${f}`;
-		                  const st=filteredCells[k]||{correct:0,total:0};
-		                  const acc= st.total? st.correct/st.total:0;
-		                  let col, ink='#fff';
-		                  if(st.total===0) { col='var(--neutral)'; }
-		                  else if(acc<0.5){ col='var(--danger)'; }
-		                  else if(acc<0.75){ col='var(--warning)'; ink='#111'; }
-		                  else { col='var(--success)'; }
-		                  const label=st.total? `${Math.round(acc*100)}%`:'';
-		                  return (
-		                    <div key={f}
-		                      className="heat-cell"
-		                      style={{background:col,color:ink,fontSize:'0.65rem'}}
-		                      title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>
-		                  );
-		                })}
-		              </div>
-		            ))}
-		          </div>
-		        </div>
-		      ))}
-		
-		      {/* Interval summaries */}
-		      <div className="card">
-		        <h3>Intervals (summary)</h3>
-		        {intervalPairs.length===0 ? (
-		          <p style={{color:'var(--ink-light)'}}>No interval data yet.</p>
-		        ) : (
-		          <div style={{overflowX:'auto'}}>
-		            <table style={{width:'100%', borderCollapse:'collapse'}}>
-		              <thead>
-		                <tr>
-		                  <th style={{textAlign:'left', borderBottom:'1px solid var(--border)'}}>Item</th>
-		                  <th style={{textAlign:'right', borderBottom:'1px solid var(--border)'}}>Correct</th>
-		                  <th style={{textAlign:'right', borderBottom:'1px solid var(--border)'}}>Total</th>
-		                  <th style={{textAlign:'right', borderBottom:'1px solid var(--border)'}}>Accuracy</th>
-		                </tr>
-		              </thead>
-		              <tbody>
-		                {intervalPairs
-		                  .sort((a,b)=> (a.total? a.correct/a.total:0) - (b.total? b.correct/b.total:0)) /* weakest first */
-		                  .map((it, i)=>{
-		                    const acc = it.total ? Math.round((it.correct/it.total)*100) : 0;
-		                    return (
-		                      <tr key={i}>
-		                        <td>{it.s}, {ordinal(it.p)} pos, F{it.a}→F{it.b} ({it.type})</td>
-		                        <td style={{textAlign:'right'}}>{it.correct}</td>
-		                        <td style={{textAlign:'right'}}>{it.total}</td>
-		                        <td style={{textAlign:'right'}}>{acc}%</td>
-		                      </tr>
-		                    );
-		                  })}
-		              </tbody>
-		            </table>
-		          </div>
-		        )}
-		      </div>
-		
-		      <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		    </div>
-		  );
-		}
+      const stats=loadJSON(STATS_KEY,{});
+      const xp=loadJSON(XP_KEY,0);
+      const lvl=levelForXP(xp);
+      const prev=lvl>1? nextLevelXP(lvl-1):0;
+      const next=nextLevelXP(lvl);
+      const pct=Math.max(0, Math.min(1, isFinite((xp-prev)/(next-prev)) ? (xp-prev)/(next-prev) : 0));
+      const isCellKey=k=>{
+        const parts=k.split(':'); return parts.length===3 && STRINGS.includes(parts[0]) && POSITIONS.includes(Number(parts[1])) && FINGERS.includes(Number(parts[2])); };
+      const filteredStats=Object.fromEntries(Object.entries(stats).filter(([k,_])=>isCellKey(k)));
+      return (
+        <div>
+          <div className="card">
+            <h2>Your Progress</h2>
+            <p>Level {lvl} (XP {xp-prev}/{next-prev})</p>
+            <div className="progress-bar" style={{height:'8px',background:'var(--border)',borderRadius:'9999px',overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${pct*100}%`,background:'var(--primary)'}}></div>
+            </div>
+						{/* Stats badges: cap to 10 and show multiplier */}
+						<p style={{marginTop:'0.5rem'}}>
+						  Badges:{' '}
+						  <span aria-label={`Level ${lvl} badges`} title={`Level ${lvl}`}>
+						    {'⭐'.repeat(Math.min(10, lvl))}{lvl > 10 ? ` ×${lvl}` : ''}
+						  </span>
+						</p>
+          </div>
+          {STRINGS.map(s=>(
+            <div className="card" key={s}>
+              <h3>{s} string</h3>
+              <div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)',gap:'0.3rem'}}>
+                {POSITIONS.map(p=>(
+                  <div key={p} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'2px'}}>
+                    {FINGERS.map(f=>{
+                      const k=`${s}:${p}:${f}`;
+                      const st=filteredStats[k]||{correct:0,total:0};
+                      const acc= st.total? st.correct/st.total:0;
+                      let col, ink='#fff';
+                      if(st.total===0) {
+                        col='var(--neutral)';
+                      } else if(acc<0.5) {
+                        col='var(--danger)';
+                      } else if(acc<0.75) {
+                        col='var(--warning)'; ink='#111';
+                      } else {
+                        col='var(--success)';
+                      }
+                      const label=st.total? `${Math.round(acc*100)}%`:'';
+                      return (
+                        <div key={f}
+                             className="heat-cell"
+                             style={{background:col,color:ink,fontSize:'0.65rem'}}
+                             title={`Pos ${p}, F${f}: ${st.correct}/${st.total}`}>{label}</div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        </div>
+      );
+    }
+
     const TEMPOS=[{it:'Prestissimo',en:'extremely fast',range:'≥200 bpm'},{it:'Presto',en:'very fast',range:'168–200 bpm'},{it:'Allegro',en:'fast, lively',range:'120–168 bpm'},{it:'Allegretto',en:'moderately fast',range:'112–120 bpm'},{it:'Andante',en:'walking tempo',range:'76–108 bpm'},{it:'Andantino',en:'slightly faster than Andante',range:'80–112 bpm'},{it:'Adagio',en:'slow, majestic',range:'66–76 bpm'},{it:'Largo',en:'very broad and slow',range:'40–60 bpm'},{it:'Lento',en:'very slow',range:'40–60 bpm'}];
     const INTERVALS=[{name:'Minor 2nd', semitones:1, feel:'Sad, tense, spooky', cue:'Jaws Theme, Für Elise'},{name:'Major 2nd', semitones:2, feel:'Happy, bright, curious', cue:'Happy Birthday (1st 2 notes)'},{name:'Minor 3rd', semitones:3, feel:'Tragic, melancholy', cue:'Greensleeves, Brahms’ Lullaby'},{name:'Major 3rd', semitones:4, feel:'Very happy, warm', cue:'When the Saints Go Marching'},{name:'Perfect 4th', semitones:5, feel:'Strong, open', cue:'Here Comes the Bride, Amazing Grace'},{name:'Tritone', semitones:6, feel:'Alert, tense', cue:'Emergency sirens, The Simpsons'},{name:'Perfect 5th', semitones:7, feel:'Heroic, open', cue:'Twinkle Twinkle, Star Wars'},{name:'Minor 6th', semitones:8, feel:'Bittersweet, longing', cue:'In My Life, Imperial March'},{name:'Major 6th', semitones:9, feel:'Lyrical, hopeful', cue:'My Bonnie Lies Over the Ocean, NBC chimes'},{name:'Minor 7th', semitones:10, feel:'Distant, complex', cue:'Somewhere (West Side Story), Pure Imagination'},{name:'Major 7th', semitones:11, feel:'Intense, unresolved', cue:'Take On Me (A-ha)'},{name:'Octave', semitones:12, feel:'Complete, powerful', cue:'Somewhere Over the Rainbow'}];
     const KEY_SIGNATURES=[{key:'C Major', type:'none', count:0},{key:'G Major', type:'sharp', count:1},{key:'D Major', type:'sharp', count:2},{key:'A Major', type:'sharp', count:3},{key:'E Major', type:'sharp', count:4},{key:'B Major', type:'sharp', count:5},{key:'F# Major', type:'sharp', count:6},{key:'C# Major', type:'sharp', count:7},{key:'F Major', type:'flat', count:1},{key:'Bb Major', type:'flat', count:2},{key:'Eb Major', type:'flat', count:3},{key:'Ab Major', type:'flat', count:4},{key:'Db Major', type:'flat', count:5},{key:'Gb Major', type:'flat', count:6},{key:'Cb Major', type:'flat', count:7}];
@@ -2241,381 +1704,393 @@
 		  );
 		}
     // --- Rhythm Trainer (Study) ---------------------------------------------------
-		function RhythmTrainer({ onBack }) {
-		  // ── prefs/state ─────────────────────────────────────────────────────────────
-		  const LOOP_KEY = 'vmq.v5.rhythmTrainer.loop';
-		  const DIFF_KEY = 'vmq.v5.rhythmTrainer.diff';
-		  const [loop, setLoop]       = React.useState(() => loadJSON(LOOP_KEY, true));
-		  const [mode, setMode]       = React.useState('listen'); // 'listen' | 'tap'
-		  const [diff, setDiff]       = React.useState(() => loadJSON(DIFF_KEY, 'Normal'));
-		  const [stage, setStage]     = React.useState(1);
-		  const [i, setI]             = React.useState(0);
-		  const [playing, setPlaying] = React.useState(false);
-		  const [showHelp, setHelp]   = React.useState(false);
-		
-		  // Tap results
-		  const [taps, setTaps]       = React.useState([]); // [{ms, err, ok}]
-		  const [acc, setAcc]         = React.useState({ pct: null, n: 0, g: 0 });
-		  const [streak, setStreak]   = React.useState(0);
-		
-		  const timersRef        = React.useRef([]);
-		  const startMsRef       = React.useRef(0);
-		  const lastLoopStartRef = React.useRef(0);
-		  const patternRef       = React.useRef(null);
-		
-		  const clearTimers = React.useCallback(() => {
-		    timersRef.current.forEach(id => clearTimeout(id));
-		    timersRef.current = [];
-		  }, []);
-		
-		  const schedule = (fn, ms) => {
-		    const id = setTimeout(fn, ms);
-		    timersRef.current.push(id);
-		    return id;
-		  };
-		
-		  // ── helpers (time + audio) ─────────────────────────────────────────────────
-		  const msPerBeat = (beatUnit, bpm) => 60000 / Math.max(1, bpm);
-		  const scheduleClick = (msFromNow, level = 'weak') => {
-		    const midi = level === 'strong' ? 102 : level === 'beat' ? 95 : 88;
-		    schedule(() => { try { audioEngine.playNote({ midi, durationMs: 120 }); } catch {} }, msFromNow);
-		  };
-		
-		  // Build a flat onset list (in beats of pat.beatUnit)
-		  const onsetsFor = (pat) => {
-		    const onsets = [];
-		    let t = 0;
-		    pat.seq.forEach(step => {
-		      const seg = (typeof step === 'number') ? { dur: step } : step;
-		      onsets.push({ t, rest: !!seg.rest });
-		      t += seg.dur;
-		    });
-		    return { onsets, totalBeats: t };
-		  };
-		
-		  // ── rhythm library (built once) ─────────────────────────────────────────────
-		  const LIB = React.useMemo(() => {
-		    const R = [];
-		    const group = arr => arr.map(x => (typeof x === 'number' ? { dur: x } : x));
-		    const fillToBeats = (cell, beats) => {
-		      const out = []; let sum = 0;
-		      const add = (seg) => out.push(typeof seg === 'number' ? { dur: seg } : seg);
-		      const cellSum = Array.isArray(cell) ? cell.reduce((a,b)=>a+(b.dur??b),0) : (cell.dur ?? cell);
-		      while (sum + cellSum <= beats + 1e-9) { Array.isArray(cell) ? cell.forEach(add) : add(cell); sum = out.reduce((a,b)=>a+b.dur,0); }
-		      if (sum < beats - 1e-6) out.push({ dur: beats - sum });
-		      return out;
-		    };
-		    const simple   = (id, name, seq, {sig='4/4', bpm=96, beats=4, accents, tier=1}={}) =>
-		      R.push({ id, tier, name, sig, beatUnit:'quarter',       bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
-		    const compound = (id, name, seq, {sig='6/8', bpm=96, beats=2, accents, tier=2}={}) =>
-		      R.push({ id, tier, name, sig, beatUnit:'dottedQuarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
-		    const asym     = (id, name, seq, {sig='5/8', bpm=116, beats=5, accents, tier=4}={}) =>
-		      R.push({ id, tier, name, sig, beatUnit:'eighth',        bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
-		
-		    // Tier 1 — Basics
-		    simple('q',   'Straight quarters',             [1],                   { tier:1 });
-		    simple('e',   'Straight eighths',              [0.5],                 { tier:1 });
-		    simple('s',   'Straight sixteenths',           [0.25],                { tier:1, bpm:88 });
-		    simple('w3',  'Waltz quarters (3/4)',          [1,1,1],               { tier:1, sig:'3/4', beats:3, bpm:96 });
-		    compound('j6','6/8 jig (3+3)',                 [1/3,1/3,1/3],         { tier:1, sig:'6/8', bpm:104 });
-		
-		    // Tier 2 — Core
-		    simple('dls','Dotted 8th–16th (long–short)',   [0.75,0.25],           { tier:2, bpm:88 });
-		    simple('dsl','Lombard (short–long)',           [0.25,0.75],           { tier:2, bpm:88 });
-		    simple('s808','Syncopation (8th–q–8th)',       [0.5,1,0.5],           { tier:2, bpm:96 });
-		    simple('off4','Backbeat quarters (off-beat)',  [{dur:0.5,rest:true},0.5], { tier:2, bpm:96 });
-		    simple('tie','Tie across beat (q+8th, 8th)',   [1.5,0.5],             { tier:2, bpm:92 });
-		    simple('tri8','Eighth-note triplets',          [1/3,1/3,1/3],         { tier:2, bpm:72 });
-		    compound('d6','6/8 dotted (long–short)',       [2/3,1/3],             { tier:2, sig:'6/8', bpm:96 });
-		
-		    // Tier 3 — Advanced
-		    simple('tri4','Quarter-note triplets (3 in 2)',[2/3,2/3,2/3,2/3,2/3,2/3], { tier:3, bpm:72 });
-		    simple('hemi','Hemiola over two bars (3/4)',   [1,1,1,1,1,1],         { tier:3, sig:'3/4', beats:6, bpm:84 });
-		    simple('ct2','Cut-time halves (2/2)',          [1],                    { tier:3, sig:'2/2', beats:2, bpm:96 });
-		    simple('swing','Swinged 8ths (≈ triplet feel)',[2/3,1/3],              { tier:3, bpm:84 });
-		    compound('sic','Siciliana (2/3,1/3,1/3)',      [2/3,1/3,1/3],          { tier:3, sig:'6/8', bpm:66 });
-		
-		    // Tier 4 — Odd/least common
-				asym('5a','5/8 (2+3)', [2,3], { sig:'5/8', bpm:116, beats:5 });
-				asym('5b','5/8 (3+2)', [3,2], { sig:'5/8', bpm:116, beats:5 });
-				asym('7a','7/8 (2+2+3)', [2,2,3], { sig:'7/8', bpm:120, beats:7 });
-				asym('7b','7/8 (3+2+2)', [3,2,2], { sig:'7/8', bpm:120, beats:7 });
-				asym('7c','7/8 (2+3+2)', [2,3,2], { sig:'7/8', bpm:120, beats:7 });
-				
-				return R;
-				}, []);
-		
-		  const STAGE_LABELS = {1:'Basics',2:'Core',3:'Advanced',4:'Odd/Asym'};
-		
-		  // ── pick pattern for the current stage/index ─────────────────────────────────
-		  const listForStage = React.useMemo(() => LIB.filter(r => r.tier === stage), [LIB, stage]);
-		  const pat = listForStage.length ? listForStage[(i % listForStage.length + listForStage.length) % listForStage.length] : null;
-		  patternRef.current = pat;
-		
-		  // ── playback (count-in → loop bar) ───────────────────────────────────────────
-		  const play = React.useCallback(() => {
-		    if (!pat) return;
-		    clearTimers();
-		    setPlaying(true);
-		    // count-in = one bar of beats (strong on 1)
-		    const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
-		    const countBeats = pat.beatsPerMeasure;
-		    for (let b=0; b<countBeats; b++) {
-		      scheduleClick(b*beatMs, b===0 ? 'strong' : 'beat');
-		    }
-		    const t0 = performance.now() + countBeats*beatMs;
-		    startMsRef.current = t0;
-		    lastLoopStartRef.current = t0;
-		
-		    const { onsets, totalBeats } = onsetsFor(pat);
-		    const totalMs = totalBeats * beatMs;
-		
-		    // schedule this bar
-		    const scheduleBar = (base) => {
-		      // accents & beat grid
-		      for (let k=0;k<Math.ceil(totalBeats)+1;k++){
-		        const at = base + k*beatMs;
-		        const isStrong = (k % pat.beatsPerMeasure) === 0;
-		        scheduleClick(at - performance.now(), isStrong ? 'strong' : 'beat');
-		      }
-		      // pattern onsets
-		      onsets.forEach((o) => {
-		        if (o.rest) return;
-		        const strongIdx = (Math.round(o.t) % pat.beatsPerMeasure) === 0;
-		        const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
-		        const lvl = strongIdx ? 'strong' : (onBeat ? 'beat' : 'weak');
-		        scheduleClick(base + o.t*beatMs - performance.now(), lvl);
-		      });
-		    };
-		
-		    // first bar after count-in
-		    scheduleBar(t0);
-		
-		    // loop bars
-		    const scheduleNext = (base) => {
-		      if (!loop) return;
-		      schedule(() => {
-		        lastLoopStartRef.current = base + totalMs;
-		        scheduleBar(base + totalMs);
-		        scheduleNext(base + totalMs);
-		      }, (base + totalMs) - performance.now() - 8);
-		    };
-		    scheduleNext(t0);
-		
-		  }, [pat, loop, clearTimers]);
-		
-		  const stop = React.useCallback(() => {
-		    clearTimers();
-		    setPlaying(false);
-		  }, [clearTimers]);
-		
-		  React.useEffect(() => () => clearTimers(), [clearTimers]);
-		  React.useEffect(() => { if (playing) { stop(); setTimeout(() => play(), 40); } }, [pat, loop, diff]); // restart when pattern/tolerance/loop changes
-		
-		  // ── Tap along grading ────────────────────────────────────────────────────────
-		  const tolMs = ({ 'Lenient':160, 'Normal':120, 'Strict':80 })[diff] ?? 120;
-		
-		  const gradeTap = (tapMs) => {
-		    const pat = patternRef.current; if (!pat) return;
-		    const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
-		    const { onsets, totalBeats } = onsetsFor(pat);
-		    const barMs = totalBeats * beatMs;
-		    if (barMs <= 0) return;
-		
-		    // Find nearest onset within current loop
-		    const base = lastLoopStartRef.current || startMsRef.current || performance.now();
-		    const pos = ((tapMs - base) % barMs + barMs) % barMs; // 0..barMs
-		    const expect = onsets.filter(o => !o.rest).map(o => o.t * beatMs);
-		    let best = { err: Infinity, at: 0 };
-		    for (const e of expect) {
-		      const delta = pos - e;
-		      const wrapped = Math.abs(delta) <= Math.abs(delta - barMs) ? delta : delta - barMs; // handle wrap
-		      const abs = Math.abs(wrapped);
-		      if (abs < Math.abs(best.err)) best = { err: wrapped, at: e };
-		    }
-		    const ok = Math.abs(best.err) <= tolMs;
-		    const rec = { ms: tapMs, err: Math.round(best.err), ok };
-		    setTaps(prev => [rec, ...prev].slice(0, 8));
-		    setAcc(prev => {
-		      const n = prev.n + 1;
-		      const g = prev.g + (ok ? 1 : 0);
-		      return { pct: Math.round((g / n) * 100), n, g };
-		    });
-		    setStreak(s => ok ? s+1 : 0);
-		    updateStat(`trainer.rhythm:${pat.id}`, ok);
-		    addXP(ok ? 2 : 1);
-		    audioEngine.playFeedback(ok);
-		    if (ok && (streak+1) >= 8) { speakSR('Great groove!'); }
-		  };
-		
-		  React.useEffect(() => {
-		    const onKey = (e) => {
-		      if (mode !== 'tap') return;
-		      const t = e.target;
-		      const tag = (t && t.tagName || '').toLowerCase();
-		      if (tag === 'input' || tag === 'textarea' || (t && t.isContentEditable)) return;
-		      if (e.key === ' ' || e.key === 'Enter') {
-		        e.preventDefault(); gradeTap(performance.now());
-		      }
-		    };
-		    window.addEventListener('keydown', onKey);
-		    return () => window.removeEventListener('keydown', onKey);
-		  }, [mode, tolMs, streak]);
-		
-		  // ── visual strip for the bar ────────────────────────────────────────────────
-		  function RhythmStrip({ pat }) {
-		    if (!pat) return null;
-		    const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
-		    const { onsets, totalBeats } = onsetsFor(pat);
-		    const W = 640, H = 84, pad = 14;
-		    const total = totalBeats;
-		    const x = (beats) => pad + (W - 2*pad) * (beats / total);
-		
-		    return (
-		      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="img" aria-label="Rhythm visualization">
-		        {/* background */}
-		        <rect x="0" y="0" width={W} height={H} rx="8" fill="var(--card)" stroke="var(--border)"/>
-		        {/* beat grid */}
-		        {[...Array(Math.ceil(total)+1)].map((_,k)=>{
-		          const X = x(k);
-		          const strong = (k % pat.beatsPerMeasure) === 0;
-		          return <line key={k} x1={X} y1={8} x2={X} y2={H-8} stroke={strong?'var(--primary)':'var(--border)'} strokeWidth={strong?1.5:1}/>;
-		        })}
-		        {/* onsets */}
-		        {onsets.map((o, idx)=>{
-		          const X = x(o.t);
-		          const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
-		          const col = o.rest ? 'var(--neutral)' : (onBeat ? 'var(--primary)' : 'var(--warning)');
-		          const h = o.rest ? 10 : 24;
-		          return (
-		            <g key={idx}>
-		              <rect x={X-3} y={H/2 - h/2} width={6} height={h} rx="2" fill={col}/>
-		              {!o.rest && <text x={X} y={H-12} textAnchor="middle" fontSize="10" fill="var(--ink-light)">{onBeat?'•':'·'}</text>}
-		            </g>
-		          );
-		        })}
-		        {/* labels */}
-		        <text x={W-10} y={16} textAnchor="end" fontSize="11" fill="var(--ink-light)">{pat.sig} • {pat.bpm} BPM</text>
-		      </svg>
-		    );
-		  }
-		
-		  // ── UI actions ──────────────────────────────────────────────────────────────
-		  const next = () => setI(i => i + 1);
-		  const prev = () => setI(i => i - 1);
-		  const togglePlay = () => { if (playing) { stop(); } else { play(); } };
-		
-		  // ── render ──────────────────────────────────────────────────────────────────
-		  if (!pat) {
-		    return (
-		      <div>
-		        <div className="card">
-		          <h2>Rhythm Trainer</h2>
-		          <p>No patterns available.</p>
-		        </div>
-		        <button className="btn btn-secondary" onClick={onBack}>Back</button>
-		      </div>
-		    );
-		  }
-		
-		  return (
-		    <div>
-		      <div className="card">
-		        <h2>Rhythm Trainer</h2>
-		        <p style={{marginTop:-6, color:'var(--ink-light)'}}>Listen, visualize, then (optionally) tap along to build inner pulse before Rhythm Drills.</p>
-		
-		        {/* controls row */}
-		        <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center', margin:'.25rem 0 .75rem'}}>
-		          <PillToggle
-		            label={mode==='listen' ? 'Mode: Listen' : 'Mode: Tap-Along'}
-		            pressed={mode==='tap'}
-		            onClick={()=>setMode(m => m==='listen' ? 'tap' : 'listen')}
-		          />
-		          <PillToggle
-		            label={`Loop ${loop ? 'On' : 'Off'}`}
-		            pressed={loop}
-		            onClick={() => { const v = !loop; setLoop(v); saveJSON(LOOP_KEY,v); }}
-		          />
-		          <PillToggle
-		            label={`Tolerance: ${diff}`}
-		            pressed={diff!=='Normal'}
-		            onClick={() => {
-		              const nxt = diff==='Normal' ? 'Lenient' : diff==='Lenient' ? 'Strict' : 'Normal';
-		              setDiff(nxt); saveJSON(DIFF_KEY, nxt);
-		            }}
-		          />
-		          <button className="btn btn-primary" onClick={togglePlay}>{playing ? 'Stop' : 'Count-in & Play'}</button>
-		          <button className="btn btn-secondary" onClick={()=>{ stop(); setHelp(h=>!h); }}>{showHelp?'Hide Help':'Help'}</button>
-		        </div>
-		
-		        {/* stage/pattern nav */}
-		        <div style={{display:'flex', gap:'.5rem', alignItems:'center', flexWrap:'wrap', marginBottom:'.5rem'}}>
-		          <div className="btn btn-secondary" onClick={()=>{ setStage(1); setI(0); }}>Basics</div>
-		          <div className="btn btn-secondary" onClick={()=>{ setStage(2); setI(0); }}>Core</div>
-		          <div className="btn btn-secondary" onClick={()=>{ setStage(3); setI(0); }}>Advanced</div>
-		          <div className="btn btn-secondary" onClick={()=>{ setStage(4); setI(0); }}>Odd/Asym</div>
-		          <span style={{marginLeft:'.5rem', color:'var(--ink-light)'}}>Stage: <strong>{STAGE_LABELS[stage]}</strong></span>
-		        </div>
-		
-		        {/* pattern header */}
-		        <div className="card" style={{padding:'0.75rem', marginBottom:'0.5rem'}}>
-		          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:'.5rem'}}>
-		            <div>
-		              <div style={{fontWeight:700}}>{pat.name}</div>
-		              <div style={{color:'var(--ink-light)', fontSize:'0.9rem'}}>{pat.sig} • Beat: {pat.beatUnit === 'quarter' ? 'quarter' : pat.beatUnit === 'dottedQuarter' ? 'dotted quarter' : 'eighth'} • {pat.bpm} BPM</div>
-		            </div>
-		            <div>
-		              <button className="btn btn-secondary" onClick={prev}>Prev</button>
-		              <button className="btn btn-primary" onClick={next}>Next</button>
-		            </div>
-		          </div>
-		          <div style={{marginTop:'.5rem'}}><RhythmStrip pat={pat} /></div>
-		        </div>
-		
-		        {/* Tap-along panel */}
-		        {mode === 'tap' ? (
-		          <div className="card" style={{padding:'0.75rem'}}>
-		            <div style={{display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap'}}>
-		              <button
-		                className="btn btn-success"
-		                style={{minWidth:180}}
-		                onPointerDown={(e)=>{ e.preventDefault(); gradeTap(performance.now()); }}
-		              >
-		                Tap (Space/Enter)
-		              </button>
-		              <div>
-		                <div><strong>Accuracy:</strong> {acc.pct != null ? `${acc.pct}%` : '—'}</div>
-		                <div style={{color:'var(--ink-light)'}}>Streak: {streak}</div>
-		              </div>
-		            </div>
-		            <div style={{marginTop:'0.5rem', fontSize:'0.9rem', color:'var(--ink-light)'}}>
-		              {taps.length===0 ? 'Tap with the clicks (count-in first if not playing).'
-		               : taps.map((t,idx)=>(
-		                  <span key={idx} style={{marginRight:8}}>
-		                    {t.ok ? '✓' : (t.err<0?'⟵':'⟶')} {Math.abs(t.err)}ms
-		                  </span>
-		               ))}
-		            </div>
-		          </div>
-		        ) : null}
-		
-		        {showHelp && (
-		          <details open style={{marginTop:'0.5rem'}}>
-		            <summary style={{fontWeight:600}}>What to listen for</summary>
-		            <ul style={{marginLeft:'1rem'}}>
-		              <li><strong>Strong vs beat vs weak clicks:</strong> bar start is strongest, beat edges medium, subdivisions light.</li>
-		              <li><strong>Triplets/compound:</strong> feel the <em>three-inside-one</em> sway; don’t squeeze them into straight 8ths.</li>
-		              <li><strong>Dotted vs Lombard:</strong> long–short vs short–long within one beat.</li>
-		              <li><strong>Syncopation/off-beats:</strong> notes arrive between beats — keep your inner pulse steady.</li>
-		              <li><strong>Odd meters:</strong> group 2s & 3s (e.g., 2+2+3); count group accents, not just raw 7.</li>
-		            </ul>
-		          </details>
-		        )}
-		      </div>
-		      <button className="btn btn-secondary" onClick={()=>{ stop(); onBack(); }}>Back</button>
-		    </div>
-		  );
-		}
+    function RhythmTrainer({ onBack }) {
+      // ── prefs/state ─────────────────────────────────────────────────────────────
+      const LOOP_KEY = 'vmq.v5.rhythmTrainer.loop';
+      const DIFF_KEY = 'vmq.v5.rhythmTrainer.diff';
+      const [loop, setLoop]       = React.useState(() => loadJSON(LOOP_KEY, true));
+      const [mode, setMode]       = React.useState('listen'); // 'listen' | 'tap'
+      const [diff, setDiff]       = React.useState(() => loadJSON(DIFF_KEY, 'Normal'));
+      const [stage, setStage]     = React.useState(1);
+      const [i, setI]             = React.useState(0);
+      const [playing, setPlaying] = React.useState(false);
+      const [showHelp, setHelp]   = React.useState(false);
+    
+      // Tap results
+      const [taps, setTaps]       = React.useState([]); // [{ms, err, ok}]
+      const [acc, setAcc]         = React.useState({ pct: null, n: 0, g: 0 });
+      const [streak, setStreak]   = React.useState(0);
+    
+      const timersRef        = React.useRef([]);
+      const startMsRef       = React.useRef(0);
+      const lastLoopStartRef = React.useRef(0);
+      const patternRef       = React.useRef(null);
+    
+      const clearTimers = React.useCallback(() => {
+        timersRef.current.forEach(id => clearTimeout(id));
+        timersRef.current = [];
+      }, []);
+    
+      const schedule = (fn, ms) => {
+        const id = setTimeout(fn, ms);
+        timersRef.current.push(id);
+        return id;
+      };
+    
+      // ── helpers (time + audio) ─────────────────────────────────────────────────
+      const msPerBeat = (beatUnit, bpm) => 60000 / Math.max(1, bpm);
+      const scheduleClick = (msFromNow, level = 'weak') => {
+        const midi = level === 'strong' ? 102 : level === 'beat' ? 95 : 88;
+        schedule(() => { try { audioEngine.playNote({ midi, durationMs: 120 }); } catch {} }, msFromNow);
+      };
+    
+      // Build a flat onset list (in beats of pat.beatUnit)
+      const onsetsFor = (pat) => {
+        const onsets = [];
+        let t = 0;
+        pat.seq.forEach(step => {
+          const seg = (typeof step === 'number') ? { dur: step } : step;
+          onsets.push({ t, rest: !!seg.rest });
+          t += seg.dur;
+        });
+        return { onsets, totalBeats: t };
+      };
+    
+      // ── rhythm library (built once) ─────────────────────────────────────────────
+      const LIB = React.useMemo(() => {
+        const R = [];
+        const group = arr => arr.map(x => (typeof x === 'number' ? { dur: x } : x));
+        const fillToBeats = (cell, beats) => {
+          const out = []; let sum = 0;
+          const add = (seg) => out.push(typeof seg === 'number' ? { dur: seg } : seg);
+          const cellSum = Array.isArray(cell) ? cell.reduce((a,b)=>a+(b.dur??b),0) : (cell.dur ?? cell);
+          while (sum + cellSum <= beats + 1e-9) { Array.isArray(cell) ? cell.forEach(add) : add(cell); sum = out.reduce((a,b)=>a+b.dur,0); }
+          if (sum < beats - 1e-6) out.push({ dur: beats - sum });
+          return out;
+        };
+        const simple   = (id, name, seq, {sig='4/4', bpm=96, beats=4, accents, tier=1}={}) =>
+          R.push({ id, tier, name, sig, beatUnit:'quarter',       bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
+        const compound = (id, name, seq, {sig='6/8', bpm=96, beats=2, accents, tier=2}={}) =>
+          R.push({ id, tier, name, sig, beatUnit:'dottedQuarter', bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
+        const asym     = (id, name, seq, {sig='5/8', bpm=116, beats=5, accents, tier=4}={}) =>
+          R.push({ id, tier, name, sig, beatUnit:'eighth',        bpm, beatsPerMeasure:beats, seq:fillToBeats(group(seq), beats), customAccents:accents });
+    
+        // Tier 1 — Basics
+        simple('q',  'Straight quarters',           [1],                 { tier:1 });
+        simple('e',  'Straight eighths',            [0.5],               { tier:1 });
+        simple('s',  'Straight sixteenths',         [0.25],              { tier:1, bpm:88 });
+        simple('w3', 'Waltz quarters (3/4)',        [1,1,1],             { tier:1, sig:'3/4', beats:3, bpm:96 });
+        compound('j6','6/8 jig (3+3)',              [1/3,1/3,1/3],       { tier:1, sig:'6/8', bpm:104 });
+    
+        // Tier 2 — Core
+        simple('dls','Dotted 8th–16th (long–short)',[0.75,0.25],         { tier:2, bpm:88 });
+        simple('dsl','Lombard (short–long)',        [0.25,0.75],         { tier:2, bpm:88 });
+        simple('s808','Syncopation (8th–q–8th)',    [0.5,1,0.5],         { tier:2, bpm:96 });
+        simple('off4','Backbeat quarters (off-beat)',[{dur:0.5,rest:true},0.5], { tier:2, bpm:96 });
+        simple('tie','Tie across beat (q+8th, 8th)',[1.5,0.5],           { tier:2, bpm:92 });
+        simple('tri8','Eighth-note triplets',       [1/3,1/3,1/3],       { tier:2, bpm:72 });
+        compound('d6','6/8 dotted (long–short)',    [2/3,1/3],           { tier:2, sig:'6/8', bpm:96 });
+    
+        // Tier 3 — Advanced
+        simple('tri4','Quarter-note triplets (3 in 2)', [2/3,2/3,2/3,2/3,2/3,2/3], { tier:3, bpm:72 });
+        simple('hemi','Hemiola over two bars (3/4)',    [1,1,1,1,1,1],             { tier:3, sig:'3/4', beats:6, bpm:84 });
+        simple('ct2','Cut-time halves (2/2)',           [1],                        { tier:3, sig:'2/2', beats:2, bpm:96 });
+        simple('swing','Swinged 8ths (≈ triplet feel)', [2/3,1/3],                  { tier:3, bpm:84 });
+        compound('sic','Siciliana (2/3,1/3,1/3)',       [2/3,1/3,1/3],              { tier:3, sig:'6/8', bpm:66 });
+    
+        // Tier 4 — Odd/Asym
+        asym('5a','5/8 (2+3)',        [1,2],               { tier:4, sig:'5/8', accents:[0,2] });
+        asym('5b','5/8 (3+2)',        [3,2],               { tier:4, sig:'5/8', accents:[0,3] });
+        asym('7a','7/8 (2+2+3)',      [2,2,3],             { tier:4, sig:'7/8', accents:[0,2,4] });
+        asym('7b','7/8 (3+2+2)',      [3,2,2],             { tier:4, sig:'7/8', accents:[0,3,5] });
+        simple('54a','5/4 (2+3)',     [1,1,1.5,1.5],       { tier:4, sig:'5/4', beats:5, bpm:88 });
+    
+        return R;
+      }, []);
+    
+      const STAGE_LABELS = {1:'Basics',2:'Core',3:'Advanced',4:'Odd/Asym'};
+    
+      // ── pick pattern for the current stage/index ─────────────────────────────────
+      const listForStage = React.useMemo(() => LIB.filter(r => r.tier === stage), [LIB, stage]);
+      const pat = listForStage.length
+        ? listForStage[(i % listForStage.length + listForStage.length) % listForStage.length]
+        : null;
+      patternRef.current = pat;
+    
+      // ── playback (count-in → loop bar) ───────────────────────────────────────────
+      const play = React.useCallback(() => {
+        if (!pat) return;
+        clearTimers();
+        setPlaying(true);
+    
+        // count-in = one bar of beats (strong on 1)
+        const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
+        const countBeats = pat.beatsPerMeasure;
+        for (let b = 0; b < countBeats; b++) {
+          scheduleClick(b * beatMs, b === 0 ? 'strong' : 'beat');
+        }
+        const t0 = performance.now() + countBeats * beatMs;
+        startMsRef.current = t0;
+        lastLoopStartRef.current = t0;
+    
+        const { onsets, totalBeats } = onsetsFor(pat);
+        const totalMs = totalBeats * beatMs;
+    
+        // schedule this bar
+        const scheduleBar = (base) => {
+          // beat grid (with custom accents as "strong")
+          for (let k = 0; k < Math.ceil(totalBeats); k++) {
+            const at = base + k * beatMs;
+            const isStrong = (k % pat.beatsPerMeasure) === 0 || (pat.customAccents?.includes(k));
+            scheduleClick(at - performance.now(), isStrong ? 'strong' : 'beat');
+          }
+          // pattern onsets
+          onsets.forEach((o) => {
+            if (o.rest) return;
+            const beatIdx = Math.round(o.t);
+            const strongIdx = (beatIdx % pat.beatsPerMeasure) === 0 || (pat.customAccents?.includes(beatIdx));
+            const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
+            const lvl = strongIdx ? 'strong' : (onBeat ? 'beat' : 'weak');
+            scheduleClick(base + o.t * beatMs - performance.now(), lvl);
+          });
+        };
+    
+        // first bar after count-in
+        scheduleBar(t0);
+    
+        // loop bars
+        const scheduleNext = (base) => {
+          if (!loop) return;
+          schedule(() => {
+            lastLoopStartRef.current = base + totalMs;
+            scheduleBar(base + totalMs);
+            scheduleNext(base + totalMs);
+          }, (base + totalMs) - performance.now() - 8);
+        };
+        scheduleNext(t0);
+      }, [pat, loop, clearTimers]);
+    
+      const stop = React.useCallback(() => {
+        clearTimers();
+        setPlaying(false);
+      }, [clearTimers]);
+    
+      React.useEffect(() => () => clearTimers(), [clearTimers]);
+      React.useEffect(() => { if (playing) { stop(); setTimeout(() => play(), 40); } }, [pat, loop, diff]); // restart when pattern/tolerance/loop changes
+    
+      // ── Tap along grading ────────────────────────────────────────────────────────
+      const tolMs = ({ 'Lenient':160, 'Normal':120, 'Strict':80 })[diff] ?? 120;
+    
+      const gradeTap = (tapMs) => {
+        const pat = patternRef.current; if (!pat) return;
+        const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
+        const { onsets, totalBeats } = onsetsFor(pat);
+        const barMs = totalBeats * beatMs;
+        if (barMs <= 0) return;
+    
+        // Find nearest onset within current loop
+        const base = lastLoopStartRef.current || startMsRef.current || performance.now();
+        const pos = ((tapMs - base) % barMs + barMs) % barMs; // 0..barMs
+        const expect = onsets.filter(o => !o.rest).map(o => o.t * beatMs);
+    
+        let best = { err: Infinity, at: 0 };
+        for (const e of expect) {
+          const delta = pos - e;
+          const wrapped = Math.abs(delta) <= Math.abs(delta - barMs) ? delta : delta - barMs; // handle wrap
+          const abs = Math.abs(wrapped);
+          if (abs < Math.abs(best.err)) best = { err: wrapped, at: e };
+        }
+    
+        const ok = Math.abs(best.err) <= tolMs;
+        const rec = { ms: tapMs, err: Math.round(best.err), ok };
+        setTaps(prev => [rec, ...prev].slice(0, 8));
+    
+        setAcc(prev => {
+          const n = prev.n + 1;
+          const g = prev.g + (ok ? 1 : 0);
+          return { pct: Math.round((g / n) * 100), n, g };
+        });
+    
+        setStreak(s => {
+          const nxt = ok ? s + 1 : 0;
+          if (ok && nxt >= 8) { speakSR('Great groove!'); }
+          return nxt;
+        });
+    
+        updateStat(`trainer.rhythm:${pat.id}`, ok);
+        addXP(ok ? 2 : 1);
+        audioEngine.playFeedback(ok);
+      };
+    
+      React.useEffect(() => {
+        const onKey = (e) => {
+          if (mode !== 'tap') return;
+          const t = e.target;
+          const tag = (t && t.tagName || '').toLowerCase();
+          if (tag === 'input' || tag === 'textarea' || (t && t.isContentEditable)) return;
+          if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault(); gradeTap(performance.now());
+          }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [mode, tolMs]);
+    
+      // ── visual strip for the bar ────────────────────────────────────────────────
+      function RhythmStrip({ pat }) {
+        if (!pat) return null;
+        const beatMs = msPerBeat(pat.beatUnit, pat.bpm);
+        const { onsets, totalBeats } = onsetsFor(pat);
+        const W = 640, H = 84, pad = 14;
+        const total = totalBeats;
+        const x = (beats) => pad + (W - 2*pad) * (beats / total);
+    
+        return (
+          <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto" role="img" aria-label="Rhythm visualization">
+            {/* background */}
+            <rect x="0" y="0" width={W} height={H} rx="8" fill="var(--card)" stroke="var(--border)"/>
+            {/* beat grid */}
+            {[...Array(Math.ceil(total)+1)].map((_,k)=>{
+              const X = x(k);
+              const strong = (k % pat.beatsPerMeasure) === 0 || (pat.customAccents?.includes(k));
+              return <line key={k} x1={X} y1={8} x2={X} y2={H-8} stroke={strong?'var(--primary)':'var(--border)'} strokeWidth={strong?1.5:1}/>;
+            })}
+            {/* onsets */}
+            {onsets.map((o, idx)=>{
+              const X = x(o.t);
+              const onBeat = Math.abs(o.t - Math.round(o.t)) < 1e-6;
+              const col = o.rest ? 'var(--neutral)' : (onBeat ? 'var(--primary)' : 'var(--warning)');
+              const h = o.rest ? 10 : 24;
+              return (
+                <g key={idx}>
+                  <rect x={X-3} y={H/2 - h/2} width={6} height={h} rx="2" fill={col}/>
+                  {!o.rest && <text x={X} y={H-12} textAnchor="middle" fontSize="10" fill="var(--ink-light)">{onBeat?'•':'·'}</text>}
+                </g>
+              );
+            })}
+            {/* labels */}
+            <text x={W-10} y={16} textAnchor="end" fontSize="11" fill="var(--ink-light)">{pat.sig} • {pat.bpm} BPM</text>
+          </svg>
+        );
+      }
+    
+      // ── UI actions ─────────────────────────────────────────────────────────────
+      const next = () => setI(i => i + 1);
+      const prev = () => setI(i => i - 1);
+    
+      const togglePlay = () => { playing ? stop() : play(); };
+    
+      // ── render ─────────────────────────────────────────────────────────────────
+      if (!pat) {
+        return (
+          <div>
+            <div className="card">
+              <h2>Rhythm Trainer</h2>
+              <p>No patterns available.</p>
+            </div>
+            <button className="btn btn-secondary" onClick={onBack}>Back</button>
+          </div>
+        );
+      }
+    
+      return (
+        <div>
+          <div className="card">
+            <h2>Rhythm Trainer</h2>
+            <p style={{marginTop:-6, color:'var(--ink-light)'}}>Listen, visualize, then (optionally) tap along to build inner pulse before Rhythm Drills.</p>
+    
+            {/* controls row */}
+            <div style={{display:'flex', gap:'.5rem', flexWrap:'wrap', alignItems:'center', margin:'.25rem 0 .75rem'}}>
+              <PillToggle
+                label={mode==='listen' ? 'Mode: Listen' : 'Mode: Tap-Along'}
+                pressed={mode==='tap'}
+                onClick={()=>setMode(m => m==='listen' ? 'tap' : 'listen')}
+              />
+              <PillToggle
+                label={`Loop ${loop ? 'On' : 'Off'}`}
+                pressed={loop}
+                onClick={() => { const v = !loop; setLoop(v); saveJSON(LOOP_KEY, v); }}
+              />
+              <PillToggle
+                label={`Tolerance: ${diff}`}
+                pressed={diff!=='Normal'}
+                onClick={() => {
+                  const nxt = diff==='Normal' ? 'Lenient' : diff==='Lenient' ? 'Strict' : 'Normal';
+                  setDiff(nxt); saveJSON(DIFF_KEY, nxt);
+                }}
+              />
+              <button className="btn btn-primary" onClick={togglePlay}>{playing ? 'Stop' : 'Count-in & Play'}</button>
+              <button className="btn btn-secondary" onClick={()=>{ stop(); setHelp(h=>!h); }}>{showHelp?'Hide Help':'Help'}</button>
+            </div>
+    
+            {/* stage/pattern nav */}
+            <div style={{display:'flex', gap:'.5rem', alignItems:'center', flexWrap:'wrap', marginBottom:'.5rem'}}>
+              <div className="btn btn-secondary" onClick={()=>{ setStage(1); setI(0); }}>Basics</div>
+              <div className="btn btn-secondary" onClick={()=>{ setStage(2); setI(0); }}>Core</div>
+              <div className="btn btn-secondary" onClick={()=>{ setStage(3); setI(0); }}>Advanced</div>
+              <div className="btn btn-secondary" onClick={()=>{ setStage(4); setI(0); }}>Odd/Asym</div>
+              <span style={{marginLeft:'.5rem', color:'var(--ink-light)'}}>Stage: <strong>{STAGE_LABELS[stage]}</strong></span>
+            </div>
+    
+            {/* pattern header */}
+            <div className="card" style={{padding:'0.75rem', marginBottom:'0.5rem'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:'.5rem'}}>
+                <div>
+                  <div style={{fontWeight:700}}>{pat.name}</div>
+                  <div style={{color:'var(--ink-light)', fontSize:'0.9rem'}}>{pat.sig} • Beat: {pat.beatUnit === 'quarter' ? 'quarter' : pat.beatUnit === 'dottedQuarter' ? 'dotted quarter' : 'eighth'} • {pat.bpm} BPM</div>
+                </div>
+                <div>
+                  <button className="btn btn-secondary" onClick={prev}>Prev</button>
+                  <button className="btn btn-primary" onClick={next}>Next</button>
+                </div>
+              </div>
+              <div style={{marginTop:'.5rem'}}><RhythmStrip pat={pat} /></div>
+            </div>
+    
+            {/* Tap-along panel */}
+            {mode === 'tap' ? (
+              <div className="card" style={{padding:'0.75rem'}}>
+                <div style={{display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap'}}>
+                  <button
+                    className="btn btn-success"
+                    style={{minWidth:180}}
+                    onPointerDown={(e)=>{ e.preventDefault(); gradeTap(performance.now()); }}
+                  >
+                    Tap (Space/Enter)
+                  </button>
+                  <div>
+                    <div><strong>Accuracy:</strong> {acc.pct != null ? `${acc.pct}%` : '—'}</div>
+                    <div style={{color:'var(--ink-light)'}}>Streak: {streak}</div>
+                  </div>
+                </div>
+                <div style={{marginTop:'0.5rem', fontSize:'0.9rem', color:'var(--ink-light)'}}>
+                  {taps.length===0 ? 'Tap with the clicks (count-in first if not playing).'
+                   : taps.map((t,idx)=>(
+                      <span key={idx} style={{marginRight:8}}>
+                        {t.ok ? '✓' : (t.err<0?'⟵':'⟶')} {Math.abs(t.err)}ms
+                      </span>
+                   ))}
+                </div>
+              </div>
+            ) : null}
+    
+            {showHelp && (
+              <details open style={{marginTop:'0.5rem'}}>
+                <summary style={{fontWeight:600}}>What to listen for</summary>
+                <ul style={{marginLeft:'1rem'}}>
+                  <li><strong>Strong vs beat vs weak clicks:</strong> bar start is strongest, beat edges medium, subdivisions light.</li>
+                  <li><strong>Triplets/compound:</strong> feel the <em>three-inside-one</em> sway; don’t squeeze them into straight 8ths.</li>
+                  <li><strong>Dotted vs Lombard:</strong> long–short vs short–long within one beat.</li>
+                  <li><strong>Syncopation/off-beats:</strong> notes arrive between beats — keep your inner pulse steady.</li>
+                  <li><strong>Odd meters:</strong> group 2s & 3s (e.g., 2+2+3); count group accents, not just raw 7.</li>
+                </ul>
+              </details>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={()=>{ stop(); onBack(); }}>Back</button>
+        </div>
+      );
+    }
 		// ── Rhythm Drills (comprehensive and progressive learning) ────────────────
     function RhythmDrills({ onBack }) {
       // ── UI state ───────────────────────────────────────────────────────────────
@@ -3624,88 +3099,83 @@
 		    </div>
 		  );
 		}
+    function App(){
+      const [page,setPage]=React.useState('home');
+      const [prefs,setPrefs]=React.useState(()=>loadJSON(PREFS_KEY,defaultPrefs));
+      return (
+        <div className="container">
+          {page==='home' && (
+            <div>
+              <h1>Violin Mastery Quest</h1>
+              <p style={{color:'var(--ink-light)'}}>Tailor your practice by choosing strings & positions. Enjoy drills, study tools and track progress.</p>
+              <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'1rem'}}>
+							  {/* 📘 Study FIRST */}
+							  <div className="card">
+							    <h2>📘 Study</h2>
+							    <button className="btn btn-primary" onClick={()=>setPage('positionRef')}>Positions Charts</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('flash')}>Flashcards</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('theoryHome')}>Music Theory</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('tempo')}>Tempo Trainer</button>
+                  <button className="btn btn-primary" onClick={()=>setPage('rhythmTrainer')}>Rhythm Trainer</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('bieler')}>Technique Lab</button>
+							  </div>
+							
+							  {/* 🎻 Play SECOND */}
+							  <div className="card">
+							    <h2>🎻 Play</h2>
+							    <button className="btn btn-primary" onClick={()=>setPage('speed')}>Speed Drill</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('snapshot')}>Snapshot</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('interval')}>Interval Sprint</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('locator')}>Note Locator</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('tempoTest')}>Tempo Tester</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('arpeggio')}>Arpeggio Tester</button>
+									<button className="btn btn-primary" onClick={()=>setPage('inteartest')}>Interval Ear Tester</button>
+									<button className="btn btn-primary" onClick={()=>setPage('rhythm')}>Rhythm Drills</button>
+									<button className="btn btn-primary" onClick={()=>setPage('custom')}>Custom Note Drill</button>
+							  </div>
+							
+							  {/* 📊 Progress & Settings */}
+							  <div className="card">
+							    <h2>📊 Progress & Settings</h2>
+							    <button className="btn btn-primary" onClick={()=>setPage('stats')}>View Stats</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('settings')}>Settings</button>
+							    <button className="btn btn-primary" onClick={()=>setPage('journal')}>Practice Journal</button>
+							  </div>
+							</div>
+            </div>
+          )}
+          {page==='speed'        && <SpeedDrill     prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='flash'        && <Flashcards     prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='snapshot'     && <Snapshot       prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='interval'     && <IntervalSprint prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='locator'      && <NoteLocator    prefs={prefs} onBack={()=>setPage('home')}/>} 
+          {page==='tempo'        && <TempoTrainer   onBack={()=>setPage('home')}/>} 
+          {page==='tempoTest'    && <TempoTester    onBack={()=>setPage('home')}/>} 
+          {page==='rhythmTrainer' && <RhythmTrainer  onBack={()=>setPage('home')}/>}
+          {page==='stats'        && <StatsPage      onBack={()=>setPage('home')}/>} 
+          {page==='settings'     && <Settings       prefs={prefs} setPrefs={setPrefs} onBack={()=>setPage('home')}/>} 
 
-    <!-- Close the first Babel script.  All helper functions, utility
-         classes and component definitions above live in this script.  -->
-    </script>
+          {page==='theoryHome'      && <TheoryHome        onBack={()=>setPage('home')} onNavigate={(p)=>setPage(p)}/>} 
+          {page==='intervalTrainer' && <IntervalTrainer   onBack={()=>setPage('theoryHome')}/>} 
+          {page==='intervalTester'  && <IntervalTester    onBack={()=>setPage('theoryHome')}/>} 
+          {page==='keyTrainer'      && <KeyTrainer        onBack={()=>setPage('theoryHome')}/>}
+          {page==='keyTester'       && <KeyTester         onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTrainer'     && <TimeTrainer       onBack={()=>setPage('theoryHome')}/>}
+          {page==='timeTester'      && <TimeTester        onBack={()=>setPage('theoryHome')}/>}
 
-    <!-- everything above (libs, CSS, root div, etc.) -->
-
-		<!-- Your app code + mount in ONE Babel block -->
-		<script
-		  type="text/babel"
-		  data-presets="env,react"
-		  data-plugins="@babel/plugin-transform-optional-chaining,@babel/plugin-transform-nullish-coalescing-operator"
-		>
-		  // --- APP SHELL ----------------------------------------------------
-		  function Home({ onGo }) {
-		    return (
-		      <div className="card">
-		        <h2>Violin Mastery Quest</h2>
-		        <p style={{ color: 'var(--ink-light)', marginTop: -6 }}>Choose a trainer to begin.</p>
-		
-		        <h3>Fingerboard &amp; Ear</h3>
-		        <button className="btn btn-primary" onClick={() => onGo('note')}>Note Locator</button>
-		        <button className="btn btn-primary" onClick={() => onGo('speed')}>Speed Drill</button>
-		        <button className="btn btn-primary" onClick={() => onGo('snapshot')}>Snapshot</button>
-		        <button className="btn btn-primary" onClick={() => onGo('intervalSprint')}>Interval Sprint</button>
-		        <button className="btn btn-primary" onClick={() => onGo('flash')}>Flashcards</button>
-		        <button className="btn btn-primary" onClick={() => onGo('arpeggio')}>Arpeggio Tester</button>
-		
-		        <h3 style={{ marginTop: '0.75rem' }}>Technique</h3>
-		        <button className="btn btn-primary" onClick={() => onGo('technique')}>Technique Lab (Technique)</button>
-		
-		        <h3 style={{ marginTop: '0.75rem' }}>Tempo &amp; Theory</h3>
-		        <button className="btn btn-primary" onClick={() => onGo('tempoTrainer')}>Tempo Trainer</button>
-		        <button className="btn btn-primary" onClick={() => onGo('tempoTester')}>Tempo Tester</button>
-		        <button className="btn btn-primary" onClick={() => onGo('theory')}>Music Theory Suite</button>
-		
-		        <h3 style={{ marginTop: '0.75rem' }}>Progress &amp; Settings</h3>
-		        <button className="btn btn-secondary" onClick={() => onGo('stats')}>Your Progress</button>
-		        <button className="btn btn-secondary" onClick={() => onGo('settings')}>Settings</button>
-		      </div>
-		    );
-		  }
-		
-		  function App() {
-		    const [page, setPage] = React.useState('home');
-		    const [prefs, setPrefs] = React.useState(() => loadJSON(PREFS_KEY, defaultPrefs));
-		    const onBack = () => setPage('home');
-		
-		    return (
-		      <div className="container">
-		        {page === 'home' && <Home onGo={setPage} />}
-		
-		        {page === 'note'           && <NoteLocator    prefs={prefs} onBack={onBack} />}
-		        {page === 'speed'          && <SpeedDrill     prefs={prefs} onBack={onBack} />}
-		        {page === 'snapshot'       && <Snapshot       prefs={prefs} onBack={onBack} />}
-		        {page === 'intervalSprint' && <IntervalSprint prefs={prefs} onBack={onBack} />}
-		        {page === 'flash'          && <Flashcards     prefs={prefs} onBack={onBack} />}
-		        {page === 'arpeggio'       && <ArpeggioTester prefs={prefs} onBack={onBack} />}
-		
-		        {page === 'technique'      && <TechniqueLab onBack={onBack} />}
-		
-		        {page === 'tempoTrainer'   && <TempoTrainer onBack={onBack} />}
-		        {page === 'tempoTester'    && <TempoTester  onBack={onBack} />}
-		
-		        {page === 'theory'         && (
-		          <TheoryHome onBack={onBack} onNavigate={(sub) => setPage(sub)} />
-		        )}
-		        {page === 'intervalTrainer'&& <IntervalTrainer onBack={onBack} />}
-		        {page === 'intervalTester' && <IntervalTester  onBack={onBack} />}
-		        {page === 'keyTrainer'     && <KeyTrainer      onBack={onBack} />}
-		        {page === 'keyTester'      && <KeyTester       onBack={onBack} />}
-		        {page === 'timeTrainer'    && <TimeTrainer     onBack={onBack} />}
-		        {page === 'timeTester'     && <TimeTester      onBack={onBack} />}
-		
-		        {page === 'stats'          && <StatsPage onBack={onBack} />}
-		        {page === 'settings'       && <Settings  prefs={prefs} setPrefs={setPrefs} onBack={onBack} />}
-		      </div>
-		    );
-		  }
-		
-		  // --- MOUNT (exactly once) ----------------------------------------------------
-		  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-		</script>
+          {page==='bieler'       && <BielerLab                onBack={()=>setPage('home')}/>}
+          {page==='arpeggio'     && <ArpeggioTester           prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='inteartest'   && <IntervalEarTester        onBack={()=>setPage('home')}/>}
+          {page==='rhythm'       && <RhythmDrills             onBack={()=>setPage('home')}/>}
+          {page==='custom'       && <CustomDrill              prefs={prefs} onBack={()=>setPage('home')}/>}
+          {page==='positionRef'  && <PositionReference        onBack={()=>setPage('home')}/>}
+          {page==='journal'      && <PracticeJournal          onBack={()=>setPage('home')}/>}
+        </div>
+      );
+    }
+    // Mount
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<React.StrictMode><App/></React.StrictMode>);
+  </script>
 </body>
 </html>
