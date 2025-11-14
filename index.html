@@ -491,7 +491,7 @@
 <body>
   <div id="root"></div>
   <div id="sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-  <script type="text/babel" data-presets="react">
+  <script type="text/babel" data-presets="env,react">
     // ============================================================================
     // CONSTANTS & DATA STRUCTURES
     // ============================================================================
@@ -3099,13 +3099,14 @@
                     <button 
                       className="btn btn-secondary"
                       onClick={() =>
-                        setQuestData(prev => ({
-                          ...prev,
-                          completed: {
-                            ...prev.completed,
-                            speedDrill: Math.min(prev.speedDrill, prev.completed.speedDrill + 1),
-                          },
-                        }) }
+                      setQuestData(prev => ({
+                        ...prev,
+                        completed: {
+                          ...prev.completed,
+                          speedDrill: Math.min(prev.speedDrill, prev.completed.speedDrill + 1),
+                        },
+                      }))
+                    }
                     >
                       ✔️ Mark 1 Done
                     </button>
@@ -3134,14 +3135,13 @@
                     </button>
                     <button 
                       className="btn btn-secondary"
-                      onClick={() =>
-                        setQuestData(prev => ({
+                      onClick={() => setQuestData(prev => ({
                           ...prev,
                           completed: {
                             ...prev.completed,
                             interval: Math.min(prev.interval, prev.completed.interval + 1),
-                          },
-                        }) }
+                      },
+                    }))}
                     >
                       ✔️ Mark 1 Done
                     </button>
@@ -3170,14 +3170,13 @@
                     </button>
                     <button 
                       className="btn btn-secondary"
-                      onClick={() =>
-                        setQuestData(prev => ({
+                      onClick={() => setQuestData(prev => ({
                           ...prev,
                           completed: {
                             ...prev.completed,
                             rhythm: Math.min(prev.rhythm, prev.completed.rhythm + 1),
-                          },
-                        }) }
+                      },
+                    }))}
                     >
                       ✔️ Mark 1 Done
                     </button>
@@ -3206,14 +3205,14 @@
                     </button>
                     <button 
                       className="btn btn-secondary"
-                      onClick={() =>
-                        setQuestData(prev => ({
+                      onClick={() => setQuestData(prev => ({
                           ...prev,
                           completed: {
                             ...prev.completed,
                             bieler: Math.min(prev.bieler, prev.completed.bieler + 1),
-                          },
-                        }) }
+                      },
+                    }))}
+                    >
                     >
                       ✔️ Mark 1 Done
                     </button>
