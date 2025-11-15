@@ -4037,7 +4037,7 @@
       }
     
       try {
-        const root = ReactDOM.createRoot(container);
+        const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
       } catch (err) {
         console.error('Violin Mastery Quest: error while rendering App:', err);
