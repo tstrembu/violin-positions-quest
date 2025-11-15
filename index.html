@@ -4,6 +4,12 @@
   <meta charset="utf-8" />
   <title>Violin Mastery Quest – Professional Edition v6.2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!--
+    Provide a descriptive summary of what this page offers. This helps search engines
+    understand the content and improves SEO when the file is hosted publicly (for
+    example on GitHub Pages). Keep the description concise and in plain language.
+  -->
+  <meta name="description" content="Violin Mastery Quest is an interactive training app designed to help violinists practice notes, positions and music theory through responsive exercises and engaging challenges." />
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -494,16 +500,34 @@
       };
     })();
   </script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!--
+    Load React and ReactDOM from a CDN. Using the `defer` attribute ensures that
+    these external scripts do not block HTML parsing. The `crossorigin`
+    attribute is added so that if subresource integrity attributes are added
+    later, the requests will be CORS-enabled. Order is preserved: React
+    must load before ReactDOM and Babel so that the Babel-compiled JSX can
+    resolve React properly.
+  -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" defer crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" defer crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer crossorigin="anonymous"></script>
 </head>
 <body>
   <div id="root"></div>
+  <!--
+    The application is built entirely in React and requires JavaScript to function.
+    If JavaScript is disabled in the user's browser, display a friendly message
+    encouraging them to enable it. This content will only appear when scripts
+    are blocked.
+  -->
+  <noscript>
+    <p style="padding:1rem;color:#b91c1c;">This application requires JavaScript to run properly. Please enable JavaScript in your browser settings.</p>
+  </noscript>
   <div id="sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <script type="text/babel" 
           data-presets="react" 
-          data-plugins="transform-optional-chaining,transform-nullish-coalescing-operator">
+          data-plugins="transform-optional-chaining,transform-nullish-coalescing-operator"
+          defer>
     // ============================================================================
     // CONSTANTS & DATA STRUCTURES
     // ============================================================================
