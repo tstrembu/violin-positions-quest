@@ -471,17 +471,27 @@
     }
   </style>
   <script>
-    (function(){
-      const KEY='vmq.theme';
-      const saved=localStorage.getItem(KEY);
+    (function () {
+      const KEY = 'vmq.theme';
+      const saved = localStorage.getItem(KEY);
+  
+      // Screen reader status helper
       window.speakSR = (txt) => {
         const el = document.getElementById('sr');
         if (el) el.textContent = txt;
       };
-      const prefers=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const dark=saved? saved==='dark':prefers;
+  
+      const prefers =
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+      const dark = saved ? saved === 'dark' : prefers;
       document.documentElement.classList.toggle('dark', dark);
-      window.__setTheme=(d)=>{ localStorage.setItem(KEY,d?'dark':'light'); document.documentElement.classList.toggle('dark', d); };
+  
+      window.__setTheme = (d) => {
+        localStorage.setItem(KEY, d ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', d);
+      };
     })();
   </script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
