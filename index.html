@@ -942,10 +942,26 @@
     // REUSABLE COMPONENTS
     // ============================================================================
     
-    function OptionButton({ label, selected, onClick, shortcut, disabled, correct, incorrect, ...rest }) {
-      const bg = correct ? 'var(--success)' : incorrect ? 'var(--danger)' : selected ? 'var(--primary-dark)' : 'var(--primary)';
+    function OptionButton({
+      label,
+      selected,
+      onClick,
+      shortcut,
+      disabled,
+      correct,
+      incorrect,
+      ...rest,    // ✅ rest props
+    }) {
+      const bg = correct
+        ? 'var(--success)'
+        : incorrect
+        ? 'var(--danger)'
+        : selected
+        ? 'var(--primary-dark)'
+        : 'var(--primary)';
+    
       const className = `option-btn ${correct ? 'correct' : ''} ${incorrect ? 'incorrect' : ''}`;
-      
+    
       return (
         <button
           type="button"
@@ -955,7 +971,7 @@
           style={{ background: bg }}
           onClick={onClick}
           disabled={disabled}
-          {...rest}
+          {...rest}   // ✅ spread the rest props
         >
           {label}
           {correct && ' ✓'}
@@ -3659,10 +3675,12 @@
                   <input
                     type="checkbox"
                     checked={localPrefs.hapticEnabled}
-                    onChange={(e) => setLocalPrefs(p => ({
-                      ...p,
-                      hapticEnabled: e.target.checked
-                    }))}
+                    onChange={(e) =>
+                      setLocalPrefs(p => ({
+                        ...p,
+                        hapticEnabled: e.target.checked,
+                      }))
+                    }
                     style={{width:'20px', height:'20px', cursor:'pointer'}}
                   />
                   <span style={{fontWeight:600}}>📳 Haptic Feedback</span>
