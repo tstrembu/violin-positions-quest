@@ -508,9 +508,10 @@
     must load before ReactDOM and Babel so that the Babel-compiled JSX can
     resolve React properly.
   -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" defer crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" defer crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer crossorigin="anonymous"></script>
+  <!-- React + ReactDOM + Babel (synchronous, in this order) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -524,10 +525,10 @@
     <p style="padding:1rem;color:#b91c1c;">This application requires JavaScript to run properly. Please enable JavaScript in your browser settings.</p>
   </noscript>
   <div id="sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-  <script type="text/babel" 
-          data-presets="react" 
-          data-plugins="transform-optional-chaining,transform-nullish-coalescing-operator"
-          defer>
+  <script
+    type="text/babel"
+    data-presets="react"
+    data-plugins="transform-optional-chaining,transform-nullish-coalescing-operator">
     // ============================================================================
     // CONSTANTS & DATA STRUCTURES
     // ============================================================================
