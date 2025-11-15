@@ -2568,7 +2568,7 @@
         clearAll
       } = useReflectionJournal(defaultModuleValue);
 
-      const handleTemplate = template => {
+      const handleTemplate = (template) => {
         if (template === 'interval') {
           setFocus('Intonation and interval recognition');
           setNextSteps(
@@ -2577,7 +2577,7 @@
             '3) Link intervals to fingerboard shapes'
           );
           setMood('focused');
-        } else if (template === 'rhythm') {  // ← Remove one }
+        } else if (template === 'rhythm') {
           setFocus('Pulse, subdivision, and bow coordination');
           setNextSteps(
             '1) Clap and count out loud with a metronome\n' +
@@ -2585,7 +2585,7 @@
             '3) Bow open strings to the same rhythm'
           );
           setMood('energized');
-        } else if (template === 'speed') {  // ← Remove one }
+        } else if (template === 'speed') {
           setFocus('Quick note recognition and accuracy');
           setNextSteps(
             '1) Name notes aloud while playing slow scales\n' +
@@ -2593,7 +2593,7 @@
             '3) Review one fingerboard pattern each day'
           );
           setMood('curious');
-        } else if (template === 'bieler') {  // ← Remove one }
+        } else if (template === 'bieler') {
           setFocus('Sound quality, bow contact point, and leverage');
           setNextSteps(
             '1) Slow tone work near the bridge with full bow\n' +
