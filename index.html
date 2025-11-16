@@ -3587,6 +3587,272 @@
       );
     }
     
+    /*** Position Reference – Violin Note Chart by Position
+     *
+     * Shows a table of notes for each string and finger in the selected position.
+     * Layout can be viewed as Strings × Fingers or Fingers × Strings, and colors
+     * can either follow the string tints or the pitch class. Uses the same
+     * canonical pitch logic as the trainers so everything stays consistent.
+     */
+    function PositionReference({ onBack }) {
+      const [pos, setPos] = React.useState(POSITIONS[0]);
+      const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
+      const [colorMode, setColorMode]   = React.useState('strings'); // 'strings' | 'notes'
+    
+      const next = () =>
+        setPos(p => (p === POSITIONS[POSITIONS.length - 1] ? POSITIONS[0] : p + 1));
+      const prev = () =>
+        setPos(p => (p === POSITIONS[0] ? POSITIONS[POSITIONS.length - 1] : p - 1));
+    
+      // Pitch-class helper for a given string / position / finger
+      const pcAt = (s, p, f) =>
+        ((OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f]) % 12 + 12) % 12;
+    
+      const ENH = {
+        0: 'C',
+        1: 'C♯/D♭',
+        2: 'D',
+        3: 'D♯/E♭',
+        4: 'E',
+        5: 'F',
+        6: 'F♯/G♭',
+        7: 'G',
+        8: 'G♯/A♭',
+        9: 'A',
+        10: 'A♯/B♭',
+        11: 'B'
+      };
+    
+      const labelFor = pc => ENH[pc] || NOTE_NAME[pc];
+    
+      // Color schemes
+      const stringTint = {
+        E: 'rgba(58,91,160,0.15)',
+        A: 'rgba(230,159,0,0.15)',
+        D: 'rgba(0,158,115,0.15)',
+        G: 'rgba(213,94,0,0.15)'
+      };
+    
+      const noteHue = pc => `hsla(${(pc * 30) % 360}, 65%, 70%, 0.28)`;
+      const bgForCell = (s, pc) =>
+        colorMode === 'strings' ? stringTint[s] : noteHue(pc);
+    
+      const cols = layoutCols === 'strings' ? STRINGS : FINGERS;
+      const rows = layoutCols === 'strings' ? FINGERS : STRINGS;
+    
+      const ordinalShort = n =>
+        ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || `${n}th`);
+    
+      const colHead = c =>
+        layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
+    
+      const rowHeadVisible = r =>
+        layoutCols === 'strings' ? ordinalShort(r) : r;
+    
+      const rowHeadAria = r =>
+        layoutCols === 'strings'
+          ? `${ordinal(r)} finger`
+          : `${r} string`;
+    
+      const cellSF = (row, col) =>
+        layoutCols === 'strings'
+          ? { s: col, f: row }
+          : { s: row, f: col };
+    
+      const CELL_STYLE = {
+        height: 56,
+        minHeight: 56,
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        padding: '10px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        fontWeight: 600,
+        lineHeight: 1.1,
+        whiteSpace: 'nowrap'
+      };
+    
+      const HEAD_COL_W = 'clamp(4ch, 9.5vw, 7ch)';
+    
+      return (
+        <div>
+          <div className="card">
+            <h2>Positions Charts</h2>
+    
+            {/* Layout & color controls */}
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: '1fr 1fr',
+                gap: '1rem',
+                marginBottom: '0.25rem'
+              }}
+            >
+              <div role="radiogroup" aria-label="Layout (columns)">
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Layout</div>
+                <OptionButton
+                  label="Strings"
+                  selected={layoutCols === 'strings'}
+                  onClick={() => setLayoutCols('strings')}
+                />
+                <OptionButton
+                  label="Fingers"
+                  selected={layoutCols === 'fingers'}
+                  onClick={() => setLayoutCols('fingers')}
+                />
+              </div>
+    
+              <div role="radiogroup" aria-label="Color mode">
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Colors</div>
+                <OptionButton
+                  label="Strings"
+                  selected={colorMode === 'strings'}
+                  onClick={() => setColorMode('strings')}
+                />
+                <OptionButton
+                  label="Notes"
+                  selected={colorMode === 'notes'}
+                  onClick={() => setColorMode('notes')}
+                />
+              </div>
+            </div>
+    
+            {/* Position chip */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                margin: '10px 0 6px'
+              }}
+            >
+              <span
+                aria-label={`Notes of ${ordinal(pos)} Position`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: 9999,
+                  border: '1px solid var(--border)',
+                  fontWeight: 700,
+                  letterSpacing: '.01em',
+                  color: 'var(--ink)',
+                  background: 'var(--card)',
+                  boxShadow: '0 1px 0 rgba(0,0,0,0.02)'
+                }}
+              >
+                {ordinal(pos)} Position
+              </span>
+            </div>
+    
+            {/* Note table */}
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: '8px',
+                tableLayout: 'fixed'
+              }}
+            >
+              <thead>
+                <tr>
+                  <th scope="col" style={{ width: HEAD_COL_W }} />
+                  {cols.map(c => (
+                    <th
+                      scope="col"
+                      key={String(c)}
+                      style={{ textAlign: 'center', fontWeight: 700 }}
+                    >
+                      {colHead(c)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={String(r)}>
+                    <th
+                      scope="row"
+                      aria-label={rowHeadAria(r)}
+                      style={{
+                        width: HEAD_COL_W,
+                        textAlign: 'right',
+                        paddingRight: 8,
+                        whiteSpace: 'nowrap',
+                        fontWeight: 600
+                      }}
+                    >
+                      {rowHeadVisible(r)}
+                    </th>
+                    {cols.map(c => {
+                      const { s, f } = cellSF(r, c);
+                      const pc = pcAt(s, pos, f);
+                      return (
+                        <td key={`${s}-${f}`} style={{ padding: 0 }}>
+                          <div
+                            style={{
+                              ...CELL_STYLE,
+                              background: bgForCell(s, pc)
+                            }}
+                            title={`${s} string • ${ordinal(f)} finger`}
+                          >
+                            {labelFor(pc)}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+    
+            {/* Position selector */}
+            <div
+              role="radiogroup"
+              aria-label="Select position"
+              style={{
+                display: 'flex',
+                gap: '.5rem',
+                justifyContent: 'center',
+                marginTop: '.75rem'
+              }}
+            >
+              {POSITIONS.map(n => (
+                <OptionButton
+                  key={n}
+                  label={String(n)}
+                  selected={pos === n}
+                  onClick={() => setPos(n)}
+                />
+              ))}
+            </div>
+    
+            {/* Previous / Next helpers */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '.5rem',
+                justifyContent: 'center',
+                marginTop: '.75rem'
+              }}
+            >
+              <button className="btn btn-secondary" type="button" onClick={prev}>
+                ← Previous
+              </button>
+              <button className="btn btn-secondary" type="button" onClick={next}>
+                Next →
+              </button>
+            </div>
+          </div>
+    
+          <button className="btn btn-secondary" onClick={onBack}>
+            Back
+          </button>
+        </div>
+      );
+    }
+    
     // ============================================================================
     // SETTINGS SCREEN (Enhanced)
     // ============================================================================
