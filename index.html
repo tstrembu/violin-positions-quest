@@ -836,6 +836,33 @@
     
     const filteredCells = prefs => CELLS.filter(c => prefs.strings[c.s] && prefs.positions[c.p]);
     
+    // --------------------------------------------------------------------------
+    // Mastery helpers for the current selection (based on BKT)
+    // --------------------------------------------------------------------------
+    
+    // Average P(know) across all currently-enabled cells
+    const avgMasteryForSelection = (prefs) => {
+      const cells = filteredCells(prefs);
+      if (!cells.length) return 0;
+    
+      const bktState = loadBKT();
+      let sum = 0;
+    
+      for (const c of cells) {
+        const { pKnow } = getBKTForCell(bktState, c.s, c.p, c.f);
+        sum += pKnow;
+      }
+    
+      return sum / cells.length; // value between 0 and 1
+    };
+    
+    // Convert an average mastery score into a human-friendly difficulty tier
+    const difficultyTierFromMastery = (m) => {
+      if (m < 0.5) return 'easy';     // student is still stabilizing basics
+      if (m < 0.85) return 'medium';  // solid but still room to grow
+      return 'hard';                  // ready for challenge / transfer tasks
+    };
+    
     // ============================================================================
     // AUDIO ENGINE (Enhanced)
     // ============================================================================
