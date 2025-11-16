@@ -1348,10 +1348,9 @@
             Toward bridge
           </text>
     
-          {/* Position numerals above the board */}
+          {/* Position labels above the board (1st–7th) */}
           {POSITIONS.map((p, idx) => {
             const xCenter = leftMargin + colWidth * (idx + 0.5);
-            const roman = ['I', 'II', 'III', 'IV', 'V'][idx] || ordinal(p);
             return (
               <text
                 key={`pos-label-${p}`}
@@ -1362,7 +1361,7 @@
                 fill="rgba(148, 163, 184, 0.95)"
                 textAnchor="middle"
               >
-                {roman}
+                {ordinal(p)}   {/* e.g. 1st, 2nd, 3rd, ... */}
               </text>
             );
           })}
