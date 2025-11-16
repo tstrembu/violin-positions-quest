@@ -740,34 +740,28 @@
     
     const getRandom = a => a[Math.floor(Math.random()*a.length)];
     
+    // ---------------------------------------------------------------------------
+    // Shared ordinal helpers (single source of truth)
+    // ---------------------------------------------------------------------------
+    
     const ordinal = n => {
-      const s = ['th','st','nd','rd'];
-      const v = n % 100;
-      return n + (s[(v-20)%10] || s[v] || s[0]);
+      if (n == null) return '';
+      const s = String(n);
+      const last = s[s.length - 1];
+      const last2 = s.length > 1 ? s.slice(-2) : s;
+    
+      if (last2 === '11' || last2 === '12' || last2 === '13') return `${s}th`;
+      if (last === '1') return `${s}st`;
+      if (last === '2') return `${s}nd`;
+      if (last === '3') return `${s}rd`;
+      return `${s}th`;
     };
     
-    const ordinalShort = (n) => {
-      // Optimized for finger labels 1–4; falls back gracefully for others.
-      const map = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-      return map[n] || `${n}th`;
-    };
+    // Short variant – currently identical, but easy to style differently later
+    const ordinalShort = n => ordinal(n);
     
-    const positionLabelShort = (n) => {
-      // Optimized for positions 1–10; extend if/when you go higher.
-      const map = {
-        1: '1st',
-        2: '2nd',
-        3: '3rd',
-        4: '4th',
-        5: '5th',
-        6: '6th',
-        7: '7th',
-        8: '8th',
-        9: '9th',
-        10: '10th'
-      };
-      return map[n] || `${n}th`;
-    };
+    // Position label – kept separate for possible "half position" etc. later
+    const positionLabelShort = n => ordinalShort(n);
     
     const canonicalBase = (s,p,f) => {
       const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
@@ -4086,10 +4080,10 @@
     
       const colHead = c =>
         layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
-    
+      
       const rowHeadVisible = r =>
         layoutCols === 'strings' ? ordinalShort(r) : r;
-    
+      
       const rowHeadAria = r =>
         layoutCols === 'strings'
           ? `${ordinal(r)} finger`
