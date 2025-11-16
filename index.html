@@ -746,6 +746,29 @@
       return n + (s[(v-20)%10] || s[v] || s[0]);
     };
     
+    const ordinalShort = (n) => {
+      // Optimized for finger labels 1–4; falls back gracefully for others.
+      const map = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+      return map[n] || `${n}th`;
+    };
+    
+    const positionLabelShort = (n) => {
+      // Optimized for positions 1–10; extend if/when you go higher.
+      const map = {
+        1: '1st',
+        2: '2nd',
+        3: '3rd',
+        4: '4th',
+        5: '5th',
+        6: '6th',
+        7: '7th',
+        8: '8th',
+        9: '9th',
+        10: '10th'
+      };
+      return map[n] || `${n}th`;
+    };
+    
     const canonicalBase = (s,p,f) => {
       const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
       return NOTE_NAME[((semi%12)+12)%12];
@@ -3871,6 +3894,81 @@
               </div>
             </div>
             
+            <div style={{ marginTop: '2rem' }}>
+              <h3>🧠 Mastery Map (BKT)</h3>
+              <p style={{ marginTop: '0.25rem', color: 'var(--ink-light)', fontSize: '0.9rem' }}>
+                Average mastery per string and position (0–100%). Darker green = stronger, red = needs attention.
+              </p>
+              <div
+                style={{
+                  marginTop: '0.75rem',
+                  overflowX: 'auto',
+                }}
+              >
+                <div
+                  className="grid"
+                  style={{
+                    gridTemplateColumns: `repeat(${POSITIONS.length + 1}, minmax(70px, 1fr))`,
+                    gap: '0.25rem',
+                    alignItems: 'stretch',
+                  }}
+                >
+                  {/* Header row: empty corner + position labels */}
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}></div>
+                  {POSITIONS.map(p => (
+                    <div
+                      key={p}
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        padding: '0.25rem 0',
+                      }}
+                    >
+                      {positionLabelShort(p)}
+                    </div>
+                  ))}
+
+                  {/* Rows per string */}
+                  {STRINGS.map(s => (
+                    <React.Fragment key={s}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        {s} string
+                      </div>
+                      {POSITIONS.map(p => {
+                        const v = positionHeat[p]?.[s] || 0;   // 0–1
+                        const pct = Math.round(v * 100);
+                        const bg = getHeatColor(pct);          // reuse your existing helper
+
+                        return (
+                          <div
+                            key={`${s}-${p}`}
+                            className="heat-cell"
+                            style={{
+                              background: bg,
+                              textAlign: 'center',
+                              fontSize: '0.8rem',
+                              lineHeight: 1.2,
+                            }}
+                            title={`${s} string, ${positionLabelShort(p)}: ${pct}% mastery`}
+                          >
+                            {pct}%
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
             <div style={{marginTop:'2rem'}}>
               <h3>📈 Accuracy by Position</h3>
               <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(100px, 1fr))', gap:'0.5rem', marginTop:'0.75rem'}}>
@@ -3880,11 +3978,10 @@
                   return (
                     <div
                       key={p}
-                      className="heat-cell"
-                      style={{background: getHeatColor(acc)}}
-                      title={`Position ${p}: ${Math.round(acc)}% (${st.correct}/${st.total})`}
+                       className="heat-cell"
+                       title={`${positionLabelShort(p)} Position: ${Math.round(acc)}% (${st.correct}/${st.total})`}
                     >
-                      Pos {p}<br/>{Math.round(acc)}%
+                       {positionLabelShort(p)}<br />{Math.round(acc)}%
                     </div>
                   );
                 })}
@@ -3977,38 +4074,7 @@
     
       const cols = layoutCols === 'strings' ? STRINGS : FINGERS;
       const rows = layoutCols === 'strings' ? FINGERS : STRINGS;
-      
-      // -------------------- Ordinal helpers --------------------
 
-      // Full ordinal string: 1 -> "1st", 2 -> "2nd", 3 -> "3rd", 4 -> "4th", 11 -> "11th", etc.
-      function ordinal(n) {
-        const s = ["th", "st", "nd", "rd"];
-        const v = n % 100;
-        return n + (s[(v - 20) % 10] || s[v] || s[0]);
-      }
-      
-      // Short ordinal for small finger numbers (1–4) – used in PositionReference row headers
-      function ordinalShort(n) {
-        const map = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
-        return map[n] || `${n}th`;
-      }
-      
-      // Short label for positions 1–10 – used on fingerboard rulers & mastery maps
-      function positionLabelShort(n) {
-        const map = {
-          1: "1st",
-          2: "2nd",
-          3: "3rd",
-          4: "4th",
-          5: "5th",
-          6: "6th",
-          7: "7th",
-          8: "8th",
-          9: "9th",
-          10: "10th",
-        };
-        return map[n] || `${n}th`;
-      }
       
       const colHead = c =>
         layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
@@ -4230,6 +4296,24 @@
       const [dark, setDark] = React.useState(
         document.documentElement.classList.contains('dark')
       );
+      
+      // BKT-based mastery for progressive unlock (positions 6–10)
+      const positionHeat = buildPositionHeat();
+
+      let baseSum = 0;
+      let baseCount = 0;
+      for (const p of [1, 2, 3, 4, 5]) {
+        for (const s of STRINGS) {
+          const v = positionHeat[p]?.[s] ?? 0;
+          baseSum += v;
+          baseCount += 1;
+        }
+      }
+      const baseMastery = baseCount ? baseSum / baseCount : 0; // 0–1
+      const POS_UNLOCK_THRESHOLD = 0.75;
+
+      const isPositionLocked = (p) =>
+        p > 5 && baseMastery < POS_UNLOCK_THRESHOLD;
     
       const save = () => {
         // Keep prefs.soundEnabled and audioEngine.mute aligned
