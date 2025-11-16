@@ -1117,140 +1117,276 @@
     // VISUAL FINGERBOARD (Enhanced)
     // ============================================================================
     
-    function VisualFingerboard({ highlight = [], onSelect, disabled, showNotes = false }) {
-      const patId = React.useMemo(() => 'pat-' + Math.random().toString(36).slice(2), []);
-      
-      const POS_W = 120;
-      const LEFT_PAD = 72;
-      const RIGHT_PAD = 24;
-      const TOP_PAD = 36;
-      const BOTTOM_PAD = 28;
-      const ROW_H = 56;
-      const MARK_W = 36;
-      const MARK_H = 20;
-      const RADIUS = 6;
-      
-      const POS_N = POSITIONS.length;
-      const W = LEFT_PAD + POS_W * POS_N + RIGHT_PAD;
-      const H = TOP_PAD + ROW_H * 4 + BOTTOM_PAD;
-      
-      const fingerX = { 1: POS_W * 0.18, 2: POS_W * 0.40, 3: POS_W * 0.62, 4: POS_W * 0.82 };
-      
-      const ORDER = ['E', 'A', 'D', 'G'];
-      const yForString = s => TOP_PAD + ORDER.indexOf(s) * ROW_H + ROW_H / 2;
-      
-      const hiMap = Object.fromEntries(highlight.map(h => [`${h.s}:${h.p}:${h.f}`, h.kind]));
-      
-      const fillForKind = k => {
-        if (k === 'correct') return 'var(--success)';
-        if (k === 'chosen') return 'var(--primary)';
-        if (k === 'distractor') return `url(#${patId})`;
-        return 'var(--card)';
+    function VisualFingerboard({
+      highlight = [],
+      onSelect,
+      disabled,
+      showNotes = false
+    }) {
+      // Map highlight array to quick lookup
+      const hiMap = {};
+      for (const h of highlight) {
+        hiMap[`${h.s}:${h.p}:${h.f}`] = h.kind || 'correct';
+      }
+    
+      const width = 760;
+      const height = 220;
+      const leftMargin = 60;
+      const rightMargin = 24;
+      const topMargin = 40;
+      const bottomMargin = 32;
+    
+      const boardWidth = width - leftMargin - rightMargin;
+      const boardHeight = height - topMargin - bottomMargin;
+    
+      const posCount = POSITIONS.length;
+      const stringCount = STRINGS.length;
+    
+      const colWidth = boardWidth / posCount;
+      const rowHeight = boardHeight / stringCount;
+    
+      // Same order as your existing board: E at top, G at bottom
+      const ORDER = [...STRINGS].reverse();
+    
+      const stringColors = {
+        G: '#b45309', // warm brown / rust
+        D: '#16a34a', // green
+        A: '#ea580c', // orange
+        E: '#2563eb'  // blue
       };
-      
-      const act = cell => {
+    
+      const vibrateSafe = (pattern) => {
+        try {
+          if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(pattern);
+          }
+        } catch {}
+      };
+    
+      const act = (cell) => {
         if (!disabled && onSelect) {
           onSelect(cell);
-          vibrate([30]);
+          vibrateSafe([30]);
         }
       };
-      
+    
       return (
         <svg
-          viewBox={`0 0 ${W} ${H}`}
+          viewBox={`0 0 ${width} ${height}`}
           width="100%"
           height="auto"
           role="grid"
           aria-label="Interactive violin fingerboard"
-          aria-rowcount={4}
-          aria-colcount={POSITIONS.length * 4}
+          aria-rowcount={stringCount}
+          aria-colcount={posCount * FINGERS.length}
         >
           <defs>
-            <pattern id={patId} patternUnits="userSpaceOnUse" width="8" height="8">
-              <rect width="8" height="8" fill="var(--warning)" />
-              <path d="M0 0 L8 8 M8 0 L0 8" stroke="var(--card)" strokeWidth="1" />
+            {/* Ebony-style gradient for the main board */}
+            <linearGradient id="fingerboardEbony" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1f2430" />
+              <stop offset="100%" stopColor="#05070b" />
+            </linearGradient>
+    
+            {/* Soft highlight for correct notes */}
+            <linearGradient id="fingerboardHighlight" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#f97316" stopOpacity="0.95" />
+            </linearGradient>
+    
+            {/* Optional cross-hatch for distractors / alternates */}
+            <pattern
+              id="fingerboardAltPattern"
+              patternUnits="userSpaceOnUse"
+              width="8"
+              height="8"
+            >
+              <rect width="8" height="8" fill="#facc15" />
+              <path
+                d="M0 0 L8 8 M8 0 L0 8"
+                stroke="#fefce8"
+                strokeWidth="1"
+              />
             </pattern>
           </defs>
-          
-          <rect
-            x={LEFT_PAD}
-            y={TOP_PAD - 16}
-            width={POS_W * POS_N}
-            height={ROW_H * 4 + 32}
-            rx="10"
-            fill="var(--card)"
-            stroke="var(--border)"
-          />
-          
-          <rect
-            x={LEFT_PAD - 8}
-            y={TOP_PAD - 16}
-            width={6}
-            height={ROW_H * 4 + 32}
-            rx="2"
-            fill="var(--ink-light)"
-            opacity="0.35"
-          />
-          
-          {POSITIONS.map((p, i) => {
-            const x = LEFT_PAD + (p - 1) * POS_W;
+    
+          {/* Nut / scroll side */}
+          <text
+            x={leftMargin}
+            y={18}
+            fontSize="10"
+            fill="rgba(148, 163, 184, 0.9)"
+            textAnchor="start"
+          >
+            Nut
+          </text>
+    
+          {/* Bridge side */}
+          <text
+            x={leftMargin + boardWidth}
+            y={18}
+            fontSize="10"
+            fill="rgba(148, 163, 184, 0.9)"
+            textAnchor="end"
+          >
+            Toward bridge
+          </text>
+    
+          {/* Position numerals above the board */}
+          {POSITIONS.map((p, idx) => {
+            const xCenter = leftMargin + colWidth * (idx + 0.5);
+            const roman = ['I', 'II', 'III', 'IV', 'V'][idx] || ordinal(p);
             return (
-              <g key={`lane-${p}`}>
-                <line x1={x} y1={TOP_PAD - 16} x2={x} y2={TOP_PAD - 16 + ROW_H * 4 + 32}
-                      stroke="var(--border)" />
+              <text
+                key={`pos-label-${p}`}
+                x={xCenter}
+                y={topMargin - 10}
+                fontSize="12"
+                fontWeight="600"
+                fill="rgba(148, 163, 184, 0.95)"
+                textAnchor="middle"
+              >
+                {roman}
+              </text>
+            );
+          })}
+    
+          {/* Main ebony fingerboard */}
+          <rect
+            x={leftMargin}
+            y={topMargin}
+            width={boardWidth}
+            height={boardHeight}
+            rx={10}
+            fill="url(#fingerboardEbony)"
+            stroke="rgba(15, 23, 42, 0.9)"
+            strokeWidth="2"
+          />
+    
+          {/* Vertical position bands */}
+          {POSITIONS.map((p, idx) => {
+            const x = leftMargin + colWidth * idx;
+            return (
+              <line
+                key={`pos-line-${p}`}
+                x1={x}
+                x2={x}
+                y1={topMargin}
+                y2={topMargin + boardHeight}
+                stroke="rgba(148, 163, 184, 0.28)"
+                strokeWidth={idx === 0 ? 1.5 : 1}
+              />
+            );
+          })}
+    
+          {/* String lanes (E → A → D → G) */}
+          {ORDER.map((s, orderIdx) => {
+            const sIdx = STRINGS.indexOf(s);
+            if (sIdx === -1) return null;
+    
+            const yMid = topMargin + rowHeight * (sIdx + 0.5);
+            const color = stringColors[s] || 'rgba(148, 163, 184, 0.85)';
+    
+            return (
+              <g key={`string-${s}`}>
+                {/* tinted lane */}
+                <rect
+                  x={leftMargin}
+                  y={yMid - rowHeight * 0.45}
+                  width={boardWidth}
+                  height={rowHeight * 0.9}
+                  fill="rgba(15, 23, 42, 0.45)"
+                />
+                {/* actual string line */}
+                <line
+                  x1={leftMargin + 4}
+                  x2={leftMargin + boardWidth - 4}
+                  y1={yMid}
+                  y2={yMid}
+                  stroke={color}
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeOpacity="0.85"
+                />
+                {/* string label on the left */}
                 <text
-                  x={x + POS_W / 2}
-                  y={TOP_PAD - 18}
-                  textAnchor="middle"
+                  x={leftMargin - 16}
+                  y={yMid + 4}
                   fontSize="12"
                   fontWeight="600"
-                  fill="var(--ink-light)"
+                  fill={color}
+                  textAnchor="end"
                 >
-                  {ordinal(p)} pos
+                  {s}
                 </text>
               </g>
             );
           })}
-          
-          {ORDER.map(s => {
-            const y = yForString(s);
-            return (
-              <g key={`string-${s}`}>
-                <text x={LEFT_PAD - 14} y={y + 4} textAnchor="end" fontWeight="700" fill="var(--ink)">{s}</text>
-                <line x1={LEFT_PAD} y1={y} x2={LEFT_PAD + POS_W * POS_N} y2={y}
-                      stroke="var(--ink-light)" strokeWidth="1.5" opacity="0.35" />
-              </g>
-            );
-          })}
-          
-          {STRINGS.map(s => (
-            POSITIONS.map(p => (
-              FINGERS.map(f => {
-                const x = LEFT_PAD + (p - 1) * POS_W + fingerX[f] - MARK_W / 2;
-                const y = yForString(s) - MARK_H / 2;
+    
+          {/* Clickable pads: one per (string, position, finger) */}
+          {STRINGS.map((s) =>
+            POSITIONS.map((p, pIdx) =>
+              FINGERS.map((f) => {
+                const sIdx = STRINGS.indexOf(s);
+                if (sIdx === -1) return null;
+    
+                const yMid = topMargin + rowHeight * (sIdx + 0.5);
+                const bandX = leftMargin + colWidth * pIdx;
+    
+                // Slight “toward bridge” compression in higher positions
+                const innerWidth = colWidth * (0.82 - pIdx * 0.03); // stays > 0
+                const fingerGap = innerWidth / (FINGERS.length + 1);
+    
+                const padWidth = Math.min(fingerGap * 0.9, 30);
+                const padHeight = rowHeight * 0.46;
+    
+                const x = bandX + fingerGap * f - padWidth / 2;
+                const y = yMid - padHeight / 2;
+    
                 const key = `${s}:${p}:${f}`;
                 const kind = hiMap[key];
-                const fill = fillForKind(kind);
                 const note = canonicalBase(s, p, f);
-                
+    
+                const isCorrect = kind === 'correct';
+                const isChosen = kind === 'chosen';
+                const isDistractor = kind === 'distractor';
+    
+                let fill = 'rgba(248, 250, 252, 0.05)';
+                let stroke = 'rgba(148, 163, 184, 0.4)';
+                let strokeWidth = 1;
+    
+                if (isCorrect) {
+                  fill = 'url(#fingerboardHighlight)';
+                  stroke = '#92400e';
+                  strokeWidth = 1.6;
+                } else if (isChosen && !isCorrect) {
+                  fill = 'rgba(37, 99, 235, 0.12)';
+                  stroke = '#2563eb';
+                  strokeWidth = 1.6;
+                } else if (isDistractor) {
+                  fill = 'url(#fingerboardAltPattern)';
+                  stroke = 'rgba(202, 138, 4, 0.9)';
+                  strokeWidth = 1.2;
+                }
+    
                 return (
                   <g key={key}>
                     <rect
                       x={x}
                       y={y}
-                      width={MARK_W}
-                      height={MARK_H}
-                      rx={RADIUS}
+                      width={padWidth}
+                      height={padHeight}
+                      rx={6}
+                      ry={6}
                       fill={fill}
-                      stroke="var(--border)"
-                      strokeWidth="1.5"
+                      stroke={stroke}
+                      strokeWidth={strokeWidth}
                       role="gridcell"
-                      aria-selected={kind === 'chosen' || kind === 'correct'}
+                      aria-selected={isCorrect || isChosen}
                       aria-label={`${s} string, ${ordinal(p)} position, finger ${f}, note ${note}`}
                       tabIndex={disabled ? -1 : 0}
                       style={{ cursor: disabled ? 'default' : 'pointer' }}
                       onClick={() => act({ s, p, f })}
-                      onKeyDown={e => {
+                      onKeyDown={(e) => {
                         if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
                           e.preventDefault();
                           e.stopPropagation();
@@ -1258,32 +1394,50 @@
                         }
                       }}
                     />
+                    {/* Optional note-name overlay for study mode */}
                     {showNotes && (
                       <text
-                        x={x + MARK_W / 2}
-                        y={y + MARK_H / 2 + 4}
+                        x={x + padWidth / 2}
+                        y={y + padHeight / 2 + 4}
                         textAnchor="middle"
                         fontSize="10"
                         fontWeight="600"
-                        fill="var(--ink)"
+                        fill="#e5e7eb"
                         pointerEvents="none"
                       >
                         {note}
                       </text>
                     )}
-                    {kind === 'correct' && (
-                      <text x={x + MARK_W / 2} y={y + MARK_H / 2 + 4}
-                            textAnchor="middle" fontSize="12" fill="var(--card)" pointerEvents="none">✓</text>
+                    {/* Check / X icons, smaller and centered */}
+                    {isCorrect && (
+                      <text
+                        x={x + padWidth / 2}
+                        y={y + padHeight / 2 + 4}
+                        textAnchor="middle"
+                        fontSize="12"
+                        fill="#111827"
+                        pointerEvents="none"
+                      >
+                        ✓
+                      </text>
                     )}
-                    {kind === 'chosen' && kind !== 'correct' && (
-                      <text x={x + MARK_W / 2} y={y + MARK_H / 2 + 4}
-                            textAnchor="middle" fontSize="12" fill="var(--card)" pointerEvents="none">✕</text>
+                    {isChosen && !isCorrect && (
+                      <text
+                        x={x + padWidth / 2}
+                        y={y + padHeight / 2 + 4}
+                        textAnchor="middle"
+                        fontSize="12"
+                        fill="#eff6ff"
+                        pointerEvents="none"
+                      >
+                        ✕
+                      </text>
                     )}
                   </g>
                 );
               })
-            ))
-          ))}
+            )
+          )}
         </svg>
       );
     }
