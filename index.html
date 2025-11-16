@@ -3810,6 +3810,9 @@
         stringStats[s].total += st.total;
       });
       
+      // 🔥 BKT-based mastery grid, string × position
+      const positionHeat = buildPositionHeat(); // 0–1 P(know) per [position][string]
+      
       const getHeatColor = (acc) => {
         if (acc >= 90) return 'var(--success)';
         if (acc >= 75) return 'var(--primary)';
@@ -3974,10 +3977,39 @@
     
       const cols = layoutCols === 'strings' ? STRINGS : FINGERS;
       const rows = layoutCols === 'strings' ? FINGERS : STRINGS;
-    
-      const positionLabelShort = n =>
-        ({1:'1st',2:'2nd',3:'3rd',4:'4th',5:'5th',6:'6th',7:'7th',8:'8th',9:'9th',10:'10th'}[n] || `${n}th`);
-    
+      
+      // -------------------- Ordinal helpers --------------------
+
+      // Full ordinal string: 1 -> "1st", 2 -> "2nd", 3 -> "3rd", 4 -> "4th", 11 -> "11th", etc.
+      function ordinal(n) {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      }
+      
+      // Short ordinal for small finger numbers (1–4) – used in PositionReference row headers
+      function ordinalShort(n) {
+        const map = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
+        return map[n] || `${n}th`;
+      }
+      
+      // Short label for positions 1–10 – used on fingerboard rulers & mastery maps
+      function positionLabelShort(n) {
+        const map = {
+          1: "1st",
+          2: "2nd",
+          3: "3rd",
+          4: "4th",
+          5: "5th",
+          6: "6th",
+          7: "7th",
+          8: "8th",
+          9: "9th",
+          10: "10th",
+        };
+        return map[n] || `${n}th`;
+      }
+      
       const colHead = c =>
         layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
     
