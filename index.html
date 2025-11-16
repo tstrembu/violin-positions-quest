@@ -740,53 +740,39 @@
     
     const getRandom = a => a[Math.floor(Math.random()*a.length)];
     
-    // ---------------------------------------------------------------------------
-    // Shared note mapping + ordinal helpers (single source of truth)
-    // ---------------------------------------------------------------------------
+    const ordinal = n => {
+      const s = ['th','st','nd','rd'];
+      const v = n % 100;
+      return n + (s[(v-20)%10] || s[v] || s[0]);
+    };
     
-    const canonicalBase = (s, p, f) => {
+    const ordinalShort = (n) => {
+      // Optimized for finger labels 1–4; falls back gracefully for others.
+      const map = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+      return map[n] || `${n}th`;
+    };
+    
+    const positionLabelShort = (n) => {
+      // Optimized for positions 1–10; extend if/when you go higher.
+      const map = {
+        1: '1st',
+        2: '2nd',
+        3: '3rd',
+        4: '4th',
+        5: '5th',
+        6: '6th',
+        7: '7th',
+        8: '8th',
+        9: '9th',
+        10: '10th'
+      };
+      return map[n] || `${n}th`;
+    };
+    
+    const canonicalBase = (s,p,f) => {
       const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-      return NOTE_NAME[((semi % 12) + 12) % 12];
+      return NOTE_NAME[((semi%12)+12)%12];
     };
-    
-    /**
-     * Long ordinal form used in headings and descriptive text.
-     * Handles 11/12/13 correctly.
-     *   1 -> "1st"
-     *   2 -> "2nd"
-     *   3 -> "3rd"
-     *   4 -> "4th"
-     *   11 -> "11th"
-     *   21 -> "21st"
-     */
-    const ordinal = (n) => {
-      if (n == null) return '';
-      const num = Math.trunc(Number(n));
-      if (!Number.isFinite(num)) return '';
-    
-      const s = String(num);
-      const last = s[s.length - 1];
-      const last2 = s.length > 1 ? s.slice(-2) : s;
-    
-      if (last2 === '11' || last2 === '12' || last2 === '13') return `${s}th`;
-      if (last === '1') return `${s}st`;
-      if (last === '2') return `${s}nd`;
-      if (last === '3') return `${s}rd`;
-      return `${s}th`;
-    };
-    
-    /**
-     * Short ordinal variant (currently the same as ordinal, but
-     * kept separate in case you ever want special styling later.
-     */
-    const ordinalShort = (n) => ordinal(n);
-    
-    /**
-     * Position label specifically for violin positions.
-     * Keeps the door open for special cases such as "½ pos" or
-     * different language variants in the future.
-     */
-    const positionLabelShort = (n) => ordinalShort(n);
     
     const levelForXP = (xp) => Math.floor(Math.pow(xp/300, 0.75)) + 1;
     const nextLevelXP = (lvl) => Math.round(300 * Math.pow(lvl, 1.4));
@@ -4043,8 +4029,15 @@
      * can either follow the string tints or the pitch class. Uses the same
      * canonical pitch logic as the trainers so everything stays consistent.
      */
-    function PositionReference({ onBack }) {
-      const [pos, setPos] = React.useState(POSITIONS[0]);
+    function PositionReference({ position, onBack }) {
+      // If a position prop is provided and valid, use it as the initial position.
+      // Otherwise, default to the first entry in POSITIONS.
+      const initialPos =
+        typeof position === 'number' && POSITIONS.includes(position)
+          ? position
+          : POSITIONS[0];
+    
+      const [pos, setPos] = React.useState(initialPos);
       const [layoutCols, setLayoutCols] = React.useState('strings'); // 'strings' | 'fingers'
       const [colorMode, setColorMode]   = React.useState('strings'); // 'strings' | 'notes'
     
@@ -4058,16 +4051,16 @@
         ((OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f]) % 12 + 12) % 12;
     
       const ENH = {
-        0: 'C',
-        1: 'C♯/D♭',
-        2: 'D',
-        3: 'D♯/E♭',
-        4: 'E',
-        5: 'F',
-        6: 'F♯/G♭',
-        7: 'G',
-        8: 'G♯/A♭',
-        9: 'A',
+        0:  'C',
+        1:  'C♯/D♭',
+        2:  'D',
+        3:  'D♯/E♭',
+        4:  'E',
+        5:  'F',
+        6:  'F♯/G♭',
+        7:  'G',
+        8:  'G♯/A♭',
+        9:  'A',
         10: 'A♯/B♭',
         11: 'B'
       };
@@ -4088,8 +4081,9 @@
     
       const cols = layoutCols === 'strings' ? STRINGS : FINGERS;
       const rows = layoutCols === 'strings' ? FINGERS : STRINGS;
-
-      
+    
+      // Header labels / aria helpers (using global ordinal helpers)
+    
       const colHead = c =>
         layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
     
@@ -4175,7 +4169,7 @@
               }}
             >
               <span
-                aria-label={`Notes of ${ordinal(pos)} Position`}
+                aria-label={`Notes of ${positionLabelShort(pos)} position`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -4189,7 +4183,7 @@
                   boxShadow: '0 1px 0 rgba(0,0,0,0.02)'
                 }}
               >
-                {ordinal(pos)} Position
+                {positionLabelShort(pos)} position
               </span>
             </div>
     
@@ -4266,9 +4260,10 @@
               }}
             >
               {POSITIONS.map(n => (
+                // now uses global positionLabelShort helper
                 <OptionButton
                   key={n}
-                  label={String(n)}
+                  label={positionLabelShort(n)}
                   selected={pos === n}
                   onClick={() => setPos(n)}
                 />
