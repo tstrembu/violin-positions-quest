@@ -3975,8 +3975,8 @@
       const cols = layoutCols === 'strings' ? STRINGS : FINGERS;
       const rows = layoutCols === 'strings' ? FINGERS : STRINGS;
     
-      const ordinalShort = n =>
-        ({ 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' }[n] || `${n}th`);
+      const positionLabelShort = n =>
+        ({1:'1st',2:'2nd',3:'3rd',4:'4th',5:'5th',6:'6th',7:'7th',8:'8th',9:'9th',10:'10th'}[n] || `${n}th`);
     
       const colHead = c =>
         layoutCols === 'strings' ? c : `${ordinal(c)} finger`;
