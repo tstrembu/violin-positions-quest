@@ -1570,6 +1570,16 @@
       const [feedback, setFeedback] = React.useState(null);
       const [showCelebration, setShowCelebration] = React.useState(false);
       
+      // Mastery + recommended difficulty for the cells currently in play
+      const avgMastery = React.useMemo(
+        () => avgMasteryForSelection(prefs),
+        [prefs]
+      );
+      const difficultyTier = React.useMemo(
+        () => difficultyTierFromMastery(avgMastery),
+        [avgMastery]
+      );
+      
       const pick = React.useCallback(() => {
         if (!cells.length) {
           setQ(null);
