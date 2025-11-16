@@ -1747,9 +1747,34 @@
       return (
         <div>
           <div className="card">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
-              <h2 style={{margin:0}}>⚡ Speed Drill</h2>
-              <button className="btn btn-secondary" onClick={() => setPaused(p => !p)}>
+            <div
+              style={{
+                display:'flex',
+                justifyContent:'space-between',
+                alignItems:'center',
+                marginBottom:'1rem'
+              }}
+            >
+              <div>
+                <h2 style={{margin:0}}>⚡ Speed Drill</h2>
+                <p
+                  style={{
+                    margin:0,
+                    marginTop:'0.25rem',
+                    fontSize:'0.8rem',
+                    color:'var(--ink-light)'
+                  }}
+                >
+                  Recommended difficulty:{' '}
+                  <strong>{difficultyTier}</strong>
+                  {' · '}Avg mastery in this range:{' '}
+                  {Math.round(avgMastery * 100)}%
+                </p>
+              </div>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setPaused(p => !p)}
+              >
                 {paused ? '▶️ Resume' : '⏸️ Pause'}
               </button>
             </div>
