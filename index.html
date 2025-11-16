@@ -4387,21 +4387,53 @@
             {/* Practice Positions */}
             <div style={{ marginTop: '1.5rem' }}>
               <h3>📍 Practice Positions</h3>
-              <div className="grid grid-cols-3" style={{ gap: '0.5rem', marginTop: '0.75rem' }}>
-                {POSITIONS.map(p => (
-                  <button
-                    key={p}
-                    className={`btn ${localPrefs.positions[p] ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() =>
-                      setLocalPrefs(pr => ({
-                        ...pr,
-                        positions: { ...pr.positions, [p]: !pr.positions[p] },
-                      }))
-                    }
-                  >
-                    Position {p} {localPrefs.positions[p] ? '✓' : ''}
-                  </button>
-                ))}
+              <p
+                style={{
+                  marginTop: '0.25rem',
+                  color: 'var(--ink-light)',
+                  fontSize: '0.9rem',
+                }}
+              >
+                Positions 1–5 are your foundation. Positions 6–10 unlock once your average mastery
+                in 1st–5th position reaches about 75%.
+              </p>
+              <div
+                className="grid grid-cols-3"
+                style={{ gap: '0.5rem', marginTop: '0.75rem' }}
+              >
+                {POSITIONS.map(p => {
+                  const locked = isPositionLocked(p);
+                  const pressed = !!localPrefs.positions[p];
+
+                  return (
+                    <button
+                      key={p}
+                      className={`btn ${
+                        pressed && !locked ? 'btn-primary' : 'btn-secondary'
+                      }`}
+                      disabled={locked}
+                      onClick={() => {
+                        if (locked) return;
+                        setLocalPrefs(pr => ({
+                          ...pr,
+                          positions: { ...pr.positions, [p]: !pr.positions[p] },
+                        }));
+                      }}
+                      title={
+                        locked
+                          ? 'Keep practicing positions 1–5; higher positions unlock at ~75% average mastery.'
+                          : `Toggle practice in position ${p}`
+                      }
+                      style={{
+                        opacity: locked ? 0.5 : 1,
+                        cursor: locked ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {locked ? '🔒 ' : ''}
+                      Pos {p} {pressed && !locked ? '✓' : ''}
+                    </button>
+                  );
+                })}
               </div>
             </div>
     
