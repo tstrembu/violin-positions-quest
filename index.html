@@ -740,39 +740,53 @@
     
     const getRandom = a => a[Math.floor(Math.random()*a.length)];
     
-    const ordinal = n => {
-      const s = ['th','st','nd','rd'];
-      const v = n % 100;
-      return n + (s[(v-20)%10] || s[v] || s[0]);
-    };
+    // ---------------------------------------------------------------------------
+    // Shared note mapping + ordinal helpers (single source of truth)
+    // ---------------------------------------------------------------------------
     
-    const ordinalShort = (n) => {
-      // Optimized for finger labels 1–4; falls back gracefully for others.
-      const map = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-      return map[n] || `${n}th`;
-    };
-    
-    const positionLabelShort = (n) => {
-      // Optimized for positions 1–10; extend if/when you go higher.
-      const map = {
-        1: '1st',
-        2: '2nd',
-        3: '3rd',
-        4: '4th',
-        5: '5th',
-        6: '6th',
-        7: '7th',
-        8: '8th',
-        9: '9th',
-        10: '10th'
-      };
-      return map[n] || `${n}th`;
-    };
-    
-    const canonicalBase = (s,p,f) => {
+    const canonicalBase = (s, p, f) => {
       const semi = OPEN_PC[s] + POS_SHIFT[p] + BASE_OFF[f];
-      return NOTE_NAME[((semi%12)+12)%12];
+      return NOTE_NAME[((semi % 12) + 12) % 12];
     };
+    
+    /**
+     * Long ordinal form used in headings and descriptive text.
+     * Handles 11/12/13 correctly.
+     *   1 -> "1st"
+     *   2 -> "2nd"
+     *   3 -> "3rd"
+     *   4 -> "4th"
+     *   11 -> "11th"
+     *   21 -> "21st"
+     */
+    const ordinal = (n) => {
+      if (n == null) return '';
+      const num = Math.trunc(Number(n));
+      if (!Number.isFinite(num)) return '';
+    
+      const s = String(num);
+      const last = s[s.length - 1];
+      const last2 = s.length > 1 ? s.slice(-2) : s;
+    
+      if (last2 === '11' || last2 === '12' || last2 === '13') return `${s}th`;
+      if (last === '1') return `${s}st`;
+      if (last === '2') return `${s}nd`;
+      if (last === '3') return `${s}rd`;
+      return `${s}th`;
+    };
+    
+    /**
+     * Short ordinal variant (currently the same as ordinal, but
+     * kept separate in case you ever want special styling later.
+     */
+    const ordinalShort = (n) => ordinal(n);
+    
+    /**
+     * Position label specifically for violin positions.
+     * Keeps the door open for special cases such as "½ pos" or
+     * different language variants in the future.
+     */
+    const positionLabelShort = (n) => ordinalShort(n);
     
     const levelForXP = (xp) => Math.floor(Math.pow(xp/300, 0.75)) + 1;
     const nextLevelXP = (lvl) => Math.round(300 * Math.pow(lvl, 1.4));
