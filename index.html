@@ -3554,19 +3554,36 @@
           setQ(null);
           return;
         }
-
-        const target = getRandom(cells);
+      
+        const bkt = loadBKT();
+      
+        // Weighted selection of target using BKT mastery
+        const weights = cells.map(c => bktPracticeWeight(bkt, c.s, c.p, c.f));
+        const total = weights.reduce((sum, w) => sum + w, 0) || 1;
+      
+        let r = Math.random() * total;
+        let chosen = cells[cells.length - 1];
+      
+        for (let i = 0; i < cells.length; i++) {
+          r -= weights[i];
+          if (r <= 0) {
+            chosen = cells[i];
+            break;
+          }
+        }
+      
+        const target = chosen;
         const highlights = [];
-
-        // Add 3 distractors
+      
+        // Add 3 distractors (still random, but could also be mastery-aware later)
         const distractors = shuffle(
           cells.filter(c => c.canon !== target.canon)
         ).slice(0, 3);
-
+      
         distractors.forEach(d => {
           highlights.push({ s: d.s, p: d.p, f: d.f, kind: 'distractor' });
         });
-
+      
         setQ({ target, highlights });
         setSelected(null);
         setFeedback(null);
