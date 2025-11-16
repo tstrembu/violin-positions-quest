@@ -618,7 +618,16 @@
 
     const INTERVAL_STATS_KEY = 'vmq.v6.intervalStats';
     const RHYTHM_STATS_KEY = 'vmq.v6.rhythmStats';
-    const BIELER_STATS_KEY = 'vmq.v6.bielerStats';    
+    const BIELER_STATS_KEY = 'vmq.v6.bielerStats';  
+    
+    const BKT_KEY = 'vmq.v6.bkt';
+
+    const BKT_DEFAULT_PARAMS = {
+      pInit: 0.25,   // initial belief student knows a new cell
+      pSlip: 0.10,   // chance of error despite knowing
+      pGuess: 0.20,  // chance of correct despite not knowing
+      pLearn: 0.08   // learning per exposure
+    };
     // ============================================================================
     // UTILITY FUNCTIONS
     // ============================================================================
@@ -638,6 +647,88 @@
       } catch {}
     };
     
+    // ----- BKT core helpers -----
+
+    // Key for any (string, position, finger) triple
+    const cellKey = (s, p, f) => `${s}:${p}:${f}`;
+    
+    // Load full BKT map: { [key]: { pKnow, seen, last, params? } }
+    const loadBKT = () => loadJSON(BKT_KEY, {});
+    
+    // Save BKT
+    const saveBKT = (state) => saveJSON(BKT_KEY, state);
+    
+    // Get current BKT state for a cell, with sensible defaults
+    const getBKTForCell = (bktState, s, p, f) => {
+      const key = cellKey(s, p, f);
+      const existing = bktState[key];
+      if (existing) return existing;
+      return {
+        pKnow: BKT_DEFAULT_PARAMS.pInit,
+        seen: 0,
+        last: null
+      };
+    };
+    
+    // One BKT update step given previous P(K) and an observed correctness
+    const updateBKTProbability = (pKnowPrev, correct, params = BKT_DEFAULT_PARAMS) => {
+      const { pSlip, pGuess, pLearn } = params;
+    
+      // P(L_t | observation)
+      let num, den, pGivenObs;
+    
+      if (correct) {
+        num = pKnowPrev * (1 - pSlip);
+        den = num + (1 - pKnowPrev) * pGuess;
+      } else {
+        num = pKnowPrev * pSlip;
+        den = num + (1 - pKnowPrev) * (1 - pGuess);
+      }
+    
+      // Guard against weird edge cases
+      pGivenObs = den > 0 ? num / den : pKnowPrev;
+    
+      // Apply learning transition to get P(L_{t+1})
+      const pNext = pGivenObs + (1 - pGivenObs) * pLearn;
+    
+      // Clamp to [0,1]
+      return Math.min(0.999, Math.max(0.001, pNext));
+    };
+    
+    // Update the BKT store for a single cell after a response
+    const recordBKTObservation = (s, p, f, correct) => {
+      const bkt = loadBKT();
+      const key = cellKey(s, p, f);
+      const prev = getBKTForCell(bkt, s, p, f);
+    
+      const pNext = updateBKTProbability(prev.pKnow, correct);
+      bkt[key] = {
+        ...prev,
+        pKnow: pNext,
+        seen: (prev.seen || 0) + 1,
+        last: Date.now()
+      };
+    
+      saveBKT(bkt);
+      return bkt;
+    };
+    
+    // Weight for item selection: low-mastery cells are picked more often
+    const bktPracticeWeight = (bktState, s, p, f) => {
+      const { pKnow, seen } = getBKTForCell(bktState, s, p, f);
+    
+      // Base weight: inverse of mastery
+      let w = 1 - pKnow;
+    
+      // Light boost if the cell has never or rarely been seen
+      if (!seen || seen < 3) {
+        w += 0.25;
+      }
+    
+      // Keep everything above a small floor to avoid "dead" items
+      return Math.max(0.05, w);
+    };
+  
     const shuffle = a => {
       const arr = [...a];
       for(let i=arr.length-1; i>0; i--) {
