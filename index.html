@@ -3599,6 +3599,9 @@
         const cellKey = `${cell.s}:${cell.p}:${cell.f}`;
         const targetKey = `${q.target.s}:${q.target.p}:${q.target.f}`;
         const ok = cellKey === targetKey;
+        
+        // Update BKT mastery for this frame
+        recordBKTObservation(q.target.s, q.target.p, q.target.f, ok);
 
         setSelected(cell);
         setAnswered(a => a + 1);
