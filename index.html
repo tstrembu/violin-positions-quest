@@ -1145,8 +1145,8 @@
       const colWidth = boardWidth / posCount;
       const rowHeight = boardHeight / stringCount;
     
-      // Same order as your existing board: E at top, G at bottom
-      const ORDER = [...STRINGS].reverse();
+      // Visual order only; logic still uses STRINGS as before
+      const ORDER = VISUAL_STRING_ORDER;
     
       const stringColors = {
         G: '#b45309', // warm brown / rust
@@ -1155,18 +1155,11 @@
         E: '#2563eb'  // blue
       };
     
-      const vibrateSafe = (pattern) => {
-        try {
-          if (window.navigator && window.navigator.vibrate) {
-            window.navigator.vibrate(pattern);
-          }
-        } catch {}
-      };
-    
       const act = (cell) => {
         if (!disabled && onSelect) {
           onSelect(cell);
-          vibrateSafe([30]);
+          // use global haptic helper so user prefs are respected
+          vibrate([30]);
         }
       };
     
@@ -1278,12 +1271,9 @@
             );
           })}
     
-          {/* String lanes (E → A → D → G) */}
-          {ORDER.map((s, orderIdx) => {
-            const sIdx = STRINGS.indexOf(s);
-            if (sIdx === -1) return null;
-    
-            const yMid = topMargin + rowHeight * (sIdx + 0.5);
+          {/* String lanes in visual order: E (top) → A → D → G (bottom) */}
+          {ORDER.map((s, laneIdx) => {
+            const yMid = topMargin + rowHeight * (laneIdx + 0.5);
             const color = stringColors[s] || 'rgba(148, 163, 184, 0.85)';
     
             return (
@@ -1322,14 +1312,11 @@
             );
           })}
     
-          {/* Clickable pads: one per (string, position, finger) */}
-          {STRINGS.map((s) =>
+          {/* Clickable pads: one per (string, position, finger), using same visual order */}
+          {ORDER.map((s, laneIdx) =>
             POSITIONS.map((p, pIdx) =>
               FINGERS.map((f) => {
-                const sIdx = STRINGS.indexOf(s);
-                if (sIdx === -1) return null;
-    
-                const yMid = topMargin + rowHeight * (sIdx + 0.5);
+                const yMid = topMargin + rowHeight * (laneIdx + 0.5);
                 const bandX = leftMargin + colWidth * pIdx;
     
                 // Slight “toward bridge” compression in higher positions
@@ -1352,20 +1339,20 @@
     
                 let fill = 'rgba(248, 250, 252, 0.05)';
                 let stroke = 'rgba(148, 163, 184, 0.4)';
-                let strokeWidth = 1;
+                let strokeWidthPad = 1;
     
                 if (isCorrect) {
                   fill = 'url(#fingerboardHighlight)';
                   stroke = '#92400e';
-                  strokeWidth = 1.6;
+                  strokeWidthPad = 1.6;
                 } else if (isChosen && !isCorrect) {
                   fill = 'rgba(37, 99, 235, 0.12)';
                   stroke = '#2563eb';
-                  strokeWidth = 1.6;
+                  strokeWidthPad = 1.6;
                 } else if (isDistractor) {
                   fill = 'url(#fingerboardAltPattern)';
                   stroke = 'rgba(202, 138, 4, 0.9)';
-                  strokeWidth = 1.2;
+                  strokeWidthPad = 1.2;
                 }
     
                 return (
@@ -1379,7 +1366,7 @@
                       ry={6}
                       fill={fill}
                       stroke={stroke}
-                      strokeWidth={strokeWidth}
+                      strokeWidth={strokeWidthPad}
                       role="gridcell"
                       aria-selected={isCorrect || isChosen}
                       aria-label={`${s} string, ${ordinal(p)} position, finger ${f}, note ${note}`}
