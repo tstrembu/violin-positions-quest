@@ -1543,48 +1543,42 @@
       const [feedback, setFeedback] = React.useState(null);
       const [showCelebration, setShowCelebration] = React.useState(false);
       
-      const pick = React.useCallback((statsArg) => {
+      const pick = React.useCallback(() => {
         if (!cells.length) {
           setQ(null);
           return;
         }
-        
-        const sstats = statsArg ?? stats;
-        
-        // Weighted selection based on accuracy (SM-2 inspired)
-        const weight = c => {
-          const k = `${c.s}:${c.p}:${c.f}`;
-          const st = sstats[k] || { correct: 0, total: 0 };
-          const acc = st.total ? st.correct / st.total : 0;
-          // Items with lower accuracy get higher weight
-          return 1 - acc + 0.1;
-        };
-        
-        const total = cells.reduce((sum, c) => sum + weight(c), 0);
+      
+        const bkt = loadBKT();
+      
+        // Weighted random draw over filtered cells using BKT weights
+        const weights = cells.map(c => bktPracticeWeight(bkt, c.s, c.p, c.f));
+        const total = weights.reduce((sum, w) => sum + w, 0) || 1;
+      
         let r = Math.random() * total;
         let chosen = cells[cells.length - 1];
-        
-        for (const c of cells) {
-          r -= weight(c);
+      
+        for (let i = 0; i < cells.length; i++) {
+          r -= weights[i];
           if (r <= 0) {
-            chosen = c;
+            chosen = cells[i];
             break;
           }
         }
-        
+      
         const correct = chosen.canon;
         const pool = [...new Set(cells.map(c => c.canon))].filter(n => n !== correct);
         const opts = shuffle([correct, ...shuffle(pool).slice(0, 3)]);
-        
+      
         setQ({ cell: chosen, options: opts });
         setSelected(null);
         setFeedback(null);
-        
+      
         try {
           const midi = MIDI_BASE[chosen.s] + POS_SHIFT[chosen.p] + BASE_OFF[chosen.f];
           audioEngine.playNote({ midi });
         } catch {}
-      }, [cells, stats]);
+      }, [cells]);
       
       React.useEffect(() => {
         pick();
@@ -1602,6 +1596,9 @@
         
         setTimeout(() => {
           const ok = opt === q.cell.canon;
+          
+          // Update mastery model for this note-frame
+          recordBKTObservation(q.cell.s, q.cell.p, q.cell.f, ok);
           
           if (ok) {
             setScore(s => s + 1);
@@ -1648,7 +1645,7 @@
               }
             };
             saveJSON(STATS_KEY, next);
-            setTimeout(() => pick(next), ok ? 500 : 1500);
+            setTimeout(() => pick(), ok ? 500 : 1500);
             return next;
           });
           
