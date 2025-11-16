@@ -844,16 +844,10 @@
     const avgMasteryForSelection = (prefs) => {
       const cells = filteredCells(prefs);
       if (!cells.length) return 0;
-    
-      const bktState = loadBKT();
-      let sum = 0;
-    
-      for (const c of cells) {
-        const { pKnow } = getBKTForCell(bktState, c.s, c.p, c.f);
-        sum += pKnow;
-      }
-    
-      return sum / cells.length; // value between 0 and 1
+      const bkt = loadBKT();
+      const total = cells.reduce((sum, c) =>
+        sum + getBKTForCell(bkt, c.s, c.p, c.f).pKnow, 0);
+      return total / cells.length;
     };
     
     // Convert an average mastery score into a human-friendly difficulty tier
@@ -861,6 +855,31 @@
       if (m < 0.5) return 'easy';     // student is still stabilizing basics
       if (m < 0.85) return 'medium';  // solid but still room to grow
       return 'hard';                  // ready for challenge / transfer tasks
+    };
+    
+    // Build a per-position, per-string mastery grid (average P(know))
+    // Used for heatmaps / progress visualizations.
+    const buildPositionHeat = () => {
+      const bkt = loadBKT();
+      const result = {}; // { position: { string: {sum,count} } }
+    
+      for (const { s, p, f } of CELLS) {
+        const state = getBKTForCell(bkt, s, p, f);
+        if (!result[p]) result[p] = {};
+        if (!result[p][s]) result[p][s] = { sum: 0, count: 0 };
+        result[p][s].sum   += state.pKnow;
+        result[p][s].count += 1;
+      }
+    
+      const out = {};
+      for (const p of POSITIONS) {
+        out[p] = {};
+        for (const s of STRINGS) {
+          const cell = result[p]?.[s];
+          out[p][s] = cell ? cell.sum / cell.count : 0;
+        }
+      }
+      return out;
     };
     
     // ============================================================================
