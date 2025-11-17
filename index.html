@@ -3489,7 +3489,7 @@
     // DAILY QUEST - Interleaved Practice Mode (NEW)
     // ============================================================================
 
-    function DailyQuest({ prefs, onBack }) {
+    function DailyQuest({ prefs, onBack, onStartModule }) {
       const QUEST_KEY = 'vmq.v6.dailyQuest';
       const QUEST_DATE_KEY = 'vmq.v6.questDate';
 
@@ -3538,10 +3538,34 @@
         }
       }, [isComplete, questData.bonusEarned]);
 
-      const startModule = (moduleName) => {
-        // This would navigate to the specific module
-        // For now, just show a message
+      // Helper for the "Practice Now" buttons.
+      // Shows a friendly message and then jumps straight into the right module.
+      const startModule = (moduleKey) => {
+        const LABELS = {
+          speed: 'Speed Drill',
+          interval: 'Interval Training',
+          rhythm: 'Rhythm Trainer',
+          bieler: 'Bieler Technique Lab',
+        };
+      
+        const name = LABELS[moduleKey] || 'Practice';
+      
+        const message =
+          `Starting ${name}. ` +
+          `Complete your practice, then return to the Daily Quest card to mark your progress.`;
+      
+        // Screen-reader hint so it still feels like a guide/coach
+        if (typeof speakSR === 'function') {
+          speakSR(message);
+        }
+        
+        // Keep the system-style popup you liked
         alert(`Starting ${moduleName}. Complete your practice, then return here!`);
+        
+        // After the popup is dismissed, immediately navigate to the right module
+        if (typeof onStartModule === 'function') {
+          onStartModule(moduleKey);
+        }
       };
 
       return (
@@ -3586,12 +3610,9 @@
                 />
                 {questData.completed.speedDrill < questData.speedDrill && (
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <button 
-                      className="btn btn-primary"
-                      onClick={() => startModule('Speed Drill')}
-                    >
+                    <Button className="btn btn-primary" onClick={() => startModule('speed')}>
                       Practice Now
-                    </button>
+                    </Button>
                     <button 
                       className="btn btn-secondary"
                        // Speed Drill “Mark 1 Done"
@@ -3627,12 +3648,9 @@
                 />
                 {questData.completed.interval < questData.interval && (
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <button 
-                      className="btn btn-primary"
-                      onClick={() => startModule('Interval Training')}
-                    >
+                    <Button className="btn btn-primary" onClick={() => startModule('interval')}>
                       Practice Now
-                    </button>
+                    </Button>
                     <button 
                       className="btn btn-secondary"
                        // Interval "Mark 1 Done"
@@ -4964,7 +4982,11 @@
           )}
 
           {screen === 'quest' && (
-            <DailyQuest prefs={prefs} onBack={() => setScreen('menu')} />
+            <DailyQuest
+              prefs={prefs}
+              onBack={() => setScreen('menu')}
+              onStartModule={(moduleKey) => setScreen(moduleKey)}
+            />
           )}
           
           {screen === 'positionRef' && (
