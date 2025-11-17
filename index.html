@@ -3671,7 +3671,11 @@
             <p style={{ fontWeight: 600 }}>
               {t.completed} / {t.required}
             </p>
-            <ProgressBar progress={t.completed} total={t.required} />
+            <ProgressBar
+              current={t.completed}
+              max={t.required || 1}
+              label={`${t.completed} / ${t.required}`}
+            />
             <div style={{ marginTop: '0.75rem' }}>
               <button
                 className="btn btn-primary"
