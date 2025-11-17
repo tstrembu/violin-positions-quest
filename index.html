@@ -3547,21 +3547,21 @@
           rhythm: 'Rhythm Trainer',
           bieler: 'Bieler Technique Lab',
         };
-      
+
         const name = LABELS[moduleKey] || 'Practice';
-      
+
         const message =
           `Starting ${name}. ` +
           `Complete your practice, then return to the Daily Quest card to mark your progress.`;
-      
+
         // Screen-reader hint so it still feels like a guide/coach
         if (typeof speakSR === 'function') {
           speakSR(message);
         }
-        
-        // Keep the system-style popup you liked
-        alert(`Starting ${moduleName}. Complete your practice, then return here!`);
-        
+
+        // Keep the system-style popup you like, but use the correct variable
+        alert(`Starting ${name}. Complete your practice, then return here!`);
+
         // After the popup is dismissed, immediately navigate to the right module
         if (typeof onStartModule === 'function') {
           onStartModule(moduleKey);
