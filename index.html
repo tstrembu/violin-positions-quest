@@ -648,6 +648,10 @@
     const BIELER_STATS_KEY = 'vmq.v7.bielerStats';  
     
     const BKT_KEY = 'vmq.v7.bkt';
+    
+    // Daily Quest storage
+    const QUEST_KEY = 'vmq.v7.dailyQuest';
+    const QUEST_DATE_KEY = 'vmq.v7.dailyQuestDate';
 
     const BKT_DEFAULT_PARAMS = {
       pInit: 0.25,   // initial belief student knows a new cell
@@ -3484,335 +3488,232 @@
       );
     }
 
-    
     // ============================================================================
     // DAILY QUEST - Interleaved Practice Mode (NEW)
     // ============================================================================
-
+    
+    const QUEST_XP_PER_UNIT = {
+      speedDrill: 5,
+      interval: 7,
+      rhythm: 7,
+      bieler: 10,
+    };
+    
+    const QUEST_TASK_KEYS = ['speedDrill', 'interval', 'rhythm', 'bieler'];
+    
+    const makeDefaultQuest = () => ({
+      speedDrill: { required: 5, completed: 0 },
+      interval:   { required: 3, completed: 0 },
+      rhythm:     { required: 2, completed: 0 },
+      bieler:     { required: 1, completed: 0 },
+      bonusAwarded: false,
+    });
+    
     function DailyQuest({ prefs, onBack, onStartModule }) {
-      const QUEST_KEY = 'vmq.v7.dailyQuest';
-      const QUEST_DATE_KEY = 'vmq.v7.questDate';
-    
-      const [questData, setQuestData] = React.useState(() => {
+      // Load or create today's quest
+      const [quest, setQuest] = React.useState(() => {
         const today = new Date().toDateString();
-        const lastDate = localStorage.getItem(QUEST_DATE_KEY);
+        const last = localStorage.getItem(QUEST_DATE_KEY);
     
-        if (lastDate === today) {
-          const saved = loadJSON(QUEST_KEY, null);
-          if (saved) return saved;
+        // Try to reuse today's quest if it exists and has the right shape
+        if (last === today) {
+          const stored = loadJSON(QUEST_KEY, null);
+          if (stored && typeof stored === 'object') {
+            return stored;
+          }
         }
     
-        // Generate new quest for today
-        return {
-          speedDrill: 5,
-          interval: 3,
-          rhythm: 2,
-          bieler: 1,
-          completed: {
-            speedDrill: 0,
-            interval: 0,
-            rhythm: 0,
-            bieler: 0
-          },
-          bonusEarned: false
-        };
+        // Otherwise, start fresh for today
+        const fresh = makeDefaultQuest();
+        saveJSON(QUEST_KEY, fresh);
+        localStorage.setItem(QUEST_DATE_KEY, today);
+        return fresh;
       });
     
-      React.useEffect(() => {
-        const today = new Date().toDateString();
-        localStorage.setItem(QUEST_DATE_KEY, today);
-        saveJSON(QUEST_KEY, questData);
-      }, [questData]);
+      // Aggregate totals for the top progress bar
+      const { requiredTotal, completedTotal } = React.useMemo(() => {
+        let requiredTotal = 0;
+        let completedTotal = 0;
     
-      const totalRequired =
-        questData.speedDrill +
-        questData.interval +
-        questData.rhythm +
-        questData.bieler;
+        QUEST_TASK_KEYS.forEach((key) => {
+          const t = quest[key];
+          if (!t) return;
+          requiredTotal += t.required || 0;
+          completedTotal += t.completed || 0;
+        });
     
-      const totalCompleted = Object.values(questData.completed).reduce(
-        (a, b) => a + b,
-        0
-      );
-      const isComplete = totalCompleted >= totalRequired;
+        return { requiredTotal, completedTotal };
+      }, [quest]);
     
-      React.useEffect(() => {
-        if (isComplete && !questData.bonusEarned) {
-          addXP(50); // Bonus XP for completing quest
-          if (audioEngine && typeof audioEngine.playCelebration === 'function') {
-            audioEngine.playCelebration();
+      const allDone =
+        requiredTotal > 0 && completedTotal >= requiredTotal && !quest.bonusAwarded;
+    
+      // Mark one unit done for a specific task (Speed, Interval, Rhythm, Technique)
+      const handleMarkUnitDone = (key) => {
+        setQuest((prev) => {
+          const task = prev[key];
+          if (!task || task.completed >= task.required) return prev;
+    
+          // Previous totals before this increment
+          const prevTotals = QUEST_TASK_KEYS.reduce(
+            (acc, k) => {
+              const t = prev[k];
+              if (!t) return acc;
+              acc.required += t.required || 0;
+              acc.completed += t.completed || 0;
+              return acc;
+            },
+            { required: 0, completed: 0 }
+          );
+    
+          const updated = {
+            ...prev,
+            [key]: { ...task, completed: task.completed + 1 },
+          };
+    
+          // Award XP for this unit
+          const xp = QUEST_XP_PER_UNIT[key] ?? 5;
+          addXP(xp);
+          saveJSON(QUEST_KEY, updated);
+    
+          // Check if this *just* completed the whole quest for the day
+          const newCompleted = prevTotals.completed + 1;
+          const questJustFinished =
+            prevTotals.required > 0 &&
+            prevTotals.completed < prevTotals.required &&
+            newCompleted >= prevTotals.required;
+    
+          if (questJustFinished && !prev.bonusAwarded) {
+            const withBonus = {
+              ...updated,
+              bonusAwarded: true,
+            };
+            addXP(25); // daily quest completion bonus
+            saveJSON(QUEST_KEY, withBonus);
+            return withBonus;
           }
-          if (typeof vibrate === 'function') {
-            vibrate([50, 100, 50, 100, 50]);
-          }
-          if (typeof speakSR === 'function') {
-            speakSR('Daily Quest complete! Bonus 50 XP earned!');
-          }
-          setQuestData((prev) => ({ ...prev, bonusEarned: true }));
-        }
-      }, [isComplete, questData.bonusEarned]);
     
-      // Helper for the "Practice Now" buttons.
-      // Shows a friendly message and then jumps straight into the right module.
-      const startModule = (moduleKey) => {
-        const LABELS = {
-          speed: 'Speed Drill',
-          interval: 'Interval Training',
-          rhythm: 'Rhythm Trainer',
-          bieler: 'Bieler Technique Lab'
+          return updated;
+        });
+      };
+    
+      // Start the appropriate practice module
+      const startTask = (key) => {
+        const moduleMap = {
+          speedDrill: 'speed',
+          interval: 'interval',
+          rhythm: 'rhythm',
+          bieler: 'bieler',
         };
     
-        const name = LABELS[moduleKey] || 'Practice';
+        const labelMap = {
+          speedDrill: 'Speed Drill',
+          interval: 'Interval Trainer',
+          rhythm: 'Rhythm Trainer',
+          bieler: 'Bieler Technique Lab',
+        };
     
-        const message =
-          `Starting ${name}. ` +
-          `Complete your practice, then return to the Daily Quest card to mark your progress.`;
+        const moduleKey = moduleMap[key];
+        const label = labelMap[key] || 'practice';
     
-        // Screen-reader hint so it still feels like a guide/coach
-        if (typeof speakSR === 'function') {
-          speakSR(message);
+        if (navigator.vibrate) {
+          navigator.vibrate([10, 40, 10]);
         }
     
-        // Keep the system-style popup you like
-        alert(message);
+        speakSR(
+          `Starting ${label}. When you finish your practice, come back to Daily Quest and mark one task done.`
+        );
     
-        // After the popup is dismissed, immediately navigate to the right module
-        if (typeof onStartModule === 'function') {
+        if (typeof onStartModule === 'function' && moduleKey) {
           onStartModule(moduleKey);
         }
       };
     
-      return (
-        <div>
-          <div className="card">
-            <h2>📅 Daily Quest</h2>
-            <p style={{ color: 'var(--ink-light)', marginTop: '-0.5rem' }}>
-              Complete today's interleaved practice for bonus XP!
+      const tasksMeta = [
+        {
+          key: 'speedDrill',
+          icon: '⚡',
+          title: 'Speed Drill',
+          subtitle: 'Complete 5 speed drill questions',
+        },
+        {
+          key: 'interval',
+          icon: '🎵🎵',
+          title: 'Interval Training',
+          subtitle: 'Complete 3 interval recognition tasks',
+        },
+        {
+          key: 'rhythm',
+          icon: '🥁',
+          title: 'Rhythm Trainer',
+          subtitle: 'Complete 2 rhythm patterns',
+        },
+        {
+          key: 'bieler',
+          icon: '🎻',
+          title: 'Technique Lab',
+          subtitle: 'Complete 1 Bieler Technique micro-session',
+        },
+      ];
+    
+      const renderTaskCard = (meta) => {
+        const t = quest[meta.key] || { required: 0, completed: 0 };
+        const done = t.required > 0 && t.completed >= t.required;
+    
+        return (
+          <div className="card card-compact" key={meta.key}>
+            <h3>
+              {meta.icon} {meta.title}
+            </h3>
+            <p>{meta.subtitle}</p>
+            <p style={{ fontWeight: 600 }}>
+              {t.completed} / {t.required}
             </p>
-    
-            <ProgressBar
-              current={totalCompleted}
-              max={totalRequired}
-              label={`${totalCompleted} / ${totalRequired} tasks complete`}
-            />
-    
-            {isComplete && (
-              <div
-                style={{
-                  marginTop: '1rem',
-                  padding: '1rem',
-                  background: 'linear-gradient(135deg, var(--success), var(--primary))',
-                  color: '#fff',
-                  borderRadius: '12px',
-                  textAlign: 'center'
-                }}
+            <ProgressBar progress={t.completed} total={t.required} />
+            <div style={{ marginTop: '0.75rem' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => startTask(meta.key)}
               >
-                <h3 style={{ margin: 0, color: '#fff' }}>🎉 Quest Complete!</h3>
-                <p style={{ margin: '0.5rem 0 0' }}>
-                  +50 Bonus XP • Come back tomorrow for a new quest!
-                </p>
-              </div>
-            )}
-    
-            <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
-              {/* Speed Drill Tasks */}
-              <div className="card card-compact">
-                <h3>⚡ Speed Drill</h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)' }}>
-                  Complete {questData.speedDrill} speed drill questions
-                </p>
-                <ProgressBar
-                  current={questData.completed.speedDrill}
-                  max={questData.speedDrill}
-                  label={`${questData.completed.speedDrill} / ${questData.speedDrill}`}
-                />
-                {questData.completed.speedDrill < questData.speedDrill && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '0.5rem'
-                    }}
-                  >
-                    <Button
-                      className="btn btn-primary"
-                      onClick={() => startModule('speed')}
-                    >
-                      Practice Now
-                    </Button>
-                    <button
-                      className="btn btn-secondary"
-                      // Speed Drill “Mark 1 Done"
-                      onClick={() =>
-                        setQuestData((prev) => ({
-                          ...prev,
-                          completed: {
-                            ...prev.completed,
-                            speedDrill: Math.min(
-                              prev.speedDrill,
-                              prev.completed.speedDrill + 1
-                            )
-                          }
-                        }))
-                      }
-                    >
-                      ✔️ Mark 1 Done
-                    </button>
-                  </div>
-                )}
-              </div>
-    
-              {/* Interval Tasks */}
-              <div className="card card-compact">
-                <h3>🎶 Interval Training</h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)' }}>
-                  Complete {questData.interval} interval recognition tasks
-                </p>
-                <ProgressBar
-                  current={questData.completed.interval}
-                  max={questData.interval}
-                  label={`${questData.completed.interval} / ${questData.interval}`}
-                />
-                {questData.completed.interval < questData.interval && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '0.5rem'
-                    }}
-                  >
-                    <Button
-                      className="btn btn-primary"
-                      onClick={() => startModule('interval')}
-                    >
-                      Practice Now
-                    </Button>
-                    <button
-                      className="btn btn-secondary"
-                      // Interval “Mark 1 Done"
-                      onClick={() =>
-                        setQuestData((prev) => ({
-                          ...prev,
-                          completed: {
-                            ...prev.completed,
-                            interval: Math.min(
-                              prev.interval,
-                              prev.completed.interval + 1
-                            )
-                          }
-                        }))
-                      }
-                    >
-                      ✔️ Mark 1 Done
-                    </button>
-                  </div>
-                )}
-              </div>
-    
-              {/* Rhythm Tasks */}
-              <div className="card card-compact">
-                <h3>🥁 Rhythm Trainer</h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)' }}>
-                  Complete {questData.rhythm} rhythm patterns
-                </p>
-                <ProgressBar
-                  current={questData.completed.rhythm}
-                  max={questData.rhythm}
-                  label={`${questData.completed.rhythm} / ${questData.rhythm}`}
-                />
-                {questData.completed.rhythm < questData.rhythm && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '0.5rem'
-                    }}
-                  >
-                    <Button
-                      className="btn btn-primary"
-                      onClick={() => startModule('rhythm')}
-                    >
-                      Practice Now
-                    </Button>
-                    <button
-                      className="btn btn-secondary"
-                      // Rhythm “Mark 1 Done"
-                      onClick={() =>
-                        setQuestData((prev) => ({
-                          ...prev,
-                          completed: {
-                            ...prev.completed,
-                            rhythm: Math.min(
-                              prev.rhythm,
-                              prev.completed.rhythm + 1
-                            )
-                          }
-                        }))
-                      }
-                    >
-                      ✔️ Mark 1 Done
-                    </button>
-                  </div>
-                )}
-              </div>
-    
-              {/* Bieler Technique Lab Tasks */}
-              <div className="card card-compact">
-                <h3>🎻 Bieler Technique Lab</h3>
-                <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)' }}>
-                  Complete {questData.bieler} focused Bieler Lab session
-                  {questData.bieler > 1 ? 's' : ''}
-                </p>
-                <ProgressBar
-                  current={questData.completed.bieler}
-                  max={questData.bieler}
-                  label={`${questData.completed.bieler} / ${questData.bieler}`}
-                />
-                {questData.completed.bieler < questData.bieler && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '0.5rem'
-                    }}
-                  >
-                    <Button
-                      className="btn btn-primary"
-                      onClick={() => startModule('bieler')}
-                    >
-                      Practice Now
-                    </Button>
-                    <button
-                      className="btn btn-secondary"
-                      // Bieler “Mark 1 Done"
-                      onClick={() =>
-                        setQuestData((prev) => ({
-                          ...prev,
-                          completed: {
-                            ...prev.completed,
-                            bieler: Math.min(
-                              prev.bieler,
-                              prev.completed.bieler + 1
-                            )
-                          }
-                        }))
-                      }
-                    >
-                      ✔️ Mark 1 Done
-                    </button>
-                  </div>
-                )}
-              </div>
+                Practice Now
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ marginLeft: '0.5rem' }}
+                onClick={() => handleMarkUnitDone(meta.key)}
+                disabled={done}
+              >
+                ✓ Mark 1 Done
+              </button>
             </div>
           </div>
+        );
+      };
     
+      return (
+        <div className="container" style={{ marginTop: '1rem' }}>
           <button className="btn btn-secondary" onClick={onBack}>
-            Back to Menu
+            ← Back
           </button>
+    
+          <div className="card">
+            <h2>📅 Daily Quest</h2>
+            <p>Complete today's interleaved practice for bonus XP!</p>
+            <p style={{ fontWeight: 600 }}>
+              {completedTotal} / {requiredTotal} tasks complete
+            </p>
+            <ProgressBar progress={completedTotal} total={requiredTotal} />
+            {quest.bonusAwarded && (
+              <p style={{ marginTop: '0.75rem', color: 'var(--success)' }}>
+                Great job — you’ve finished today’s quest and earned a bonus!
+              </p>
+            )}
+          </div>
+    
+          {tasksMeta.map(renderTaskCard)}
         </div>
       );
     }
-
     
     // ============================================================================
     // FINGERBOARD QUIZ - Interactive Board Mode (NEW)
