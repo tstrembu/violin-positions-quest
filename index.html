@@ -4388,12 +4388,139 @@ const normalizePrefs = (rawPrefs) => {
     // SETTINGS SCREEN (Enhanced)
     // ============================================================================
     
+    // ============================================================================
+    // SETTINGS SCREEN (Enhanced, with hard position gating)
+    // ============================================================================
+    
     function Settings({ prefs, setPrefs, onBack }) {
-      const [localPrefs, setLocalPrefs] = React.useState(prefs);
+      const [localPrefs, setLocalPrefs] = React.useState(() => normalizePrefs(prefs));
       const [muted, setMuted] = React.useState(audioEngine.mute);
       const [dark, setDark] = React.useState(
         document.documentElement.classList.contains('dark')
       );
+    
+      // Recompute mastery & unlock status on each render; cheap compared to React work
+      const positionHeat = buildPositionHeat();
+      const baselineMastery = corePositionsMastery();
+      const advancedUnlocked = baselineMastery >= POSITION_UNLOCK_THRESHOLD;
+    
+      const isPositionLocked = (p) =>
+        ADVANCED_POSITIONS.includes(p) && !advancedUnlocked;
+    
+      const toggleString = (s) => {
+        setLocalPrefs((prev) => ({
+          ...prev,
+          strings: { ...prev.strings, [s]: !prev.strings[s] }
+        }));
+      };
+    
+      const togglePosition = (p) => {
+        if (isPositionLocked(p)) return; // extra safety; UI will also disable
+        setLocalPrefs((prev) => ({
+          ...prev,
+          positions: { ...prev.positions, [p]: !prev.positions[p] }
+        }));
+      };
+    
+      const save = () => {
+        const normalized = normalizePrefs(localPrefs);
+        setPrefs(normalized);
+        saveJSON(PREFS_KEY, normalized);
+        audioEngine.mute = muted;
+        saveJSON('vmq.v6.mute', muted);
+    
+        if (dark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        onBack();
+      };
+    
+      const cancel = () => onBack();
+    
+      return (
+        <div className="card">
+          <h2>Settings</h2>
+    
+          {/* Strings */}
+          <section style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ marginBottom: 8 }}>Practice strings</h3>
+            <p className="muted">
+              Turn strings on/off to match current repertoire or teacher focus.
+            </p>
+            <div className="chip-row">
+              {STRINGS.map((s) => (
+                <OptionButton
+                  key={s}
+                  label={`${s} string`}
+                  selected={!!localPrefs.strings[s]}
+                  onClick={() => toggleString(s)}
+                />
+              ))}
+            </div>
+          </section>
+    
+          {/* Positions */}
+          <section style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ marginBottom: 8 }}>Practice positions</h3>
+            <p className="muted" style={{ marginBottom: 6 }}>
+              Start with 1st–5th position. Positions 6–10 unlock once your average
+              mastery in the core positions reaches {Math.round(POSITION_UNLOCK_THRESHOLD * 100)}%.
+            </p>
+            <p className="muted" style={{ marginBottom: 10 }}>
+              Current core mastery: <strong>{Math.round(baselineMastery * 100)}%</strong>
+            </p>
+    
+            <div className="chip-row" aria-label="Practice positions" role="radiogroup">
+              {POSITIONS.map((p) => {
+                const locked = isPositionLocked(p);
+                const active = !!localPrefs.positions[p];
+    
+                let label = positionLabelShort(p);
+                if (locked) label += ' (locked)';
+    
+                return (
+                  <OptionButton
+                    key={p}
+                    label={label}
+                    selected={active && !locked}
+                    disabled={locked}
+                    onClick={() => togglePosition(p)}
+                  />
+                );
+              })}
+            </div>
+          </section>
+    
+          {/* Sound / Theme */}
+          <section style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ marginBottom: 8 }}>Sound & display</h3>
+            <div className="chip-row">
+              <OptionButton
+                label={muted ? 'Sound: Off' : 'Sound: On'}
+                selected={!muted}
+                onClick={() => setMuted((m) => !m)}
+              />
+              <OptionButton
+                label={dark ? 'Dark mode' : 'Light mode'}
+                selected={dark}
+                onClick={() => setDark((d) => !d)}
+              />
+            </div>
+          </section>
+    
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-secondary" onClick={cancel}>
+              Cancel
+            </button>
+            <button type="button" className="btn btn-primary" onClick={save}>
+              Save
+            </button>
+          </div>
+        </div>
+      );
+    }
       
       // BKT-based mastery for progressive unlock (positions 6–10)
       const positionHeat = buildPositionHeat();
