@@ -987,6 +987,35 @@ const normalizePrefs = (rawPrefs) => {
       return out;
     };
     
+    // ---------------------------------------------------------------------------
+    // Position mastery gating helpers (Settings / future modules)
+    // ---------------------------------------------------------------------------
+    
+    const CORE_POSITIONS = [1, 2, 3, 4, 5];
+    const ADVANCED_POSITIONS = POSITIONS.filter(p => !CORE_POSITIONS.includes(p));
+    // 75% average BKT mastery in 1st–5th position to unlock 6–10.
+    const POSITION_UNLOCK_THRESHOLD = 0.75;
+    
+    /**
+     * Average BKT mastery across core positions 1–5.
+     * Accepts an optional positionHeat matrix to avoid recomputing if already built.
+     * Returns a 0–1 value.
+     */
+    function corePositionsMastery(positionHeat) {
+      const heat = positionHeat || buildPositionHeat();
+      let sum = 0;
+      let count = 0;
+    
+      for (const p of CORE_POSITIONS) {
+        for (const s of STRINGS) {
+          const v = heat[p]?.[s] ?? 0;
+          sum += v;
+          count += 1;
+        }
+      }
+      return count ? sum / count : 0;
+    }
+    
     // ============================================================================
     // AUDIO ENGINE (Enhanced)
     // ============================================================================
@@ -4383,11 +4412,7 @@ const normalizePrefs = (rawPrefs) => {
         </div>
       );
     }
-    
-    // ============================================================================
-    // SETTINGS SCREEN (Enhanced)
-    // ============================================================================
-    
+
     // ============================================================================
     // SETTINGS SCREEN (Enhanced, with hard position gating)
     // ============================================================================
