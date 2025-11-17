@@ -201,6 +201,33 @@
       text-align:left;
     }
     
+    /* Compact chip layout just for the Positions Charts selector */
+    .position-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    /* Override the global .option-btn width ONLY inside the position selector */
+    .position-nav .option-btn {
+      width: auto;
+      min-width: 3.1rem;       /* fits “10th” comfortably */
+      padding: 0.45rem 0.9rem; /* slightly more compact */
+      margin: 0;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    /* Optional: tiny tweak for very small phones */
+    @media (max-width: 480px) {
+      .position-nav {
+        max-width: 360px;
+        margin-inline: auto;
+      }
+    }
+    
     .option-btn:hover:not(:disabled) {
       transform:translateX(4px);
       border-color:rgba(255,255,255,0.3);
