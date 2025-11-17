@@ -3924,7 +3924,7 @@
                   ))}
 
                   {/* Rows per string */}
-                  {STRINGS.map(s => (
+                  {VISUAL_STRING_ORDER.map(s => (
                     <React.Fragment key={s}>
                       <div
                         style={{
@@ -3940,7 +3940,7 @@
                         const v = positionHeat[p]?.[s] || 0;   // 0–1
                         const pct = Math.round(v * 100);
                         const bg = getHeatColor(pct);          // reuse your existing helper
-
+                  
                         return (
                           <div
                             key={`${s}-${p}`}
