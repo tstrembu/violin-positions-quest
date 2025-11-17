@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Professional Edition 6.3.9.1</title>
+  <title>Violin Mastery Quest – Professional Edition 7.0.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!--
     Provide a descriptive summary of what this page offers. This helps search engines
@@ -632,22 +632,22 @@
     // STORAGE KEYS
     // ============================================================================
     
-    const XP_KEY = 'vmq.v6.xp';
-    const STATS_KEY = 'vmq.v6.stats';
-    const PREFS_KEY = 'vmq.v6.prefs';
-    const FLASH_KEY = 'vmq.v6.flashcards';
-    const FLASH_SIG_KEY = 'vmq.v6.flashcards.sig';
-    const ACHIEVEMENTS_KEY = 'vmq.v6.achievements';
-    const STREAK_KEY = 'vmq.v6.streak';
-    const LAST_VISIT_KEY = 'vmq.v6.lastVisit';
-    const TUTORIAL_KEY = 'vmq.v6.tutorialComplete';
-    const REFLECTIONS_KEY = 'vmq.v6.reflections';
+    const XP_KEY = 'vmq.v7.xp';
+    const STATS_KEY = 'vmq.v7.stats';
+    const PREFS_KEY = 'vmq.v7.prefs';
+    const FLASH_KEY = 'vmq.v7.flashcards';
+    const FLASH_SIG_KEY = 'vmq.v7.flashcards.sig';
+    const ACHIEVEMENTS_KEY = 'vmq.v7.achievements';
+    const STREAK_KEY = 'vmq.v7.streak';
+    const LAST_VISIT_KEY = 'vmq.v7.lastVisit';
+    const TUTORIAL_KEY = 'vmq.v7.tutorialComplete';
+    const REFLECTIONS_KEY = 'vmq.v7.reflections';
 
-    const INTERVAL_STATS_KEY = 'vmq.v6.intervalStats';
-    const RHYTHM_STATS_KEY = 'vmq.v6.rhythmStats';
-    const BIELER_STATS_KEY = 'vmq.v6.bielerStats';  
+    const INTERVAL_STATS_KEY = 'vmq.v7.intervalStats';
+    const RHYTHM_STATS_KEY = 'vmq.v7.rhythmStats';
+    const BIELER_STATS_KEY = 'vmq.v7.bielerStats';  
     
-    const BKT_KEY = 'vmq.v6.bkt';
+    const BKT_KEY = 'vmq.v7.bkt';
 
     const BKT_DEFAULT_PARAMS = {
       pInit: 0.25,   // initial belief student knows a new cell
@@ -1017,7 +1017,7 @@
     class AudioEngine {
       constructor() {
         this.ctx = null;
-        this.mute = loadJSON('vmq.v6.mute', false);
+        this.mute = loadJSON('vmq.v7.mute', false);
       }
       
       ensure() {
@@ -1114,7 +1114,7 @@
       
       setMute(m) {
         this.mute = m;
-        saveJSON('vmq.v6.mute', m);
+        saveJSON('vmq.v7.mute', m);
       }
     }
     
@@ -3490,8 +3490,8 @@
     // ============================================================================
 
     function DailyQuest({ prefs, onBack, onStartModule }) {
-      const QUEST_KEY = 'vmq.v6.dailyQuest';
-      const QUEST_DATE_KEY = 'vmq.v6.questDate';
+      const QUEST_KEY = 'vmq.v7.dailyQuest';
+      const QUEST_DATE_KEY = 'vmq.v7.questDate';
     
       const [questData, setQuestData] = React.useState(() => {
         const today = new Date().toDateString();
