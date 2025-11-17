@@ -874,6 +874,9 @@
     const filterActiveCells = (prefs) =>
       CELLS.filter((c) => prefs.strings[c.s] && prefs.positions[c.p]);
 
+    // Backwards-compatible alias: older code still using `filteredCells`
+    const filteredCells = filterActiveCells;
+
     /**
      * Average BKT mastery across core positions (1–5).
      * Accepts an optional positionHeat matrix to avoid recomputing if already built.
