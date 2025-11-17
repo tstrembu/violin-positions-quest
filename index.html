@@ -3492,16 +3492,17 @@
     function DailyQuest({ prefs, onBack, onStartModule }) {
       const QUEST_KEY = 'vmq.v6.dailyQuest';
       const QUEST_DATE_KEY = 'vmq.v6.questDate';
-
+    
       const [questData, setQuestData] = React.useState(() => {
         const today = new Date().toDateString();
         const lastDate = localStorage.getItem(QUEST_DATE_KEY);
-
+    
         if (lastDate === today) {
-          return loadJSON(QUEST_KEY, null);
+          const saved = loadJSON(QUEST_KEY, null);
+          if (saved) return saved;
         }
-
-        // Generate new quest
+    
+        // Generate new quest for today
         return {
           speedDrill: 5,
           interval: 3,
@@ -3516,28 +3517,41 @@
           bonusEarned: false
         };
       });
-
+    
       React.useEffect(() => {
         const today = new Date().toDateString();
         localStorage.setItem(QUEST_DATE_KEY, today);
         saveJSON(QUEST_KEY, questData);
       }, [questData]);
-
-      const totalRequired = questData.speedDrill + questData.interval + questData.rhythm + questData.bieler;
-      const totalCompleted = Object.values(questData.completed).reduce((a, b) => a + b, 0);
-      const progressPercent = (totalCompleted / totalRequired) * 100;
+    
+      const totalRequired =
+        questData.speedDrill +
+        questData.interval +
+        questData.rhythm +
+        questData.bieler;
+    
+      const totalCompleted = Object.values(questData.completed).reduce(
+        (a, b) => a + b,
+        0
+      );
       const isComplete = totalCompleted >= totalRequired;
-
+    
       React.useEffect(() => {
         if (isComplete && !questData.bonusEarned) {
           addXP(50); // Bonus XP for completing quest
-          audioEngine.playCelebration();
-          vibrate([50, 100, 50, 100, 50]);
-          speakSR('Daily Quest complete! Bonus 50 XP earned!');
-          setQuestData(prev => ({ ...prev, bonusEarned: true }));
+          if (audioEngine && typeof audioEngine.playCelebration === 'function') {
+            audioEngine.playCelebration();
+          }
+          if (typeof vibrate === 'function') {
+            vibrate([50, 100, 50, 100, 50]);
+          }
+          if (typeof speakSR === 'function') {
+            speakSR('Daily Quest complete! Bonus 50 XP earned!');
+          }
+          setQuestData((prev) => ({ ...prev, bonusEarned: true }));
         }
       }, [isComplete, questData.bonusEarned]);
-
+    
       // Helper for the "Practice Now" buttons.
       // Shows a friendly message and then jumps straight into the right module.
       const startModule = (moduleKey) => {
@@ -3545,29 +3559,29 @@
           speed: 'Speed Drill',
           interval: 'Interval Training',
           rhythm: 'Rhythm Trainer',
-          bieler: 'Bieler Technique Lab',
+          bieler: 'Bieler Technique Lab'
         };
-
+    
         const name = LABELS[moduleKey] || 'Practice';
-
+    
         const message =
           `Starting ${name}. ` +
           `Complete your practice, then return to the Daily Quest card to mark your progress.`;
-
+    
         // Screen-reader hint so it still feels like a guide/coach
         if (typeof speakSR === 'function') {
           speakSR(message);
         }
-
-        // Keep the system-style popup you like, but use the correct variable
-        alert(`Starting ${name}. Complete your practice, then return here!`);
-
+    
+        // Keep the system-style popup you like
+        alert(message);
+    
         // After the popup is dismissed, immediately navigate to the right module
         if (typeof onStartModule === 'function') {
           onStartModule(moduleKey);
         }
       };
-
+    
       return (
         <div>
           <div className="card">
@@ -3575,27 +3589,31 @@
             <p style={{ color: 'var(--ink-light)', marginTop: '-0.5rem' }}>
               Complete today's interleaved practice for bonus XP!
             </p>
-
+    
             <ProgressBar
               current={totalCompleted}
               max={totalRequired}
               label={`${totalCompleted} / ${totalRequired} tasks complete`}
             />
-
+    
             {isComplete && (
-              <div style={{
-                marginTop: '1rem',
-                padding: '1rem',
-                background: 'linear-gradient(135deg, var(--success), var(--primary))',
-                color: '#fff',
-                borderRadius: '12px',
-                textAlign: 'center'
-              }}>
+              <div
+                style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  background: 'linear-gradient(135deg, var(--success), var(--primary))',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  textAlign: 'center'
+                }}
+              >
                 <h3 style={{ margin: 0, color: '#fff' }}>🎉 Quest Complete!</h3>
-                <p style={{ margin: '0.5rem 0 0' }}>+50 Bonus XP • Come back tomorrow for a new quest!</p>
+                <p style={{ margin: '0.5rem 0 0' }}>
+                  +50 Bonus XP • Come back tomorrow for a new quest!
+                </p>
               </div>
             )}
-
+    
             <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
               {/* Speed Drill Tasks */}
               <div className="card card-compact">
@@ -3609,23 +3627,32 @@
                   label={`${questData.completed.speedDrill} / ${questData.speedDrill}`}
                 />
                 {questData.completed.speedDrill < questData.speedDrill && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <Button className="btn btn-primary" onClick={() => startModule('speed')}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      marginTop: '0.5rem'
+                    }}
+                  >
+                    <Button
+                      className="btn btn-primary"
+                      onClick={() => startModule('speed')}
+                    >
                       Practice Now
                     </Button>
-                    <button 
+                    <button
                       className="btn btn-secondary"
-                       // Speed Drill “Mark 1 Done"
+                      // Speed Drill “Mark 1 Done"
                       onClick={() =>
-                        setQuestData(prev => ({
+                        setQuestData((prev) => ({
                           ...prev,
                           completed: {
                             ...prev.completed,
                             speedDrill: Math.min(
-                              prev.speedDrill, 
+                              prev.speedDrill,
                               prev.completed.speedDrill + 1
-                            ),
-                          },
+                            )
+                          }
                         }))
                       }
                     >
@@ -3634,7 +3661,7 @@
                   </div>
                 )}
               </div>
-
+    
               {/* Interval Tasks */}
               <div className="card card-compact">
                 <h3>🎶 Interval Training</h3>
@@ -3647,23 +3674,32 @@
                   label={`${questData.completed.interval} / ${questData.interval}`}
                 />
                 {questData.completed.interval < questData.interval && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <Button className="btn btn-primary" onClick={() => startModule('interval')}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      marginTop: '0.5rem'
+                    }}
+                  >
+                    <Button
+                      className="btn btn-primary"
+                      onClick={() => startModule('interval')}
+                    >
                       Practice Now
                     </Button>
-                    <button 
+                    <button
                       className="btn btn-secondary"
-                       // Interval "Mark 1 Done"
+                      // Interval “Mark 1 Done"
                       onClick={() =>
-                        setQuestData(prev => ({
+                        setQuestData((prev) => ({
                           ...prev,
                           completed: {
                             ...prev.completed,
                             interval: Math.min(
                               prev.interval,
                               prev.completed.interval + 1
-                            ),
-                          },
+                            )
+                          }
                         }))
                       }
                     >
@@ -3672,7 +3708,7 @@
                   </div>
                 )}
               </div>
-
+    
               {/* Rhythm Tasks */}
               <div className="card card-compact">
                 <h3>🥁 Rhythm Trainer</h3>
@@ -3685,23 +3721,32 @@
                   label={`${questData.completed.rhythm} / ${questData.rhythm}`}
                 />
                 {questData.completed.rhythm < questData.rhythm && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <Button className="btn btn-primary" onClick={() => startModule('rhythm')}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      marginTop: '0.5rem'
+                    }}
+                  >
+                    <Button
+                      className="btn btn-primary"
+                      onClick={() => startModule('rhythm')}
+                    >
                       Practice Now
                     </Button>
-                    <button 
+                    <button
                       className="btn btn-secondary"
-                       // Rhythm "Mark 1 Done"
+                      // Rhythm “Mark 1 Done"
                       onClick={() =>
-                        setQuestData(prev => ({
+                        setQuestData((prev) => ({
                           ...prev,
                           completed: {
                             ...prev.completed,
                             rhythm: Math.min(
                               prev.rhythm,
                               prev.completed.rhythm + 1
-                            ),
-                          },
+                            )
+                          }
                         }))
                       }
                     >
@@ -3710,12 +3755,13 @@
                   </div>
                 )}
               </div>
-
-              {/* Bieler Tasks */}
+    
+              {/* Bieler Technique Lab Tasks */}
               <div className="card card-compact">
-                <h3>📚 Technique Lab</h3>
+                <h3>🎻 Bieler Technique Lab</h3>
                 <p style={{ fontSize: '0.9rem', color: 'var(--ink-light)' }}>
-                  Answer {questData.bieler} technique concept
+                  Complete {questData.bieler} focused Bieler Lab session
+                  {questData.bieler > 1 ? 's' : ''}
                 </p>
                 <ProgressBar
                   current={questData.completed.bieler}
@@ -3723,26 +3769,32 @@
                   label={`${questData.completed.bieler} / ${questData.bieler}`}
                 />
                 {questData.completed.bieler < questData.bieler && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <button 
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '0.5rem',
+                      marginTop: '0.5rem'
+                    }}
+                  >
+                    <Button
                       className="btn btn-primary"
-                      onClick={() => startModule('Technique Lab')}
+                      onClick={() => startModule('bieler')}
                     >
                       Practice Now
-                    </button>
-                    <button 
+                    </Button>
+                    <button
                       className="btn btn-secondary"
-                       // Bieler "Mark 1 Done"
+                      // Bieler “Mark 1 Done"
                       onClick={() =>
-                        setQuestData(prev => ({
+                        setQuestData((prev) => ({
                           ...prev,
                           completed: {
                             ...prev.completed,
                             bieler: Math.min(
                               prev.bieler,
                               prev.completed.bieler + 1
-                            ),
-                          },
+                            )
+                          }
                         }))
                       }
                     >
@@ -3753,8 +3805,10 @@
               </div>
             </div>
           </div>
-
-          <button className="btn btn-secondary" onClick={onBack}>Back to Menu</button>
+    
+          <button className="btn btn-secondary" onClick={onBack}>
+            Back to Menu
+          </button>
         </div>
       );
     }
