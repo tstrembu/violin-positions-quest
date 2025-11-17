@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Professional Edition 6.3.8.9.1.8</title>
+  <title>Violin Mastery Quest – Professional Edition 6.3.8.1.9</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!--
     Provide a descriptive summary of what this page offers. This helps search engines
@@ -4362,23 +4362,25 @@
     
             {/* Position selector */}
             <div
+              className="position-nav"
               role="radiogroup"
               aria-label="Select position"
-              style={{
-                display: 'flex',
-                gap: '.5rem',
-                justifyContent: 'center',
-                marginTop: '.75rem'
-              }}
             >
-              {POSITIONS.map(n => (
-                // now uses global positionLabelShort helper
-                <OptionButton
-                  key={n}
-                  label={positionLabelShort(n)}
-                  selected={pos === n}
-                  onClick={() => setPos(n)}
-                />
+              {POSITIONS.map((n, idx) => (
+                <React.Fragment key={n}>
+                  {/* Force a clean visual break between 1st–5th and 6th–10th */}
+                  {idx === 5 && (
+                    <span
+                      aria-hidden="true"
+                      style={{ flexBasis: '100%', height: 0 }}
+                    />
+                  )}
+                  <OptionButton
+                    label={positionLabelShort(n)}
+                    selected={pos === n}
+                    onClick={() => setPos(n)}
+                  />
+                </React.Fragment>
               ))}
             </div>
     
