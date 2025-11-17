@@ -4414,68 +4414,132 @@ const normalizePrefs = (rawPrefs) => {
     }
 
     // ============================================================================
+    // ============================================================================
     // SETTINGS SCREEN (Enhanced, with hard position gating)
     // ============================================================================
     
     function Settings({ prefs, setPrefs, onBack }) {
-      const [localPrefs, setLocalPrefs] = React.useState(() => normalizePrefs(prefs));
-      const [muted, setMuted] = React.useState(audioEngine.mute);
+      // Local editable copy of prefs
+      const [localPrefs, setLocalPrefs] = React.useState(() => ({ ...prefs }));
+    
+      // Sound: if prefs.soundEnabled is known, derive mute from that; otherwise fall back to engine.
+      const initialMuted =
+        typeof prefs.soundEnabled === 'boolean'
+          ? !prefs.soundEnabled
+          : audioEngine.mute;
+      const [muted, setMuted] = React.useState(initialMuted);
+    
+      // Theme: read current DOM state (window.__setTheme will update it on save)
       const [dark, setDark] = React.useState(
         document.documentElement.classList.contains('dark')
       );
     
-      // Recompute mastery & unlock status on each render; cheap compared to React work
+      // --- BKT-based mastery & position gating ---------------------------------
+    
+      // Mastery matrix per string × position (0–1)
       const positionHeat = buildPositionHeat();
-      const baselineMastery = corePositionsMastery();
+    
+      // Average mastery over 1st–5th position (0–1)
+      const baselineMastery = corePositionsMastery(positionHeat);
+    
+      // Advanced positions (6–10) unlocked once baselineMastery ≥ threshold
       const advancedUnlocked = baselineMastery >= POSITION_UNLOCK_THRESHOLD;
     
-      const isPositionLocked = (p) =>
+      const isPositionLocked = p =>
         ADVANCED_POSITIONS.includes(p) && !advancedUnlocked;
     
-      const toggleString = (s) => {
-        setLocalPrefs((prev) => ({
+      // --- Toggle helpers -------------------------------------------------------
+    
+      const toggleString = s => {
+        setLocalPrefs(prev => ({
           ...prev,
           strings: { ...prev.strings, [s]: !prev.strings[s] }
         }));
       };
     
-      const togglePosition = (p) => {
-        if (isPositionLocked(p)) return; // extra safety; UI will also disable
-        setLocalPrefs((prev) => ({
+      const togglePosition = p => {
+        if (isPositionLocked(p)) return; // guard against clicks on locked chips
+        setLocalPrefs(prev => ({
           ...prev,
           positions: { ...prev.positions, [p]: !prev.positions[p] }
         }));
       };
     
-      const save = () => {
-        const normalized = normalizePrefs(localPrefs);
-        setPrefs(normalized);
-        saveJSON(PREFS_KEY, normalized);
-        audioEngine.mute = muted;
-        saveJSON('vmq.v6.mute', muted);
+      const toggleHaptic = () => {
+        setLocalPrefs(prev => ({
+          ...prev,
+          hapticEnabled: !prev.hapticEnabled
+        }));
+      };
     
-        if (dark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
+      // --- Save / reset logic ---------------------------------------------------
+    
+      const save = () => {
+        // Keep prefs.soundEnabled, audioEngine.mute, and UI checkbox aligned
+        const nextPrefs = {
+          ...localPrefs,
+          soundEnabled: !muted
+        };
+    
+        setPrefs(nextPrefs);
+        saveJSON(PREFS_KEY, nextPrefs);
+    
+        audioEngine.setMute(muted);
+        window.__setTheme(dark);
+    
+        // Achievement: "all_positions" – only award if user has enabled AND practiced all positions
+        const allEnabled = POSITIONS.every(p => nextPrefs.positions[p]);
+        if (allEnabled) {
+          const stats = loadJSON(STATS_KEY, {});
+          const practicedAll = POSITIONS.every(p =>
+            Object.keys(stats).some(key => {
+              // stats keys are like "G:1:1" (string:position:finger)
+              const parts = key.split(':');
+              const pos = Number(parts[1]);
+              return pos === p;
+            })
+          );
+          if (practicedAll) {
+            checkAchievement('all_positions');
+          }
         }
+    
         onBack();
       };
     
-      const cancel = () => onBack();
+      const resetProgress = () => {
+        if (
+          confirm(
+            'Are you sure you want to reset ALL progress? This cannot be undone!'
+          )
+        ) {
+          localStorage.removeItem(XP_KEY);
+          localStorage.removeItem(STATS_KEY);
+          localStorage.removeItem(ACHIEVEMENTS_KEY);
+          localStorage.removeItem(STREAK_KEY);
+          localStorage.removeItem(FLASH_KEY);
+          alert('Progress reset! Reloading...');
+          window.location.reload();
+        }
+      };
+    
+      // --- Render ---------------------------------------------------------------
     
       return (
         <div className="card">
-          <h2>Settings</h2>
+          <h2>⚙️ Settings</h2>
     
-          {/* Strings */}
-          <section style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ marginBottom: 8 }}>Practice strings</h3>
-            <p className="muted">
-              Turn strings on/off to match current repertoire or teacher focus.
+          {/* Practice Strings */}
+          <section style={{ marginTop: '1.5rem' }}>
+            <h3>🎻 Practice strings</h3>
+            <p className="muted" style={{ marginTop: 4 }}>
+              Only the strings selected here will appear in drills and quizzes.
             </p>
-            <div className="chip-row">
-              {STRINGS.map((s) => (
+            <div
+              className="chip-row"
+              style={{ marginTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}
+            >
+              {STRINGS.map(s => (
                 <OptionButton
                   key={s}
                   label={`${s} string`}
@@ -4486,24 +4550,29 @@ const normalizePrefs = (rawPrefs) => {
             </div>
           </section>
     
-          {/* Positions */}
-          <section style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ marginBottom: 8 }}>Practice positions</h3>
-            <p className="muted" style={{ marginBottom: 6 }}>
-              Start with 1st–5th position. Positions 6–10 unlock once your average
-              mastery in the core positions reaches {Math.round(POSITION_UNLOCK_THRESHOLD * 100)}%.
+          {/* Practice Positions */}
+          <section style={{ marginTop: '1.5rem' }}>
+            <h3>📍 Practice positions</h3>
+            <p className="muted" style={{ marginTop: 4 }}>
+              Positions 1–5 are your foundation. Positions 6–10 unlock once your
+              average mastery in 1st–5th position reaches about{' '}
+              {Math.round(POSITION_UNLOCK_THRESHOLD * 100)}%.
             </p>
-            <p className="muted" style={{ marginBottom: 10 }}>
-              Current core mastery: <strong>{Math.round(baselineMastery * 100)}%</strong>
+            <p className="muted" style={{ marginTop: 4 }}>
+              Current core mastery:{' '}
+              <strong>{Math.round(baselineMastery * 100)}%</strong>
             </p>
     
-            <div className="chip-row" aria-label="Practice positions" role="radiogroup">
-              {POSITIONS.map((p) => {
+            <div
+              className="chip-row"
+              style={{ marginTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}
+            >
+              {POSITIONS.map(p => {
                 const locked = isPositionLocked(p);
                 const active = !!localPrefs.positions[p];
     
                 let label = positionLabelShort(p);
-                if (locked) label += ' (locked)';
+                if (locked) label += ' 🔒';
     
                 return (
                   <OptionButton
@@ -4518,282 +4587,69 @@ const normalizePrefs = (rawPrefs) => {
             </div>
           </section>
     
-          {/* Sound / Theme */}
-          <section style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ marginBottom: 8 }}>Sound & display</h3>
-            <div className="chip-row">
-              <OptionButton
-                label={muted ? 'Sound: Off' : 'Sound: On'}
-                selected={!muted}
-                onClick={() => setMuted((m) => !m)}
-              />
+          {/* Appearance & Sound */}
+          <section style={{ marginTop: '1.5rem' }}>
+            <h3>🎨 Appearance & sound</h3>
+            <div
+              className="chip-row"
+              style={{ marginTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}
+            >
               <OptionButton
                 label={dark ? 'Dark mode' : 'Light mode'}
                 selected={dark}
-                onClick={() => setDark((d) => !d)}
+                onClick={() => setDark(d => !d)}
+              />
+              <OptionButton
+                label={muted ? 'Sound: Off' : 'Sound: On'}
+                selected={!muted}
+                onClick={() => setMuted(m => !m)}
+              />
+              <OptionButton
+                label={
+                  localPrefs.hapticEnabled ? 'Haptics: On' : 'Haptics: Off'
+                }
+                selected={!!localPrefs.hapticEnabled}
+                onClick={toggleHaptic}
               />
             </div>
           </section>
     
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-secondary" onClick={cancel}>
+          {/* Danger Zone */}
+          <section style={{ marginTop: '1.5rem' }}>
+            <h3>⚠️ Danger zone</h3>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={resetProgress}
+              style={{ marginTop: '0.75rem' }}
+            >
+              🗑️ Reset all progress
+            </button>
+          </section>
+    
+          {/* Footer Actions */}
+          <div
+            style={{
+              marginTop: '2rem',
+              display: 'flex',
+              gap: '0.5rem',
+              justifyContent: 'flex-end'
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onBack}
+            >
               Cancel
             </button>
-            <button type="button" className="btn btn-primary" onClick={save}>
-              Save
-            </button>
-          </div>
-        </div>
-      );
-    }
-      
-      // BKT-based mastery for progressive unlock (positions 6–10)
-      const positionHeat = buildPositionHeat();
-
-      let baseSum = 0;
-      let baseCount = 0;
-      for (const p of [1, 2, 3, 4, 5]) {
-        for (const s of STRINGS) {
-          const v = positionHeat[p]?.[s] ?? 0;
-          baseSum += v;
-          baseCount += 1;
-        }
-      }
-      const baseMastery = baseCount ? baseSum / baseCount : 0; // 0–1
-      const POS_UNLOCK_THRESHOLD = 0.75;
-
-      const isPositionLocked = (p) =>
-        p > 5 && baseMastery < POS_UNLOCK_THRESHOLD;
-    
-      const save = () => {
-        // Keep prefs.soundEnabled and audioEngine.mute aligned
-        const nextPrefs = {
-          ...localPrefs,
-          soundEnabled: !muted,
-        };
-    
-        setPrefs(nextPrefs);
-        saveJSON(PREFS_KEY, nextPrefs);
-    
-        audioEngine.setMute(muted);
-        window.__setTheme(dark);
-    
-        // Check all_positions achievement
-        const allEnabled = POSITIONS.every(p => nextPrefs.positions[p]);
-        if (allEnabled) {
-          const stats = loadJSON(STATS_KEY, {});
-          const practiceAllPos = POSITIONS.every(p => {
-            return Object.keys(stats).some(key => {
-              const [, pos] = key.split(':');
-              return pos == p;
-            });
-          });
-          if (practiceAllPos) {
-            checkAchievement('all_positions');
-          }
-        }
-    
-        onBack();
-      };
-    
-      const resetProgress = () => {
-        if (confirm('Are you sure you want to reset ALL progress? This cannot be undone!')) {
-          localStorage.removeItem(XP_KEY);
-          localStorage.removeItem(STATS_KEY);
-          localStorage.removeItem(ACHIEVEMENTS_KEY);
-          localStorage.removeItem(STREAK_KEY);
-          localStorage.removeItem(FLASH_KEY);
-          alert('Progress reset! Reloading...');
-          window.location.reload();
-        }
-      };
-    
-      return (
-        <div>
-          <div className="card">
-            <h2>⚙️ Settings</h2>
-    
-            {/* Practice Strings */}
-            <div style={{ marginTop: '1.5rem' }}>
-              <h3>🎻 Practice Strings</h3>
-              <div className="grid grid-cols-2" style={{ gap: '0.5rem', marginTop: '0.75rem' }}>
-                {STRINGS.map(s => (
-                  <button
-                    key={s}
-                    className={`btn ${localPrefs.strings[s] ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() =>
-                      setLocalPrefs(p => ({
-                        ...p,
-                        strings: { ...p.strings, [s]: !p.strings[s] },
-                      }))
-                    }
-                  >
-                    {s} String {localPrefs.strings[s] ? '✓' : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-    
-            {/* Practice Positions */}
-            <div style={{ marginTop: '1.5rem' }}>
-              <h3>📍 Practice Positions</h3>
-              <p
-                style={{
-                  marginTop: '0.25rem',
-                  color: 'var(--ink-light)',
-                  fontSize: '0.9rem',
-                }}
-              >
-                Positions 1–5 are your foundation. Positions 6–10 unlock once your average mastery
-                in 1st–5th position reaches about 75%.
-              </p>
-              <div
-                className="grid grid-cols-3"
-                style={{ gap: '0.5rem', marginTop: '0.75rem' }}
-              >
-                {POSITIONS.map(p => {
-                  const locked = isPositionLocked(p);
-                  const pressed = !!localPrefs.positions[p];
-
-                  return (
-                    <button
-                      key={p}
-                      className={`btn ${
-                        pressed && !locked ? 'btn-primary' : 'btn-secondary'
-                      }`}
-                      disabled={locked}
-                      onClick={() => {
-                        if (locked) return;
-                        setLocalPrefs(pr => ({
-                          ...pr,
-                          positions: { ...pr.positions, [p]: !pr.positions[p] },
-                        }));
-                      }}
-                      title={
-                        locked
-                          ? 'Keep practicing positions 1–5; higher positions unlock at ~75% average mastery.'
-                          : `Toggle practice in position ${p}`
-                      }
-                      style={{
-                        opacity: locked ? 0.5 : 1,
-                        cursor: locked ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      {locked ? '🔒 ' : ''}
-                      Pos {p} {pressed && !locked ? '✓' : ''}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-    
-            {/* Appearance & Sound */}
-            <div style={{ marginTop: '1.5rem' }}>
-              <h3>🎨 Appearance & Sound</h3>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem',
-                  marginTop: '0.75rem',
-                }}
-              >
-                {/* Dark Mode */}
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={dark}
-                    onChange={e => setDark(e.target.checked)}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontWeight: 600 }}>🌙 Dark Mode</span>
-                </label>
-    
-                {/* Sound Effects */}
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={!muted}
-                    onChange={e => {
-                      const enabled = e.target.checked;
-                      setMuted(!enabled); // muted is the inverse of enabled
-                      setLocalPrefs(p => ({
-                        ...p,
-                        soundEnabled: enabled,
-                      }));
-                    }}
-                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontWeight: 600 }}>🔊 Sound Effects</span>
-                </label>
-    
-                {/* Haptic Feedback */}
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={localPrefs.hapticEnabled}
-                    onChange={e =>
-                      setLocalPrefs(p => ({
-                        ...p,
-                        hapticEnabled: e.target.checked,
-                      }))
-                    }
-                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontWeight: 600 }}>📳 Haptic Feedback</span>
-                </label>
-              </div>
-            </div>
-    
-            {/* Danger Zone */}
-            <div style={{ marginTop: '1.5rem' }}>
-              <h3>⚠️ Danger Zone</h3>
-              <button
-                className="btn btn-danger"
-                onClick={resetProgress}
-                style={{ marginTop: '0.75rem' }}
-              >
-                🗑️ Reset All Progress
-              </button>
-            </div>
-    
-            {/* Footer Actions */}
-            <div
-              style={{
-                marginTop: '2rem',
-                display: 'flex',
-                gap: '0.5rem',
-                justifyContent: 'flex-end',
-              }}
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={save}
             >
-              <button className="btn btn-secondary" onClick={onBack}>
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={save}>
-                💾 Save Settings
-              </button>
-            </div>
+              💾 Save settings
+            </button>
           </div>
         </div>
       );
