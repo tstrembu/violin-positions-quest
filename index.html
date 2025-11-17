@@ -844,102 +844,95 @@
     // --------------------------------------------------------------------------
     // Preferences, selection + position-unlock logic
     // --------------------------------------------------------------------------
-    
-    const DEFAULT_UNLOCKED_POSITIONS = [1, 2, 3, 4, 5];
-    const ADVANCED_POSITIONS         = [6, 7, 8, 9, 10];
-    // B// --------------------------------------------------------------------------
-// Preferences, selection + position-unlock logic
-// --------------------------------------------------------------------------
 
-const DEFAULT_UNLOCKED_POSITIONS = [1, 2, 3, 4, 5];
-const ADVANCED_POSITIONS         = [6, 7, 8, 9, 10];
-// Baseline mastery (across positions 1–5) required to unlock 6–10
-const POSITION_UNLOCK_THRESHOLD  = 0.75;
+    // Core vs advanced positions for gating
+    const CORE_POSITIONS = [1, 2, 3, 4, 5];
+    const ADVANCED_POSITIONS = POSITIONS.filter((p) => !CORE_POSITIONS.includes(p));
 
-const defaultPrefs = {
-  strings:   Object.fromEntries(STRINGS.map(s => [s, true])),
-  // Only core positions (1–5) are on by default; 6–10 start off
-  positions: Object.fromEntries(
-    POSITIONS.map(p => [p, DEFAULT_UNLOCKED_POSITIONS.includes(p)])
-  ),
-  flashLevel:       'Professional',
-  difficulty:       'medium',
-  soundEnabled:     true,
-  hapticEnabled:    true,
-  tutorialComplete: false
-};
+    // Positions that are ON by default in a fresh profile.
+    const DEFAULT_UNLOCKED_POSITIONS = CORE_POSITIONS;
 
-/**
- * Hard filter of the global CELLS list using current prefs.
- * This is the only place practice pools should be derived from.
- */
-const filteredCells = (prefs) =>
-  CELLS.filter(c => prefs.strings[c.s] && prefs.positions[c.p]);
+    // Baseline mastery (across positions 1–5) required to unlock 6–10.
+    const POSITION_UNLOCK_THRESHOLD = 0.75;
 
+    const defaultPrefs = {
+      strings: Object.fromEntries(STRINGS.map((s) => [s, true])),
+      // Only core positions (1–5) are on by default; 6–10 start off
+      positions: Object.fromEntries(
+        POSITIONS.map((p) => [p, DEFAULT_UNLOCKED_POSITIONS.includes(p)])
+      ),
+      flashLevel: 'Professional',
+      difficulty: 'medium',
+      soundEnabled: true,
+      hapticEnabled: true,
+      tutorialComplete: false,
+    };
 
-/**
- * Compute baseline “core position” mastery across positions 1–5 and all strings.
- * Uses the global BKT state and ignores prefs (we want true ability, not practice history).
- */
-const corePositionsMastery = () => {
-  const heat = buildPositionHeat(); // { position: { string: mastery } }
-  let sum = 0;
-  let count = 0;
+    /**
+     * Filter global CELLS by prefs so only allowed string/position combos are practiced.
+     */
+    const filterActiveCells = (prefs) =>
+      CELLS.filter((c) => prefs.strings[c.s] && prefs.positions[c.p]);
 
-  for (const p of DEFAULT_UNLOCKED_POSITIONS) {
-    const row = heat[p];
-    if (!row) continue;
-    for (const s of STRINGS) {
-      sum += row[s] || 0;
-      count += 1;
+    /**
+     * Average BKT mastery across core positions (1–5).
+     * Accepts an optional positionHeat matrix to avoid recomputing if already built.
+     * Returns a 0–1 value.
+     */
+    function corePositionsMastery(positionHeat) {
+      const heat = positionHeat || buildPositionHeat(); // { position: { string: mastery } }
+      let sum = 0;
+      let count = 0;
+
+      for (const p of CORE_POSITIONS) {
+        const row = heat[p];
+        if (!row) continue;
+        for (const s of STRINGS) {
+          const v = row[s] ?? 0;
+          sum += v;
+          count += 1;
+        }
+      }
+
+      return count ? sum / count : 0;
     }
-  }
 
-  return count ? sum / count : 0;
-};
+    /**
+     * Normalize preferences:
+     *  - Merge with defaultPrefs (so every key exists).
+     *  - Enforce hard gating rules for advanced positions (6–10).
+     *
+     * This function is the single source of truth for what positions may
+     * *legally* be practiced right now.
+     */
+    const normalizePrefs = (rawPrefs) => {
+      const base = { ...defaultPrefs, ...(rawPrefs || {}) };
 
-/**
- * Normalize preferences:
- *  - Merge with defaultPrefs (so every key exists).
- *  - Enforce that locked positions are always false.
- *  - Only allow 6–10 to be true if the student has unlocked them via mastery.
- *
- * This function is the single source of truth for what positions may
- * *legally* be practiced right now.
- */
-const normalizePrefs = (rawPrefs) => {
-  const base = { ...defaultPrefs, ...(rawPrefs || {}) };
+      const current = { ...base.positions };
+      const mastery = corePositionsMastery();
+      const advancedUnlocked = mastery >= POSITION_UNLOCK_THRESHOLD;
 
-  const current = { ...base.positions };
-  const mastery = corePositionsMastery();
-  const advancedUnlocked = mastery >= POSITION_UNLOCK_THRESHOLD;
+      // Core positions (1–5) are always allowed; if the prefs object somehow
+      // omitted them, default to true.
+      for (const p of CORE_POSITIONS) {
+        if (typeof current[p] !== 'boolean') {
+          current[p] = true;
+        }
+      }
 
-  // Core positions (1–5) are always allowed; if the prefs object somehow
-  // omitted them, default to true.
-  for (const p of DEFAULT_UNLOCKED_POSITIONS) {
-    if (typeof current[p] !== 'boolean') {
-      current[p] = true;
-    }
-  }
+      // Advanced positions: cannot be ON unless they are unlocked.
+      for (const p of ADVANCED_POSITIONS) {
+        if (!advancedUnlocked) {
+          // Not unlocked yet → force hard OFF.
+          current[p] = false;
+        } else if (typeof current[p] !== 'boolean') {
+          // Unlocked but missing → default ON.
+          current[p] = true;
+        }
+      }
 
-  // Advanced positions: cannot be ON unless they are unlocked.
-  for (const p of ADVANCED_POSITIONS) {
-    const value = !!current[p];
-
-    if (!advancedUnlocked) {
-      // Not unlocked yet → force hard OFF.
-      current[p] = false;
-    } else {
-      // Unlocked: default to OFF unless the user already explicitly chose ON.
-      current[p] = value;
-    }
-  }
-
-  return {
-    ...base,
-    positions: current
-  };
-};
+      return { ...base, positions: current };
+    };
     
     // --------------------------------------------------------------------------
     // Mastery helpers for the current selection (based on BKT)
