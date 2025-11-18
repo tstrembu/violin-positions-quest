@@ -554,8 +554,7 @@
   <div id="sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <script
     type="text/babel"
-    data-presets="react"
-    data-plugins="transform-optional-chaining,transform-nullish-coalescing-operator">
+    data-presets="react">
     // ============================================================================
     // CONSTANTS & DATA STRUCTURES
     // ============================================================================
@@ -663,10 +662,14 @@
     // UTILITY FUNCTIONS
     // ============================================================================
     
-    const loadJSON = (k,fb) => {
+    const loadJSON = (k, fb) => {
       try {
-        const v = JSON.parse(localStorage.getItem(k));
-        return v ?? fb;
+        const raw = localStorage.getItem(k);
+        if (raw == null) return fb;
+    
+        const v = JSON.parse(raw);
+        // Preserve the “null/undefined → fallback” semantics of ??
+        return v == null ? fb : v;
       } catch {
         return fb;
       }
@@ -917,17 +920,17 @@
       const heat = positionHeat || buildPositionHeat(); // { position: { string: mastery } }
       let sum = 0;
       let count = 0;
-
+    
       for (const p of CORE_POSITIONS) {
         const row = heat[p];
         if (!row) continue;
         for (const s of STRINGS) {
-          const v = row[s] ?? 0;
-          sum += v;
+          const v = row[s];
+          sum += typeof v === 'number' ? v : 0;
           count += 1;
         }
       }
-
+    
       return count ? sum / count : 0;
     }
 
@@ -1006,8 +1009,9 @@
       const out = {};
       for (const p of POSITIONS) {
         out[p] = {};
+        const row = result[p] || {};
         for (const s of STRINGS) {
-          const cell = result[p]?.[s];
+          const cell = row[s];
           out[p][s] = cell ? cell.sum / cell.count : 0;
         }
       }
