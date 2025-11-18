@@ -3528,7 +3528,7 @@
       const [quest, setQuest] = React.useState(() => {
         const today = new Date().toDateString();
         const last = localStorage.getItem(QUEST_DATE_KEY);
-    
+
         // Try to reuse today's quest if it exists and has the right shape
         if (last === today) {
           const stored = loadJSON(QUEST_KEY, null);
@@ -3536,38 +3536,38 @@
             return stored;
           }
         }
-    
+
         // Otherwise, start fresh for today
         const fresh = makeDefaultQuest();
         saveJSON(QUEST_KEY, fresh);
         localStorage.setItem(QUEST_DATE_KEY, today);
         return fresh;
       });
-    
+
       // Aggregate totals for the top progress bar
       const { requiredTotal, completedTotal } = React.useMemo(() => {
         let requiredTotal = 0;
         let completedTotal = 0;
-    
+
         QUEST_TASK_KEYS.forEach((key) => {
           const t = quest[key];
           if (!t) return;
           requiredTotal += t.required || 0;
           completedTotal += t.completed || 0;
         });
-    
+
         return { requiredTotal, completedTotal };
       }, [quest]);
-    
+
       const allDone =
         requiredTotal > 0 && completedTotal >= requiredTotal && !quest.bonusAwarded;
-    
+
       // Mark one unit done for a specific task (Speed, Interval, Rhythm, Technique)
       const handleMarkUnitDone = (key) => {
         setQuest((prev) => {
           const task = prev[key];
           if (!task || task.completed >= task.required) return prev;
-    
+
           // Previous totals before this increment
           const prevTotals = QUEST_TASK_KEYS.reduce(
             (acc, k) => {
@@ -3579,50 +3579,53 @@
             },
             { required: 0, completed: 0 }
           );
-    
+
           const updated = {
             ...prev,
-            [key]: { ...task, completed: task.completed + 1 },
+            [key]: { ...task, completed: task.completed + 1 }
           };
-    
+
           // Award XP for this unit
-          const xp =
-            Object.prototype.hasOwnProperty.call(QUEST_XP_PER_UNIT, key)
-              ? QUEST_XP_PER_UNIT[key]
-              : 5;
-          
+          const xp = Object.prototype.hasOwnProperty.call(QUEST_XP_PER_UNIT, key)
+            ? QUEST_XP_PER_UNIT[key]
+            : 5;
+
           addXP(xp);
           saveJSON(QUEST_KEY, updated);
-    
+
           // Check if this *just* completed the whole quest for the day
           const newCompleted = prevTotals.completed + 1;
           const questJustFinished =
             prevTotals.required > 0 &&
             prevTotals.completed < prevTotals.required &&
             newCompleted >= prevTotals.required;
-    
+
           if (questJustFinished && !prev.bonusAwarded) {
             const withBonus = {
               ...updated,
-              bonusAwarded: true,
+              bonusAwarded: true
             };
             addXP(25); // daily quest completion bonus
             saveJSON(QUEST_KEY, withBonus);
             return withBonus;
           }
-    
+
           return updated;
         });
       };
-    
-      // Start the appropriate practice module
+
       const startTask = (key) => {
         const moduleMap = {
           speedDrill: 'speed',
           interval: 'interval',
           rhythm: 'rhythm',
-          bieler: 'bieler',
+          bieler: 'bieler'
         };
+        const moduleKey = moduleMap[key];
+        if (moduleKey) onStartModule(moduleKey);
+      };
+
+      // ... (rest of the DailyQuest component: UI, buttons, etc.)
     
         const labelMap = {
           speedDrill: 'Speed Drill',
