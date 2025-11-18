@@ -3584,47 +3584,41 @@
       const [quest, setQuest] = React.useState(() => {
         const today = new Date().toDateString();
         const last = localStorage.getItem(QUEST_DATE_KEY);
-
-        // Try to reuse today's quest if it exists and has the right shape
+    
         if (last === today) {
           const stored = loadJSON(QUEST_KEY, null);
           if (stored && typeof stored === 'object') {
             return stored;
           }
         }
-
-        // Otherwise, start fresh for today
+    
         const fresh = makeDefaultQuest();
         saveJSON(QUEST_KEY, fresh);
         localStorage.setItem(QUEST_DATE_KEY, today);
         return fresh;
       });
-
-      // Aggregate totals for the top progress bar
+    
       const { requiredTotal, completedTotal } = React.useMemo(() => {
         let requiredTotal = 0;
         let completedTotal = 0;
-
+    
         QUEST_TASK_KEYS.forEach((key) => {
           const t = quest[key];
           if (!t) return;
           requiredTotal += t.required || 0;
           completedTotal += t.completed || 0;
         });
-
+    
         return { requiredTotal, completedTotal };
       }, [quest]);
-
-      const allDone =
-        requiredTotal > 0 && completedTotal >= requiredTotal && !quest.bonusAwarded;
-
-      // Mark one unit done for a specific task (Speed, Interval, Rhythm, Technique)
+    
+      const allDone = requiredTotal > 0 && completedTotal >= requiredTotal && !quest.bonusAwarded;
+    
       const handleMarkUnitDone = (key) => {
         setQuest((prev) => {
           const task = prev[key];
           if (!task || task.completed >= task.required) return prev;
-
-          // Previous totals before this increment
+    
           const prevTotals = QUEST_TASK_KEYS.reduce(
             (acc, k) => {
               const t = prev[k];
@@ -3635,41 +3629,39 @@
             },
             { required: 0, completed: 0 }
           );
-
+    
           const updated = {
             ...prev,
             [key]: { ...task, completed: task.completed + 1 }
           };
-
-          // Award XP for this unit
+    
           const xp = Object.prototype.hasOwnProperty.call(QUEST_XP_PER_UNIT, key)
             ? QUEST_XP_PER_UNIT[key]
             : 5;
-
+    
           addXP(xp);
           saveJSON(QUEST_KEY, updated);
-
-          // Check if this *just* completed the whole quest for the day
+    
           const newCompleted = prevTotals.completed + 1;
           const questJustFinished =
             prevTotals.required > 0 &&
             prevTotals.completed < prevTotals.required &&
             newCompleted >= prevTotals.required;
-
+    
           if (questJustFinished && !prev.bonusAwarded) {
             const withBonus = {
               ...updated,
               bonusAwarded: true
             };
-            addXP(25); // daily quest completion bonus
+            addXP(25);
             saveJSON(QUEST_KEY, withBonus);
             return withBonus;
           }
-
+    
           return updated;
         });
       };
-
+    
       const startTask = (key) => {
         const moduleMap = {
           speedDrill: 'speed',
@@ -3677,12 +3669,7 @@
           rhythm: 'rhythm',
           bieler: 'bieler'
         };
-        const moduleKey = moduleMap[key];
-        if (moduleKey) onStartModule(moduleKey);
-      };
-
-      // ... (rest of the DailyQuest component: UI, buttons, etc.)
-    
+        
         const labelMap = {
           speedDrill: 'Speed Drill',
           interval: 'Interval Trainer',
@@ -3715,7 +3702,7 @@
         },
         {
           key: 'interval',
-          icon: '🎵🎵',
+          icon: '🎶',
           title: 'Interval Training',
           subtitle: 'Complete 3 interval recognition tasks',
         },
@@ -3727,7 +3714,7 @@
         },
         {
           key: 'bieler',
-          icon: '🎻',
+          icon: '📚',
           title: 'Technique Lab',
           subtitle: 'Complete 1 Bieler Technique micro-session',
         },
@@ -3742,16 +3729,16 @@
             <h3>
               {meta.icon} {meta.title}
             </h3>
-            <p>{meta.subtitle}</p>
-            <p style={{ fontWeight: 600 }}>
-              {t.completed} / {t.required}
+            <p style={{color:'var(--ink-light)'}}>{meta.subtitle}</p>
+            <p style={{ fontWeight: 600, margin:'0.5rem 0' }}>
+              Progress: {t.completed} / {t.required}
             </p>
             <ProgressBar
               current={t.completed}
               max={t.required || 1}
               label={`${t.completed} / ${t.required}`}
             />
-            <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ marginTop: '0.75rem', display:'flex', gap:'0.5rem', flexWrap:'wrap' }}>
               <button
                 className="btn btn-primary"
                 onClick={() => startTask(meta.key)}
@@ -3760,7 +3747,6 @@
               </button>
               <button
                 className="btn btn-secondary"
-                style={{ marginLeft: '0.5rem' }}
                 onClick={() => handleMarkUnitDone(meta.key)}
                 disabled={done}
               >
@@ -3772,26 +3758,40 @@
       };
     
       return (
-        <div className="container" style={{ marginTop: '1rem' }}>
-          <button className="btn btn-secondary" onClick={onBack}>
-            ← Back
-          </button>
-    
+        <div>
           <div className="card">
             <h2>📅 Daily Quest</h2>
-            <p>Complete today's interleaved practice for bonus XP!</p>
-            <p style={{ fontWeight: 600 }}>
-              {completedTotal} / {requiredTotal} tasks complete
+            <p style={{color:'var(--ink-light)'}}>Complete today's interleaved practice for bonus XP!</p>
+            <p style={{ fontWeight: 600, margin:'1rem 0' }}>
+              Overall Progress: {completedTotal} / {requiredTotal} tasks complete
             </p>
-            <ProgressBar progress={completedTotal} total={requiredTotal} />
+            <ProgressBar 
+              current={completedTotal} 
+              max={requiredTotal} 
+              label={`${completedTotal} / ${requiredTotal} tasks`}
+            />
             {quest.bonusAwarded && (
-              <p style={{ marginTop: '0.75rem', color: 'var(--success)' }}>
-                Great job — you’ve finished today’s quest and earned a bonus!
-              </p>
+              <div style={{ 
+                marginTop: '1rem', 
+                padding:'1rem',
+                background:'var(--success)', 
+                color:'#fff',
+                borderRadius:'12px',
+                fontWeight:600,
+                textAlign:'center'
+              }}>
+                🎉 Quest Complete! Bonus XP awarded!
+              </div>
             )}
           </div>
     
-          {tasksMeta.map(renderTaskCard)}
+          <div className="grid" style={{gap:'1rem', marginTop:'1rem'}}>
+            {tasksMeta.map(renderTaskCard)}
+          </div>
+          
+          <button className="btn btn-secondary" onClick={onBack} style={{marginTop:'1rem'}}>
+            Back to Menu
+          </button>
         </div>
       );
     }
