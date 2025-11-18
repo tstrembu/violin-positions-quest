@@ -2530,14 +2530,30 @@
         }, ok ? 500 : 1200);
       };
       
+      const conceptCount =
+        cq && Array.isArray(cq.options) && cq.options.length
+          ? cq.options.length
+          : 4;
+      
+      const applyCount =
+        aq && Array.isArray(aq.options) && aq.options.length
+          ? aq.options.length
+          : 4;
+      
+      const hotkeyCount = mode === 'concept' ? conceptCount : applyCount;
+      
       useAnswerHotkeys(
         mode !== 'vocab',
         (i) => {
-          if (mode === 'concept' && cq.options[i]) answerConcept(cq.options[i], i);
-          if (mode === 'apply' && aq.options[i]) answerApply(aq.options[i], i);
+          if (mode === 'concept' && cq && cq.options[i]) {
+            answerConcept(cq.options[i], i);
+          }
+          if (mode === 'apply' && aq && aq.options[i]) {
+            answerApply(aq.options[i], i);
+          }
         },
         onBack,
-        mode === 'concept' ? (cq.options?.length || 4) : (aq.options?.length || 4)
+        hotkeyCount
       );
       
       React.useEffect(() => {
