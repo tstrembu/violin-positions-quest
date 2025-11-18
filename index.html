@@ -1019,7 +1019,7 @@
     };
 
     // ============================================================================
-    // AUDIO ENGINE (Enhanced)
+    // AUDIO ENGINE (Enhanced, with feedback + celebration)
     // ============================================================================
     
     class AudioEngine {
@@ -1027,7 +1027,7 @@
         this.ctx = null;
         this.mute = loadJSON('vmq.v7.mute', false);
       }
-      
+    
       ensure() {
         if (!this.ctx) {
           this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1035,34 +1035,36 @@
         if (this.ctx.state === 'suspended') this.ctx.resume();
         return this.ctx;
       }
-      
+    
+      // Simple pitched note (used all over the app)
       playNote({ midi, durationMs = 800, waveform = 'sine' }) {
         if (this.mute) return;
         const ctx = this.ensure();
         const now = ctx.currentTime + 0.01;
-
+    
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-
+    
         osc.type = waveform;
         osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
-
+    
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(0.9, now + 0.02);
         gain.gain.setTargetAtTime(0, now + durationMs / 1000, 0.1);
-
+    
         osc.connect(gain);
         gain.connect(ctx.destination);
-
+    
         osc.start(now);
         osc.stop(now + durationMs / 1000 + 0.2);
       }
-
+    
+      // Interval playback for the Interval Trainer
       playInterval({ rootMidi, semitones, gapMs = 150, durationMs = 600, simultaneous = false }) {
         if (this.mute) return;
         const ctx = this.ensure();
         const t0 = ctx.currentTime + 0.01;
-        
+    
         const note = (midi, t) => {
           const osc = ctx.createOscillator();
           const g = ctx.createGain();
@@ -1076,7 +1078,7 @@
           osc.start(t);
           osc.stop(t + durationMs / 1000 + 0.2);
         };
-        
+    
         if (simultaneous) {
           note(rootMidi, t0);
           note(rootMidi + semitones, t0);
@@ -1085,11 +1087,65 @@
           note(rootMidi + semitones, t0 + gapMs / 1000);
         }
       }
+    
+      // Short “correct / incorrect” blip, used by drills
+      playFeedback(ok) {
+        if (this.mute) return;
+        const ctx = this.ensure();
+        const now = ctx.currentTime + 0.01;
+    
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+    
+        // Higher pitch for correct, lower for incorrect
+        const midi = ok ? 84 : 60; // A5 vs C4
+        osc.type = 'sine';
+        osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+    
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(ok ? 0.7 : 0.5, now + 0.02);
+        gain.gain.setTargetAtTime(0, now + 0.25, 0.1);
+    
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+    
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+    
+      // Little celebratory arpeggio for achievements
+      playCelebration() {
+        if (this.mute) return;
+        const ctx = this.ensure();
+        const now = ctx.currentTime + 0.01;
+    
+        // Simple major triad up the octave
+        const freqs = [440, 554.37, 659.25, 880]; // A4–C#5–E5–A5
+    
+        freqs.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          const t = now + i * 0.12;
+    
+          osc.frequency.value = freq;
+    
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.6, t + 0.03);
+          gain.gain.setTargetAtTime(0, t + 0.35, 0.12);
+    
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+    
+          osc.start(t);
+          osc.stop(t + 0.7);
+        });
+      }
     }
-
+    
     const audioEngine = new AudioEngine();
-
-    // Unlock audio on first interaction
+    
+    // Unlock audio on first user interaction
     window.addEventListener(
       'pointerdown',
       () => {
