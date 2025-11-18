@@ -3617,7 +3617,11 @@
           };
     
           // Award XP for this unit
-          const xp = QUEST_XP_PER_UNIT[key] ?? 5;
+          const xp =
+            Object.prototype.hasOwnProperty.call(QUEST_XP_PER_UNIT, key)
+              ? QUEST_XP_PER_UNIT[key]
+              : 5;
+          
           addXP(xp);
           saveJSON(QUEST_KEY, updated);
     
