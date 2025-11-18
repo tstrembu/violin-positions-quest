@@ -1146,8 +1146,11 @@
         
         let voices = [];
         try {
-          voices = synth.getVoices?.() || [];
+          if (typeof synth.getVoices === 'function') {
+            voices = synth.getVoices() || [];
+          }
           if (typeof synth.onvoiceschanged === 'undefined') {
+            // Touch voices to trigger lazy loading on some browsers
             void voices.length;
           }
         } catch {}
@@ -1194,7 +1197,7 @@
           if (tag === 'input' || tag === 'select' || tag === 'textarea' || (t && t.isContentEditable)) return;
           
           const k = e.key;
-          const max = (count ?? 4) - 1;
+          const max = (typeof count === 'number' ? count : 4) - 1;
           let handled = false;
           
           if (k >= '1' && k <= '9') {
