@@ -3072,6 +3072,11 @@
         { value: 'speed', label: 'Speed Drill' },
         { value: 'bieler', label: 'Technique Lab' }
       ];
+      
+        const getModuleLabel = (value) => {
+        const m = moduleOptions.find((mod) => mod.value === value);
+        return m ? m.label : 'General';
+      };
 
       const defaultModuleValue =
         currentModule && moduleOptions.some(m => m.value === currentModule)
@@ -3458,7 +3463,7 @@
                             })}
                           </span>
                           <span className="badge" style={{fontSize:'0.75rem'}}>
-                            {moduleOptions.find(m => m.value === entry.module)?.label || 'General'}
+                            {getModuleLabel(entry.module)}
                           </span>
                           {entry.mood && (
                             <span style={{fontSize:'1.2rem'}}>
@@ -3504,9 +3509,9 @@
                     }}>
                       <h3 style={{marginTop:0, color:'#fff'}}>Most recent theme</h3>
                       <p style={{marginBottom:'0.5rem'}}>
-                        <strong>
-                          {moduleOptions.find(m => m.value === mostRecent.module)?.label}:
-                        </strong>{' '}
+                      <strong>
+                        {getModuleLabel(mostRecent.module)}:
+                      </strong>{' '}
                         {mostRecent.focus || 'No focus recorded.'}
                       </p>
                       {mostRecent.nextSteps && (
