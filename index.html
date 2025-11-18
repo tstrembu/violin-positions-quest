@@ -2123,13 +2123,18 @@
         }, 200);
       };
       
+      const optionCount =
+        q && Array.isArray(q.options) && q.options.length
+          ? q.options.length
+          : 4;
+      
       useAnswerHotkeys(
         !!q,
         (i) => {
           if (q && q.options[i]) answer(q.options[i], i);
         },
         onBack,
-        q?.options?.length ?? 4
+        optionCount
       );
       
       return (
