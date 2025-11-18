@@ -4067,9 +4067,10 @@
                         {s} string
                       </div>
                       {POSITIONS.map(p => {
-                        const v = positionHeat[p]?.[s] || 0;   // 0–1
+                        const row = positionHeat[p] || {};
+                        const v = typeof row[s] === 'number' ? row[s] : 0;   // 0–1
                         const pct = Math.round(v * 100);
-                        const bg = getHeatColor(pct);          // reuse your existing helper
+                        const bg = getHeatColor(pct);
                   
                         return (
                           <div
