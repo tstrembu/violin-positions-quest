@@ -1029,40 +1029,37 @@
       }
       
       ensure() {
-        if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if(this.ctx.state === 'suspended') this.ctx.resume();
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
         return this.ctx;
       }
       
-      playNote({midi, durationMs = 800, waveform = 'sine'}) {
-        if(this.mute) return;
+      playNote({ midi, durationMs = 800, waveform = 'sine' }) {
+        if (this.mute) return;
         const ctx = this.ensure();
-        const now = ctx.currentTime;
-        const freq = 440 * Math.pow(2, (midi-69)/12);
-        
+        const now = ctx.currentTime + 0.01;
+
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        
-        osc.frequency.value = freq;
+
         osc.type = waveform;
-        
+        osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.8, now+0.01);
-        gain.gain.exponentialRampToValueAtTime(0.1, now+durationMs/1000*0.8);
-        gain.gain.linearRampToValueAtTime(0, now+durationMs/1000);
-        
+        gain.gain.linearRampToValueAtTime(0.9, now + 0.02);
+        gain.gain.setTargetAtTime(0, now + durationMs / 1000, 0.1);
+
         osc.connect(gain);
         gain.connect(ctx.destination);
+
         osc.start(now);
-        osc.stop(now+durationMs/1000);
-        
-        osc.onended = () => {
-          try { osc.disconnect(); gain.disconnect(); } catch {}
-        };
+        osc.stop(now + durationMs / 1000 + 0.2);
       }
-      
-      playInterval({rootMidi, semitones, gapMs = 150, durationMs = 600, simultaneous = false}) {
-        if(this.mute) return;
+
+      playInterval({ rootMidi, semitones, gapMs = 150, durationMs = 600, simultaneous = false }) {
+        if (this.mute) return;
         const ctx = this.ensure();
         const t0 = ctx.currentTime + 0.01;
         
@@ -1070,68 +1067,40 @@
           const osc = ctx.createOscillator();
           const g = ctx.createGain();
           osc.type = 'sine';
-          osc.frequency.value = 440 * Math.pow(2, (midi-69)/12);
+          osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
           g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(0.8, t+0.01);
-          g.gain.exponentialRampToValueAtTime(0.1, t+durationMs/1000*0.8);
-          g.gain.linearRampToValueAtTime(0, t+durationMs/1000);
+          g.gain.linearRampToValueAtTime(0.8, t + 0.01);
+          g.gain.setTargetAtTime(0, t + durationMs / 1000, 0.15);
           osc.connect(g);
           g.connect(ctx.destination);
           osc.start(t);
-          osc.stop(t+durationMs/1000);
-          osc.onended = () => { try { osc.disconnect(); g.disconnect(); } catch {} };
+          osc.stop(t + durationMs / 1000 + 0.2);
         };
         
-        note(rootMidi, t0);
-        note(rootMidi + semitones, simultaneous ? t0 : t0 + gapMs/1000);
-      }
-      
-      playFeedback(ok) {
-        if(this.mute) return;
-        const ctx = this.ensure();
-        const now = ctx.currentTime;
-        const freq = ok ? 880 : 220;
-        
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.frequency.value = freq;
-        osc.type = 'square';
-        
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.3, now+0.01);
-        gain.gain.linearRampToValueAtTime(0, now+0.2);
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now+0.2);
-        
-        osc.onended = () => {
-          try { osc.disconnect(); gain.disconnect(); } catch {}
-        };
-      }
-      
-      playCelebration() {
-        if(this.mute) return;
-        const notes = [60, 64, 67, 72]; // C major chord + octave
-        notes.forEach((midi, i) => {
-          setTimeout(() => this.playNote({midi, durationMs:300}), i*100);
-        });
-      }
-      
-      setMute(m) {
-        this.mute = m;
-        saveJSON('vmq.v7.mute', m);
+        if (simultaneous) {
+          note(rootMidi, t0);
+          note(rootMidi + semitones, t0);
+        } else {
+          note(rootMidi, t0);
+          note(rootMidi + semitones, t0 + gapMs / 1000);
+        }
       }
     }
-    
+
     const audioEngine = new AudioEngine();
-    
+
     // Unlock audio on first interaction
-    window.addEventListener('pointerdown', () => {
-      try { audioEngine.ensure(); } catch {}
-    }, { once: true });
+    window.addEventListener(
+      'pointerdown',
+      () => {
+        try {
+          audioEngine.ensure();
+        } catch {
+          // ignore
+        }
+      },
+      { once: true }
+    );
     
     // ============================================================================
     // SPEECH SYNTHESIS (Enhanced)
