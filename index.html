@@ -4987,13 +4987,12 @@
     }
     
     // ============================================================================
-    // ============================================================================
     // RENDER (with safety checks)
     // ============================================================================
     
     (function () {
       const container = document.getElementById('root');
-    
+
       if (!container) {
         console.error('Violin Mastery Quest: #root container not found.');
         const fallback = document.createElement('div');
@@ -5002,23 +5001,23 @@
         document.body.appendChild(fallback);
         return;
       }
-    
-      if (!window.React || !window.ReactDOM) {
+
+      if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
         console.error('Violin Mastery Quest: React or ReactDOM not loaded.');
         container.innerHTML =
           '<p style="padding:1rem;color:#b91c1c;">Error: React/ReactDOM failed to load. Check your script tags and network.</p>';
         return;
       }
-    
+
       if (typeof ReactDOM.createRoot !== 'function') {
         console.error(
           'Violin Mastery Quest: ReactDOM.createRoot is not available. You may have the wrong ReactDOM version.'
         );
         container.innerHTML =
-          '<p style="padding:1rem;color:#b91c1c;">Error: This app expects React 18 (createRoot). Make sure the ReactDOM script is @18.</p>';
+          '<p style="padding:1rem;color:#b91c1c;">Error: This app requires React 18 (createRoot). Make sure the ReactDOM script is @18.</p>';
         return;
       }
-    
+
       try {
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
