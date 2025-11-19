@@ -3679,8 +3679,8 @@
     function DailyQuest({ prefs, onBack, onStartModule }) {
       // Load or create today's quest
       const [quest, setQuest] = React.useState(() => {
-        const today = new Date().toDateString();
-        const last = localStorage.getItem(QUEST_DATE_KEY);
+      const today = new Date().toDateString();
+      const last = localStorage.getItem(QUEST_DATE_KEY);
     
         if (last === today) {
           const stored = loadJSON(QUEST_KEY, null);
@@ -3689,7 +3689,7 @@
           }
         }
     
-        const fresh = makeDefaultQuest();
+      const fresh = makeDefaultQuest();
         saveJSON(QUEST_KEY, fresh);
         localStorage.setItem(QUEST_DATE_KEY, today);
         return fresh;
@@ -5139,6 +5139,7 @@
       );
     }
     
+    try {
       // ============================================================================
       // RENDER with Enhanced Error Handling and Loading Management
       // ============================================================================
