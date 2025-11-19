@@ -507,53 +507,6 @@
       }
     }
   </style>
-  <!-- Add loading screen styles -->
-  <style>
-    #app-loader {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      transition: opacity 0.5s ease;
-    }
-    #app-loader.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    .loader-content {
-      text-align: center;
-      color: white;
-    }
-    .loader-spinner {
-      width: 60px;
-      height: 60px;
-      border: 4px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1.5rem;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .loader-title {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-bottom: 0.5rem;
-    }
-    .loader-status {
-      font-size: 1rem;
-      opacity: 0.9;
-    }
-  </style>
-  
   <script>
     (function () {
       const KEY = 'vmq.theme';
@@ -578,48 +531,104 @@
       };
     })();
   </script>
-  
-  <!-- Load React, ReactDOM, and Babel with proper error handling -->
-  <script>
-    window.vmqScriptsLoaded = { react: false, reactDOM: false, babel: false };
-    window.vmqScriptErrors = [];
-  </script>
-  
-  <script 
-    src="https://unpkg.com/react@18/umd/react.production.min.js"
-    crossorigin
-    onload="window.vmqScriptsLoaded.react = true; console.log('✓ React loaded');"
-    onerror="window.vmqScriptErrors.push('React failed to load'); console.error('✗ React failed');">
-  </script>
-  
-  <script 
-    src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
-    crossorigin
-    onload="window.vmqScriptsLoaded.reactDOM = true; console.log('✓ ReactDOM loaded');"
-    onerror="window.vmqScriptErrors.push('ReactDOM failed to load'); console.error('✗ ReactDOM failed');">
-  </script>
-  
-  <script 
-    src="https://unpkg.com/@babel/standalone/babel.min.js"
-    onload="window.vmqScriptsLoaded.babel = true; console.log('✓ Babel loaded');"
-    onerror="window.vmqScriptErrors.push('Babel failed to load'); console.error('✗ Babel failed');">
-  </script>
+  <!--
+    Load React and ReactDOM from a CDN. Using the `defer` attribute ensures that
+    these external scripts do not block HTML parsing. The `crossorigin`
+    attribute is added so that if subresource integrity attributes are added
+    later, the requests will be CORS-enabled. Order is preserved: React
+    must load before ReactDOM and Babel so that the Babel-compiled JSX can
+    resolve React properly.
+  -->
+  <!-- React + ReactDOM + Babel (synchronous, in this order) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body>
-  <div id="root"></div>
   <!--
     The application is built entirely in React and requires JavaScript to function.
     If JavaScript is disabled in the user's browser, display a friendly message
     encouraging them to enable it. This content will only appear when scripts
     are blocked.
-  -->
+    -->
+<body>
+  <!-- Loading Screen -->
+  <div id="app-loader">
+    <div class="loader-content">
+      <div class="loader-spinner"></div>
+      <h1 class="loader-title">Violin Mastery Quest</h1>
+      <p class="loader-status" id="loader-status">Loading application...</p>
+    </div>
+  </div>
+
+  <div id="root"></div>
+  
   <noscript>
     <p style="padding:1rem;color:#b91c1c;">This application requires JavaScript to run properly. Please enable JavaScript in your browser settings.</p>
   </noscript>
+  
   <div id="sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
   <script
     type="text/babel"
     data-presets="react">
+    (function() {
+  'use strict';
+  
+  // Wait for all dependencies to load
+  function checkDependencies() {
+    const status = document.getElementById('loader-status');
+    
+    // Check for script errors
+    if (window.vmqScriptErrors && window.vmqScriptErrors.length > 0) {
+      if (status) status.textContent = 'Error loading dependencies. Please refresh.';
+      console.error('Script loading errors:', window.vmqScriptErrors);
+      setTimeout(() => {
+        document.getElementById('app-loader').innerHTML = 
+          '<div style="color:white;padding:2rem;text-align:center;">' +
+          '<h2>Loading Error</h2>' +
+          '<p>Failed to load required libraries. Please check your internet connection and refresh the page.</p>' +
+          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
+          '</div>';
+      }, 1000);
+      return false;
+    }
+    
+    // Check if all scripts loaded
+    if (typeof React === 'undefined') {
+      if (status) status.textContent = 'Loading React...';
+      return false;
+    }
+    if (typeof ReactDOM === 'undefined') {
+      if (status) status.textContent = 'Loading ReactDOM...';
+      return false;
+    }
+    if (typeof Babel === 'undefined') {
+      if (status) status.textContent = 'Loading Babel...';
+      return false;
+    }
+    
+    return true;
+  }
+  
+  function initializeApp() {
+    if (!checkDependencies()) {
+      // Retry after a short delay
+      setTimeout(initializeApp, 100);
+      return;
+    }
+    
+    const status = document.getElementById('loader-status');
+    if (status) status.textContent = 'Initializing components...';
+    
+    // Small delay to ensure Babel has processed everything
+    setTimeout(startApp, 300);
+  }
+  
+  function startApp() {
+    try {
+      // Your existing code starts here
+      // Keep everything from your original script
+
     // ============================================================================
     // CONSTANTS & DATA STRUCTURES
     // ============================================================================
