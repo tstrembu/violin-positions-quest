@@ -5126,65 +5126,46 @@
       if (!container) {
         console.error('Violin Mastery Quest: #root container not found.');
         if (loader) {
-          loader.innerHTML = '<div style="color:white;padding:2rem;text-align:center;"><h2>Error</h2><p>#root container not found. Check HTML structure.</p></div>';
+          loader.innerHTML = '<div style="color:white;padding:2rem;text-align:center;"><h2>Error</h2><p>#root container not found.</p></div>';
         }
-        return;
-      }
-
-      if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-        console.error('Violin Mastery Quest: React or ReactDOM not loaded.');
-        container.innerHTML = '<p style="padding:1rem;color:#b91c1c;">Error: React/ReactDOM failed to load. Check your network connection.</p>';
-        if (loader) setTimeout(() => loader.classList.add('hidden'), 500);
         return;
       }
 
       if (typeof ReactDOM.createRoot !== 'function') {
         console.error('Violin Mastery Quest: ReactDOM.createRoot not available.');
-        container.innerHTML = '<p style="padding:1rem;color:#b91c1c;">Error: This app requires React 18. Incompatible React version detected.</p>';
+        container.innerHTML = '<p style="padding:1rem;color:#b91c1c;">Error: This app requires React 18.</p>';
         if (loader) setTimeout(() => loader.classList.add('hidden'), 500);
         return;
       }
 
-      try {
-        const root = ReactDOM.createRoot(container);
-        root.render(<App />);
-        
-        // Hide loader after render
-        setTimeout(() => {
-          if (loader) {
-            loader.classList.add('hidden');
-            setTimeout(() => loader.remove(), 500);
-          }
-        }, 100);
-        
-        console.log('✓ Violin Mastery Quest initialized successfully');
-      } catch (err) {
-        console.error('Violin Mastery Quest: Render error:', err);
-        container.innerHTML = 
-          '<div style="padding:2rem;color:#b91c1c;background:var(--card);border-radius:12px;margin:1rem;">' +
-          '<h2>Application Error</h2>' +
-          '<p>An error occurred while starting the app.</p>' +
-          '<p style="font-family:monospace;font-size:0.875rem;margin-top:1rem;padding:1rem;background:#f1f5f9;border-radius:8px;">' + 
-          err.toString() + '</p>' +
-          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:#3a5ba0;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
-          '</div>';
-        if (loader) setTimeout(() => loader.classList.add('hidden'), 500);
-      }
+      const root = ReactDOM.createRoot(container);
+      root.render(<App />);
+      
+      // Hide loader after successful render
+      setTimeout(() => {
+        if (loader) {
+          loader.classList.add('hidden');
+          setTimeout(() => loader.remove(), 500);
+        }
+      }, 100);
+      
+      console.log('✓ Violin Mastery Quest initialized successfully');
+      
     } catch (err) {
-      console.error('Fatal error in app initialization:', err);
+      console.error('Fatal error:', err);
       const loader = document.getElementById('app-loader');
       if (loader) {
         loader.innerHTML = 
           '<div style="color:white;padding:2rem;text-align:center;">' +
-          '<h2>Fatal Error</h2>' +
-          '<p>The application failed to initialize.</p>' +
-          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
+          '<h2>Error</h2>' +
+          '<p>' + err.message + '</p>' +
+          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh</button>' +
           '</div>';
       }
     }
   }
   
-  // Start initialization when DOM is ready
+  // Start initialization
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
   } else {
@@ -5192,66 +5173,17 @@
   }
   
 })();
-  </script>
+</script>
+
+<!-- Backup timeout script (separate, after main script) -->
 <script>
-(function() {
-  'use strict';
-  
-  let checkCount = 0;
-  const maxChecks = 50; // 5 seconds max
-  
-  function waitForBabel() {
-    checkCount++;
-    const status = document.getElementById('loader-status');
-    
-    // Check if Babel has transformed the script
-    if (typeof App === 'undefined') {
-      if (checkCount < maxChecks) {
-        if (status && checkCount % 5 === 0) {
-          status.textContent = 'Compiling application code...';
-        }
-        setTimeout(waitForBabel, 100);
-        return;
-      } else {
-        // Timeout - show error
-        if (status) status.textContent = 'Compilation timeout. Refreshing...';
-        setTimeout(() => location.reload(), 2000);
-        return;
-      }
-    }
-    
-    // App is defined, Babel finished
-    if (status) status.textContent = 'Starting application...';
-    
-    // Give it a moment then check if render succeeded
-    setTimeout(() => {
-      const loader = document.getElementById('app-loader');
-      const root = document.getElementById('root');
-      
-      // If root is still empty, there was a render error
-      if (root && root.children.length === 0) {
-        console.error('Render failed - root is empty');
-        if (loader) {
-          loader.innerHTML = 
-            '<div style="color:white;padding:2rem;text-align:center;">' +
-            '<h2>Render Error</h2>' +
-            '<p>The application failed to render. Check the browser console for details.</p>' +
-            '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
-            '</div>';
-        }
-      } else {
-        // Success - hide loader
-        if (loader) {
-          loader.classList.add('hidden');
-          setTimeout(() => loader.remove(), 500);
-        }
-      }
-    }, 500);
+setTimeout(() => {
+  const loader = document.getElementById('app-loader');
+  if (loader && !loader.classList.contains('hidden')) {
+    console.warn('Timeout: Force hiding loader');
+    loader.classList.add('hidden');
   }
-  
-  // Start checking after a brief delay
-  setTimeout(waitForBabel, 500);
-})();
+}, 10000); // 10 second fallback
 </script>
 </body>
 </html>
