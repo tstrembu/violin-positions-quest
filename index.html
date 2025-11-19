@@ -5116,47 +5116,82 @@
       );
     }
     
-    // ============================================================================
-    // RENDER (with safety checks)
-    // ============================================================================
-    
-    (function () {
+      // ============================================================================
+      // RENDER with Enhanced Error Handling and Loading Management
+      // ============================================================================
+      
       const container = document.getElementById('root');
+      const loader = document.getElementById('app-loader');
 
       if (!container) {
         console.error('Violin Mastery Quest: #root container not found.');
-        const fallback = document.createElement('div');
-        fallback.textContent =
-          'Error: #root container not found. Check the HTML structure.';
-        document.body.appendChild(fallback);
+        if (loader) {
+          loader.innerHTML = '<div style="color:white;padding:2rem;text-align:center;"><h2>Error</h2><p>#root container not found. Check HTML structure.</p></div>';
+        }
         return;
       }
 
       if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
         console.error('Violin Mastery Quest: React or ReactDOM not loaded.');
-        container.innerHTML =
-          '<p style="padding:1rem;color:#b91c1c;">Error: React/ReactDOM failed to load. Check your script tags and network.</p>';
+        container.innerHTML = '<p style="padding:1rem;color:#b91c1c;">Error: React/ReactDOM failed to load. Check your network connection.</p>';
+        if (loader) setTimeout(() => loader.classList.add('hidden'), 500);
         return;
       }
 
       if (typeof ReactDOM.createRoot !== 'function') {
-        console.error(
-          'Violin Mastery Quest: ReactDOM.createRoot is not available. You may have the wrong ReactDOM version.'
-        );
-        container.innerHTML =
-          '<p style="padding:1rem;color:#b91c1c;">Error: This app requires React 18 (createRoot). Make sure the ReactDOM script is @18.</p>';
+        console.error('Violin Mastery Quest: ReactDOM.createRoot not available.');
+        container.innerHTML = '<p style="padding:1rem;color:#b91c1c;">Error: This app requires React 18. Incompatible React version detected.</p>';
+        if (loader) setTimeout(() => loader.classList.add('hidden'), 500);
         return;
       }
 
       try {
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = ReactDOM.createRoot(container);
         root.render(<App />);
+        
+        // Hide loader after render
+        setTimeout(() => {
+          if (loader) {
+            loader.classList.add('hidden');
+            setTimeout(() => loader.remove(), 500);
+          }
+        }, 100);
+        
+        console.log('✓ Violin Mastery Quest initialized successfully');
       } catch (err) {
-        console.error('Violin Mastery Quest: error while rendering App:', err);
-        container.innerHTML =
-          '<p style="padding:1rem;color:#b91c1c;">An unexpected error occurred while starting the app. Check the JavaScript console for details.</p>';
+        console.error('Violin Mastery Quest: Render error:', err);
+        container.innerHTML = 
+          '<div style="padding:2rem;color:#b91c1c;background:var(--card);border-radius:12px;margin:1rem;">' +
+          '<h2>Application Error</h2>' +
+          '<p>An error occurred while starting the app.</p>' +
+          '<p style="font-family:monospace;font-size:0.875rem;margin-top:1rem;padding:1rem;background:#f1f5f9;border-radius:8px;">' + 
+          err.toString() + '</p>' +
+          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:#3a5ba0;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
+          '</div>';
+        if (loader) setTimeout(() => loader.classList.add('hidden'), 500);
       }
-    })();
+    } catch (err) {
+      console.error('Fatal error in app initialization:', err);
+      const loader = document.getElementById('app-loader');
+      if (loader) {
+        loader.innerHTML = 
+          '<div style="color:white;padding:2rem;text-align:center;">' +
+          '<h2>Fatal Error</h2>' +
+          '<p>The application failed to initialize.</p>' +
+          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
+          '</div>';
+      }
+    }
+  }
+  
+  // Start initialization when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+  } else {
+    initializeApp();
+  }
+  
+})();
   </script>
 </body>
 </html>
