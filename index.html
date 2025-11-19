@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Violin Mastery Quest – Professional Edition 7.2.9</title>
+  <title>Violin Mastery Quest – Professional Edition 7.2.9.0.8</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!--
     Provide a descriptive summary of what this page offers. This helps search engines
@@ -5143,54 +5143,61 @@
       // RENDER with Enhanced Error Handling and Loading Management
       // ============================================================================
       
+      console.log('🎨 Rendering React app...');
+      
       const container = document.getElementById('root');
       const loader = document.getElementById('app-loader');
 
       if (!container) {
-        console.error('Violin Mastery Quest: #root container not found.');
+        console.error('❌ #root container not found.');
         if (loader) {
-          loader.innerHTML = '<div style="color:white;padding:2rem;text-align:center;"><h2>Error</h2><p>#root container not found.</p></div>';
+          loader.innerHTML = '<div style="color:white;padding:2rem;text-align:center;"><h2>Error</h2><p>#root container not found. Check HTML structure.</p></div>';
         }
         return;
       }
 
       if (typeof ReactDOM.createRoot !== 'function') {
-        console.error('Violin Mastery Quest: ReactDOM.createRoot not available.');
+        console.error('❌ ReactDOM.createRoot not available.');
         container.innerHTML = '<p style="padding:1rem;color:#b91c1c;">Error: This app requires React 18.</p>';
         if (loader) setTimeout(() => loader.classList.add('hidden'), 500);
         return;
       }
 
       const root = ReactDOM.createRoot(container);
-      root.render(<App />);
+      root.render(React.createElement(App));
+      
+      console.log('✓ React app rendered successfully!');
       
       // Hide loader after successful render
       setTimeout(() => {
         if (loader) {
           loader.classList.add('hidden');
-          setTimeout(() => loader.remove(), 500);
+          setTimeout(() => {
+            if (loader.parentNode) loader.remove();
+          }, 500);
         }
-      }, 100);
-      
-      console.log('✓ Violin Mastery Quest initialized successfully');
+        console.log('✅ Violin Mastery Quest loaded successfully!');
+      }, 500);
       
     } catch (err) {
-      console.error('Fatal error:', err);
+      console.error('❌ Fatal render error:', err);
       const loader = document.getElementById('app-loader');
       if (loader) {
         loader.innerHTML = 
           '<div style="color:white;padding:2rem;text-align:center;">' +
-          '<h2>Error</h2>' +
-          '<p>' + err.message + '</p>' +
+          '<h2>Render Error</h2>' +
+          '<p style="font-family:monospace;background:rgba(0,0,0,0.3);padding:1rem;border-radius:8px;margin:1rem 0;">' + err.message + '</p>' +
           '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh</button>' +
           '</div>';
       }
     }
   }
+  
+  // Start the render loop
   tryRender();
 }
   
-  // Start initialization
+  // Start initialization when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
   } else {
@@ -5200,15 +5207,46 @@
 })();
 </script>
 
-<!-- Backup timeout script -->
+<!-- Emergency timeout - forces app to show after 15 seconds -->
 <script>
-setTimeout(() => {
-  const loader = document.getElementById('app-loader');
-  if (loader && !loader.classList.contains('hidden')) {
-    console.warn('Timeout: Force hiding loader');
-    loader.classList.add('hidden');
-  }
-}, 10000);
+(function() {
+  console.log('⏰ Emergency timeout set for 15 seconds');
+  
+  setTimeout(function() {
+    const loader = document.getElementById('app-loader');
+    const root = document.getElementById('root');
+    
+    if (loader && !loader.classList.contains('hidden')) {
+      console.warn('⚠️ Emergency timeout triggered - forcing loader to hide');
+      
+      // Check if app actually rendered
+      if (root && root.children.length > 0) {
+        // App is there, just hide the loader
+        console.log('✓ App is rendered, hiding loader');
+        loader.classList.add('hidden');
+        setTimeout(function() { 
+          if (loader.parentNode) loader.remove(); 
+        }, 500);
+      } else {
+        // App never rendered, show error
+        console.error('❌ App never rendered');
+        loader.innerHTML = 
+          '<div style="color:white;padding:2rem;text-align:center;">' +
+          '<h2>Loading Failed</h2>' +
+          '<p>The application failed to load within 15 seconds.</p>' +
+          '<p style="font-size:0.9rem;margin-top:1rem;">Try:</p>' +
+          '<ul style="text-align:left;max-width:400px;margin:1rem auto;font-size:0.9rem;">' +
+          '<li>Refreshing the page</li>' +
+          '<li>Checking your internet connection</li>' +
+          '<li>Using a different browser (Chrome or Firefox recommended)</li>' +
+          '<li>Disabling browser extensions temporarily</li>' +
+          '</ul>' +
+          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
+          '</div>';
+      }
+    }
+  }, 15000);
+})();
 </script>
 </body>
 </html>
