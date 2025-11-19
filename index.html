@@ -568,32 +568,14 @@
   
   <div id="sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-  <script
-    type="text/babel"
-    data-presets="react">
-    (function() {
+<script type="text/babel" data-presets="react">
+(function() {
   'use strict';
   
   // Wait for all dependencies to load
   function checkDependencies() {
     const status = document.getElementById('loader-status');
     
-    // Check for script errors
-    if (window.vmqScriptErrors && window.vmqScriptErrors.length > 0) {
-      if (status) status.textContent = 'Error loading dependencies. Please refresh.';
-      console.error('Script loading errors:', window.vmqScriptErrors);
-      setTimeout(() => {
-        document.getElementById('app-loader').innerHTML = 
-          '<div style="color:white;padding:2rem;text-align:center;">' +
-          '<h2>Loading Error</h2>' +
-          '<p>Failed to load required libraries. Please check your internet connection and refresh the page.</p>' +
-          '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
-          '</div>';
-      }, 1000);
-      return false;
-    }
-    
-    // Check if all scripts loaded
     if (typeof React === 'undefined') {
       if (status) status.textContent = 'Loading React...';
       return false;
@@ -612,23 +594,23 @@
   
   function initializeApp() {
     if (!checkDependencies()) {
-      // Retry after a short delay
       setTimeout(initializeApp, 100);
       return;
     }
     
     const status = document.getElementById('loader-status');
-    if (status) status.textContent = 'Initializing components...';
+    if (status) status.textContent = 'Compiling application...';
     
-    // Small delay to ensure Babel has processed everything
+    // Wait for Babel to finish transforming
     setTimeout(startApp, 300);
   }
   
   function startApp() {
+    const status = document.getElementById('loader-status');
+    if (status) status.textContent = 'Starting application...';
+    
     try {
-      // Your existing code starts here
-      // Keep everything from your original script
-
+ 
     // ============================================================================
     // CONSTANTS & DATA STRUCTURES
     // ============================================================================
