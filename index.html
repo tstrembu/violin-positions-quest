@@ -572,6 +572,8 @@
 (function() {
   'use strict';
   
+  console.log('🎻 Violin Mastery Quest - Initializing...');
+  
   // Wait for all dependencies to load
   function checkDependencies() {
     const status = document.getElementById('loader-status');
@@ -589,6 +591,7 @@
       return false;
     }
     
+    console.log('✓ All dependencies loaded');
     return true;
   }
   
@@ -599,22 +602,27 @@
     }
     
     const status = document.getElementById('loader-status');
-    if (status) status.textContent = 'Compiling application...';
+    if (status) status.textContent = 'Compiling application (this may take 5-10 seconds)...';
     
-    // Give Babel MORE time to finish transforming (increase from 300 to 1500ms)
-    setTimeout(startApp, 3500);
+    console.log('⏳ Waiting for Babel to compile JSX...');
+    
+    // Give Babel PLENTY of time - 8 seconds
+    setTimeout(startApp, 8000);
   }
   
   function startApp() {
+    console.log('🚀 Starting app...');
+    
     const status = document.getElementById('loader-status');
     if (status) status.textContent = 'Starting application...';
     
-    // Add a check to see if App is defined
+    // Try to render with retry logic
     let attempts = 0;
-    const maxAttempts = 20;
+    const maxAttempts = 30; // Try for up to 6 more seconds
     
     function tryRender() {
       attempts++;
+      console.log(`Attempt ${attempts}/${maxAttempts} to render...`);
       
       if (typeof App === 'undefined') {
         if (attempts < maxAttempts) {
@@ -622,21 +630,22 @@
           setTimeout(tryRender, 200);
           return;
         } else {
-          console.error('App component not defined after compilation timeout');
+          console.error('❌ App component never became available');
           const loader = document.getElementById('app-loader');
           if (loader) {
             loader.innerHTML = 
               '<div style="color:white;padding:2rem;text-align:center;">' +
-              '<h2>Compilation Error</h2>' +
-              '<p>The application took too long to compile. This can happen with slow connections or browsers.</p>' +
-              '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh Page</button>' +
+              '<h2>Compilation Timeout</h2>' +
+              '<p>The application took too long to compile. This can happen with:</p>' +
+              '<ul style="text-align:left;max-width:400px;margin:1rem auto;"><li>Slow internet connections</li><li>Older browsers</li><li>Browser extensions blocking scripts</li></ul>' +
+              '<button onclick="location.reload()" style="margin-top:1rem;padding:0.75rem 1.5rem;background:white;color:#764ba2;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Refresh & Try Again</button>' +
               '</div>';
           }
           return;
         }
       }
       
-      // App is defined, proceed with render
+      console.log('✓ App component is available!');
       doRender();
     }
     
