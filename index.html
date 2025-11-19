@@ -5157,7 +5157,7 @@
 })();
 </script>
 
-<!-- Backup timeout script (separate, after main script) -->
+<!-- Backup timeout script -->
 <script>
 setTimeout(() => {
   const loader = document.getElementById('app-loader');
@@ -5165,7 +5165,7 @@ setTimeout(() => {
     console.warn('Timeout: Force hiding loader');
     loader.classList.add('hidden');
   }
-}, 10000); // 10 second fallback
+}, 10000);
 </script>
 </body>
 </html>
